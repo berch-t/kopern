@@ -1,0 +1,61 @@
+"use client";
+
+import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Bot } from "lucide-react";
+import { type AgentDoc } from "@/lib/firebase/firestore";
+import { AnimatedCounter } from "@/components/motion/AnimatedCounter";
+
+interface AgentCardProps {
+  agent: AgentDoc & { id: string };
+}
+
+const domainColors: Record<string, string> = {
+  accounting: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
+  legal: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  devops: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+  support: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+  sales: "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200",
+  default: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
+};
+
+export function AgentCard({ agent }: AgentCardProps) {
+  const colorClass = domainColors[agent.domain] || domainColors.default;
+
+  return (
+    <Link href={`/agents/${agent.id}`}>
+      <Card className="cursor-pointer transition-shadow hover:shadow-md">
+        <CardHeader className="flex flex-row items-center gap-3 pb-2">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <Bot className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <CardTitle className="text-base">{agent.name}</CardTitle>
+            <Badge variant="secondary" className={colorClass}>
+              {agent.domain}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="line-clamp-2 text-sm text-muted-foreground">
+            {agent.description || "No description"}
+          </p>
+          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+            <span>v{agent.version}</span>
+            {agent.latestGradingScore !== null && (
+              <span className="flex items-center gap-1">
+                Score:{" "}
+                <AnimatedCounter
+                  value={agent.latestGradingScore * 100}
+                  suffix="%"
+                  className="font-semibold text-foreground"
+                />
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
