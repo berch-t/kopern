@@ -14,7 +14,6 @@ import { Separator } from "@/components/ui/separator";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { StaggerChildren, staggerItem } from "@/components/motion/StaggerChildren";
 import {
-  FlaskConical,
   Check,
   Minus,
   Moon,
@@ -22,6 +21,7 @@ import {
   Lightbulb,
   DollarSign,
   LayoutDashboard,
+  Zap,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -58,6 +58,14 @@ export default function PricingPage() {
       popular: true,
     },
     {
+      key: "usage" as const,
+      price: billing === "monthly" ? t.pricing.tiers.usage.price : t.pricing.tiers.usage.priceAnnual,
+      cta: t.pricing.startUsage,
+      href: user ? "/dashboard" : "/login",
+      popular: false,
+      payPerUse: true,
+    },
+    {
       key: "enterprise" as const,
       price: billing === "monthly" ? t.pricing.tiers.enterprise.price : t.pricing.tiers.enterprise.priceAnnual,
       cta: t.pricing.contactSales,
@@ -73,13 +81,18 @@ export default function PricingPage() {
     "gradingRunsPerMonth",
     "models",
     "support",
+    "teams",
+    "pipelines",
+    "observability",
   ] as const;
 
   const booleanFeatures = [
-    { key: "sso", starter: false, pro: false, enterprise: true },
-    { key: "auditLogs", starter: false, pro: false, enterprise: true },
-    { key: "versionHistory", starter: false, pro: true, enterprise: true },
-    { key: "batchProcessing", starter: false, pro: true, enterprise: true },
+    { key: "subAgents", starter: false, pro: true, enterprise: true, usage: true },
+    { key: "metaAgent", starter: false, pro: true, enterprise: true, usage: true },
+    { key: "sso", starter: false, pro: false, enterprise: true, usage: false },
+    { key: "auditLogs", starter: false, pro: false, enterprise: true, usage: false },
+    { key: "versionHistory", starter: false, pro: true, enterprise: true, usage: true },
+    { key: "batchProcessing", starter: false, pro: true, enterprise: true, usage: true },
   ] as const;
 
   return (
@@ -87,8 +100,7 @@ export default function PricingPage() {
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
         <div className="flex items-center gap-2">
-          <FlaskConical className="h-7 w-7 text-primary" />
-          <span className="text-xl font-bold">Kopern</span>
+          <img src="/logo_small.png" alt="Kopern" className="h-7" />
         </div>
         <div className="flex items-center gap-3">
           <LocalizedLink href="/examples">
@@ -164,7 +176,7 @@ export default function PricingPage() {
         </SlideUp>
 
         {/* Pricing cards */}
-        <StaggerChildren className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 pb-16">
+        <StaggerChildren className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 pb-16">
           {tiers.map((tier) => {
             const tierData = t.pricing.tiers[tier.key];
             return (
@@ -179,6 +191,12 @@ export default function PricingPage() {
                       {t.pricing.popular}
                     </Badge>
                   )}
+                  {"payPerUse" in tier && tier.payPerUse && (
+                    <Badge variant="secondary" className="absolute -top-3 left-1/2 -translate-x-1/2 gap-1">
+                      <Zap className="h-3 w-3" />
+                      {t.pricing.payAsYouGo}
+                    </Badge>
+                  )}
                   <CardHeader className="text-center pb-2">
                     <CardTitle className="text-xl">{tierData.name}</CardTitle>
                     <p className="text-sm text-muted-foreground">
@@ -187,13 +205,21 @@ export default function PricingPage() {
                   </CardHeader>
                   <CardContent className="flex flex-col flex-1">
                     <div className="text-center mb-6">
-                      <span className="text-4xl font-bold">
-                        ${tier.price}
-                      </span>
-                      {tier.price !== "0" && (
-                        <span className="text-muted-foreground">
-                          {billing === "monthly" ? t.pricing.mo : t.pricing.yr}
+                      {"payPerUse" in tier && tier.payPerUse ? (
+                        <span className="text-2xl font-bold text-primary">
+                          {t.pricing.payAsYouGo}
                         </span>
+                      ) : (
+                        <>
+                          <span className="text-4xl font-bold">
+                            ${tier.price}
+                          </span>
+                          {tier.price !== "0" && (
+                            <span className="text-muted-foreground">
+                              {billing === "monthly" ? t.pricing.mo : t.pricing.yr}
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
 

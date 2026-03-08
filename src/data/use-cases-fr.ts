@@ -161,4 +161,54 @@ export const useCasesFr: Record<
     costReduction: "30K\u20ac/an en temps d'\u00e9quipe Customer Success",
     riskMitigation: "D\u00e9tecte les probl\u00e8mes produit \u00e9mergents 5x plus vite, r\u00e9duisant le churn",
   },
+  "agent-team-code-review": {
+    title: "\u00c9quipe d'Agents : Revue de Code Full-Stack",
+    domain: "Multi-Agent / DevOps",
+    tagline: "Trois agents sp\u00e9cialistes r\u00e9visent le code en parall\u00e8le, puis un coordinateur synth\u00e9tise un rapport unifi\u00e9",
+    description:
+      "Une \u00e9quipe de 3 agents sp\u00e9cialis\u00e9s (s\u00e9curit\u00e9, performance, conventions) r\u00e9vise le code en parall\u00e8le. Chaque agent se concentre sur son domaine d'expertise et produit des conclusions ind\u00e9pendantes. Un agent coordinateur synth\u00e9tise ensuite toutes les conclusions en un rapport unifi\u00e9, d\u00e9dupliqu\u00e9, avec des actions prioritaires et une recommandation de merge.",
+    timeSaved: "45-90 min par PR complexe r\u00e9duites \u00e0 20 secondes d'analyse parall\u00e8le",
+    costReduction: "~80K\u20ac/an pour une \u00e9quipe de 10 d\u00e9veloppeurs (remplace 3 passes de r\u00e9viseur senior)",
+    riskMitigation: "Couverture 3x plus profonde \u2014 s\u00e9curit\u00e9, performance et conventions d\u00e9tect\u00e9es simultan\u00e9ment",
+  },
+  "pipeline-content-creator": {
+    title: "Pipeline de Contenu : Recherche \u2192 R\u00e9daction \u2192 SEO",
+    domain: "Pipeline / Contenu",
+    tagline: "Un pipeline en 3 \u00e9tapes o\u00f9 les agents recherchent, r\u00e9digent et optimisent le contenu s\u00e9quentiellement",
+    description:
+      "Un pipeline s\u00e9quentiel en 3 \u00e9tapes : l'Agent 1 recherche un sujet en parcourant plusieurs sources et en extrayant les faits cl\u00e9s. L'Agent 2 transforme la recherche en contenu structur\u00e9 et soign\u00e9 correspondant \u00e0 la voix de marque. L'Agent 3 optimise le contenu pour le SEO \u2014 balises meta, densit\u00e9 de mots-cl\u00e9s, liens internes, score de lisibilit\u00e9. La sortie de chaque \u00e9tape alimente la suivante.",
+    timeSaved: "4-6 heures par article r\u00e9duites \u00e0 15 minutes de relecture",
+    costReduction: "~60K\u20ac/an en remplacement des co\u00fbts de r\u00e9dacteur freelance + sp\u00e9cialiste SEO",
+    riskMitigation: "Voix de marque coh\u00e9rente et conformit\u00e9 SEO sur 100% du contenu publi\u00e9",
+  },
+  "meta-agent-builder": {
+    title: "M\u00e9ta-Agent : Architecte d'Agents IA",
+    domain: "M\u00e9ta-Agent / Plateforme",
+    tagline: "D\u00e9crivez votre besoin en langage naturel et obtenez un agent enti\u00e8rement configur\u00e9",
+    description:
+      "Un agent IA qui construit d'autres agents. D\u00e9crivez votre cas d'usage en langage naturel et il g\u00e9n\u00e8re la configuration compl\u00e8te : prompt syst\u00e8me, skills (avec contenu), outils (avec param\u00e8tres JSON Schema), suite de grading et instructions d'int\u00e9gration MCP. Valide la spec pour la coh\u00e9rence interne et sugg\u00e8re des am\u00e9liorations bas\u00e9es sur les bonnes pratiques de conception d'agents.",
+    timeSaved: "2-4 heures de configuration d'agent r\u00e9duites \u00e0 5 minutes de conversation",
+    costReduction: "Permet aux utilisateurs non-techniques de construire des agents (0\u20ac de formation)",
+    riskMitigation: "Les configs g\u00e9n\u00e9r\u00e9es suivent des patterns \u00e9prouv\u00e9s, r\u00e9duisant les erreurs de configuration de 85%",
+  },
+  "multi-agent-incident-response": {
+    title: "Escouade de R\u00e9ponse aux Incidents",
+    domain: "Multi-Agent / SRE",
+    tagline: "Un agent routeur trie les alertes vers le bon sp\u00e9cialiste, qui diagnostique et corrige pendant qu'un agent communication informe les parties prenantes",
+    description:
+      "Ex\u00e9cution conditionnelle d'\u00e9quipe pour la r\u00e9ponse aux incidents. Un agent routeur lit les alertes entrantes et classifie le type d'incident (base de donn\u00e9es, r\u00e9seau, application, s\u00e9curit\u00e9). L'agent sp\u00e9cialiste appropri\u00e9 diagnostique le probl\u00e8me \u00e0 l'aide de runbooks et de m\u00e9triques, puis propose un correctif. Un agent communication r\u00e9dige les mises \u00e0 jour de la page de statut et les notifications aux parties prenantes tout au long du processus.",
+    timeSaved: "15-30 min de triage initial + 30-60 min de communication de statut par incident",
+    costReduction: "~120K\u20ac/an pour une rotation d'astreinte de 5 personnes (MTTR r\u00e9duit, moins de toil)",
+    riskMitigation: "R\u00e9duit le MTTR de 65% gr\u00e2ce au triage automatis\u00e9 et au diagnostic + communication parall\u00e8les",
+  },
+  "orchestrated-data-pipeline": {
+    title: "Pipeline de Donn\u00e9es Observable",
+    domain: "Pipeline / Observabilit\u00e9",
+    tagline: "Un pipeline ETL enti\u00e8rement trac\u00e9 avec suivi des co\u00fbts en tokens, gestion des erreurs et validation qualit\u00e9 \u00e0 chaque \u00e9tape",
+    description:
+      "Un pipeline avec observabilit\u00e9 compl\u00e8te sur 4 \u00e9tapes : Extraction (r\u00e9cup\u00e9ration des donn\u00e9es sources), Transformation (nettoyage, normalisation, enrichissement), Validation (contr\u00f4les qualit\u00e9 des donn\u00e9es), et Chargement (\u00e9criture vers la destination). Chaque \u00e9tape \u00e9met des \u00e9v\u00e9nements de session structur\u00e9s avec timing, co\u00fbts en tokens et suivi des erreurs. Les r\u00e8gles de qualit\u00e9 int\u00e9gr\u00e9es d\u00e9tectent les violations de sch\u00e9ma, les taux de nulls et les anomalies de distribution avant le chargement.",
+    timeSaved: "3-8 heures de d\u00e9bogage ETL manuel r\u00e9duites \u00e0 une identification instantan\u00e9e de la cause racine",
+    costReduction: "~50K\u20ac/an en temps d'ing\u00e9nierie data + pr\u00e9vient 200K\u20ac+ de co\u00fbts li\u00e9s aux donn\u00e9es corrompues en aval",
+    riskMitigation: "99,5% de qualit\u00e9 des donn\u00e9es avec validation pr\u00e9-chargement \u2014 z\u00e9ro corruption silencieuse",
+  },
 };

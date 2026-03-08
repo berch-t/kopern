@@ -125,6 +125,7 @@ export default function RunsPage({
     );
 
     start(`/api/agents/${agentId}/grading/${suiteId}/run`, {
+      userId: user!.uid,
       cases: cases.map((c) => ({
         id: c.id,
         name: c.name,

@@ -20,6 +20,31 @@ export interface UserDoc {
   updatedAt: Timestamp;
 }
 
+export interface PurposeGateConfig {
+  enabled: boolean;
+  question: string;
+  injectInSystemPrompt: boolean;
+}
+
+export interface TillDoneConfig {
+  enabled: boolean;
+  requireTaskListBeforeExecution: boolean;
+  autoPromptOnIncomplete: boolean;
+  confirmBeforeClear: boolean;
+}
+
+export interface AgentBranding {
+  themeColor: string;
+  accentColor: string;
+  icon: string;
+}
+
+export interface ToolOverrideConfig {
+  toolName: string;
+  wrapperCode: string;
+  enabled: boolean;
+}
+
 export interface AgentDoc {
   name: string;
   description: string;
@@ -33,6 +58,10 @@ export interface AgentDoc {
   version: number;
   isPublished: boolean;
   latestGradingScore: number | null;
+  purposeGate: PurposeGateConfig | null;
+  tillDone: TillDoneConfig | null;
+  branding: AgentBranding | null;
+  toolOverrides: ToolOverrideConfig[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -158,6 +187,120 @@ export interface McpUsageDoc {
   lastRequestAt: Timestamp;
 }
 
+// --- Agent Teams ---
+
+export interface AgentTeamMember {
+  agentId: string;
+  role: string;
+  order: number;
+  description: string;
+}
+
+export interface AgentTeamDoc {
+  name: string;
+  description: string;
+  agents: AgentTeamMember[];
+  executionMode: "parallel" | "sequential" | "conditional";
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+// --- Pipelines ---
+
+export interface PipelineStep {
+  agentId: string;
+  role: string;
+  order: number;
+  inputMapping: "previous_output" | "original_input" | "custom";
+  customInputTemplate?: string;
+  continueOnError: boolean;
+}
+
+export interface PipelineDoc {
+  name: string;
+  description: string;
+  steps: PipelineStep[];
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+// --- Sessions / Observability ---
+
+export interface SessionEvent {
+  type:
+    | "message"
+    | "tool_call"
+    | "tool_result"
+    | "sub_agent_spawn"
+    | "sub_agent_result"
+    | "error"
+    | "compact"
+    | "pipeline_step"
+    | "team_member";
+  timestamp: Timestamp;
+  data: Record<string, unknown>;
+}
+
+export interface SessionDoc {
+  purpose: string | null;
+  startedAt: Timestamp;
+  endedAt: Timestamp | null;
+  totalTokensIn: number;
+  totalTokensOut: number;
+  totalCost: number;
+  toolCallCount: number;
+  subAgentCallCount: number;
+  messageCount: number;
+  modelUsed: string;
+  providerUsed: string;
+  events: SessionEvent[];
+}
+
+// --- Usage / Billing ---
+
+export interface UsageDoc {
+  inputTokens: number;
+  outputTokens: number;
+  totalCost: number;
+  requestCount: number;
+  agentBreakdown: Record<string, { inputTokens: number; outputTokens: number; cost: number }>;
+}
+
+// --- Extension Event Types ---
+
+export type ExtensionEventType =
+  | "session_start"
+  | "session_end"
+  | "session_compact"
+  | "message_start"
+  | "message_end"
+  | "message_stream_token"
+  | "tool_call_start"
+  | "tool_call_end"
+  | "tool_call_error"
+  | "tool_call_blocked"
+  | "agent_thinking_start"
+  | "agent_thinking_end"
+  | "agent_response_start"
+  | "agent_response_end"
+  | "sub_agent_spawn"
+  | "sub_agent_result"
+  | "sub_agent_error"
+  | "pipeline_start"
+  | "pipeline_step_start"
+  | "pipeline_step_end"
+  | "pipeline_end"
+  | "team_execution_start"
+  | "team_member_start"
+  | "team_member_end"
+  | "team_execution_end"
+  | "user_input"
+  | "user_confirm"
+  | "user_deny"
+  | "error"
+  | "context_limit_warning"
+  | "cost_limit_warning";
+
 // --- Typed collection refs ---
 
 function typedCollection<T = DocumentData>(path: string) {
@@ -265,4 +408,44 @@ export function mcpUsageCollection(userId: string, agentId: string, serverId: st
 
 export function mcpUsageDoc(userId: string, agentId: string, serverId: string, yearMonth: string) {
   return doc(db, "users", userId, "agents", agentId, "mcpServers", serverId, "usage", yearMonth);
+}
+
+// --- Agent Teams collections ---
+
+export function agentTeamsCollection(userId: string) {
+  return typedCollection<AgentTeamDoc>(`users/${userId}/agentTeams`);
+}
+
+export function agentTeamDoc(userId: string, teamId: string) {
+  return doc(db, "users", userId, "agentTeams", teamId);
+}
+
+// --- Pipelines collections ---
+
+export function pipelinesCollection(userId: string, agentId: string) {
+  return typedCollection<PipelineDoc>(`users/${userId}/agents/${agentId}/pipelines`);
+}
+
+export function pipelineDoc(userId: string, agentId: string, pipelineId: string) {
+  return doc(db, "users", userId, "agents", agentId, "pipelines", pipelineId);
+}
+
+// --- Sessions collections ---
+
+export function sessionsCollection(userId: string, agentId: string) {
+  return typedCollection<SessionDoc>(`users/${userId}/agents/${agentId}/sessions`);
+}
+
+export function sessionDoc(userId: string, agentId: string, sessionId: string) {
+  return doc(db, "users", userId, "agents", agentId, "sessions", sessionId);
+}
+
+// --- Usage / Billing collections ---
+
+export function usageCollection(userId: string) {
+  return typedCollection<UsageDoc>(`users/${userId}/usage`);
+}
+
+export function usageDoc(userId: string, yearMonth: string) {
+  return doc(db, "users", userId, "usage", yearMonth);
 }

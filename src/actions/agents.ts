@@ -33,6 +33,10 @@ export async function createAgent(
     version: 1,
     isPublished: false,
     latestGradingScore: null,
+    purposeGate: null,
+    tillDone: null,
+    branding: null,
+    toolOverrides: [],
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   } as unknown as AgentDoc);
@@ -54,6 +58,10 @@ export async function updateAgent(
       | "thinkingLevel"
       | "builtinTools"
       | "connectedRepos"
+      | "purposeGate"
+      | "tillDone"
+      | "branding"
+      | "toolOverrides"
     >
   >
 ) {

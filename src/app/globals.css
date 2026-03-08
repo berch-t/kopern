@@ -118,6 +118,17 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Landing page section backgrounds — subtle purple tint */
+:root {
+  --landing-section-alt: oklch(0.97 0.01 285);
+  --landing-section-hero: oklch(0.98 0.008 285);
+}
+
+.dark {
+  --landing-section-alt: oklch(0.17 0.015 285);
+  --landing-section-hero: oklch(0.155 0.012 285);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

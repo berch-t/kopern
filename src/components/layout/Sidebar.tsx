@@ -8,12 +8,13 @@ import {
   Bot,
   BookOpen,
   Cable,
+  CreditCard,
   LayoutDashboard,
   Lightbulb,
   Settings,
   ChevronLeft,
   ChevronRight,
-  FlaskConical,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -28,6 +29,8 @@ export function Sidebar() {
   const navItems = [
     { href: "/dashboard", label: t.nav.dashboard, icon: LayoutDashboard },
     { href: "/agents", label: t.nav.agents, icon: Bot },
+    { href: "/teams", label: t.nav.teams, icon: Users },
+    { href: "/billing", label: t.nav.billing, icon: CreditCard },
     { href: "/api-keys", label: t.nav.api, icon: Cable },
     { href: "/examples", label: t.nav.examples, icon: Lightbulb },
     { href: "/settings", label: t.nav.settings, icon: Settings },
@@ -47,16 +50,15 @@ export function Sidebar() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <LocalizedLink href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <FlaskConical className="h-6 w-6 text-sidebar-primary" />
-                <span className="text-lg font-bold">Kopern</span>
+              <LocalizedLink href="/" className="hover:opacity-80 transition-opacity">
+                <img src="/logo_small.png" alt="Kopern" className="h-6" />
               </LocalizedLink>
             </motion.div>
           )}
         </AnimatePresence>
         {collapsed && (
           <LocalizedLink href="/" className="hover:opacity-80 transition-opacity">
-            <FlaskConical className="h-6 w-6 text-sidebar-primary" />
+            <img src="/logo_small.png" alt="Kopern" className="h-6" />
           </LocalizedLink>
         )}
         <Button

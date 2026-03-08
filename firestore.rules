@@ -70,6 +70,27 @@ service cloud.firestore {
             }
           }
         }
+
+        // Pipelines
+        match /pipelines/{pipelineId} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+
+        // Sessions (Observability)
+        match /sessions/{sessionId} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+      }
+
+      // Agent Teams (user-level)
+      match /agentTeams/{teamId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Usage / Billing (user-level)
+      match /usage/{yearMonth} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null && request.auth.uid == userId;
       }
     }
   }

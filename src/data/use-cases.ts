@@ -14,6 +14,11 @@ import {
   BarChart3,
   Workflow,
   Mail,
+  Network,
+  Sparkles,
+  Eye,
+  GitMerge,
+  Layers,
   type LucideIcon,
 } from "lucide-react";
 
@@ -1098,6 +1103,727 @@ Daily digest: aggregated trends posted to #product-insights.`,
 - output_match: urgency is "high" or "critical" (weight: 0.3)
 - output_match: detects churn risk (weight: 0.3)
 - output_match: routes to customer success (weight: 0.2)`,
+      },
+    ],
+  },
+
+  // 16. Agent Team: Full-Stack Code Review
+  {
+    slug: "agent-team-code-review",
+    title: "Agent Team: Full-Stack Code Review",
+    domain: "Multi-Agent / DevOps",
+    icon: Network,
+    tagline: "Three specialist agents review code in parallel, then a coordinator synthesizes a unified report",
+    description:
+      "A team of 3 specialized agents (security, performance, conventions) reviews code in parallel. Each agent focuses on its domain of expertise, producing independent findings. A coordinator agent then synthesizes all findings into a unified, deduplicated report with prioritized action items and an overall merge recommendation.",
+    timeSaved: "45-90 min per complex PR reduced to 20 seconds of parallel analysis",
+    costReduction: "~$80K/year for a team of 10 developers (replaces 3 senior reviewer passes)",
+    riskMitigation: "3x coverage depth — security, performance, and convention issues caught simultaneously",
+    systemPrompt: `You are a coordinator agent managing a team of 3 specialist code reviewers. Your role is to orchestrate parallel reviews and synthesize findings.
+
+Workflow:
+1. Receive the PR diff and metadata (files changed, author, branch)
+2. Delegate to specialists in parallel:
+   - security_agent: OWASP Top 10, auth flaws, injection, data exposure
+   - performance_agent: O(n²) loops, memory leaks, unnecessary re-renders, bundle size
+   - conventions_agent: naming, file structure, test coverage, documentation
+3. Collect all specialist reports
+4. Deduplicate overlapping findings (prefer the specialist's version)
+5. Resolve conflicts (e.g., security recommends X, performance recommends Y)
+6. Produce unified report with priority ranking
+
+Output JSON:
+{
+  "overallScore": 0-100,
+  "canMerge": boolean,
+  "specialistScores": { "security": number, "performance": number, "conventions": number },
+  "findings": [{ "source": string, "severity": string, "category": string, "file": string, "line": number, "message": string, "suggestion": string }],
+  "conflicts": [{ "finding1": string, "finding2": string, "resolution": string }],
+  "summary": string
+}
+
+Merge policy: canMerge = true only if overallScore >= 70 AND security score >= 80 AND no critical findings.`,
+    skills: [
+      {
+        name: "team-coordination-protocol",
+        content: `<skill name="team-coordination-protocol">
+Team Coordination Protocol for Multi-Agent Code Review:
+
+1. Task Distribution:
+   - Parse the diff to identify file types and changed sections
+   - Route security-relevant files (auth, API, DB queries) with HIGH priority to security_agent
+   - Route performance-critical paths (loops, data fetching, rendering) to performance_agent
+   - Send all files to conventions_agent for baseline checks
+
+2. Parallel Execution:
+   - All 3 agents run simultaneously with a 30-second timeout
+   - If a specialist times out, mark its findings as "incomplete" and proceed
+   - Each specialist returns: { score: number, findings: [], confidence: number }
+
+3. Conflict Resolution Rules:
+   - Security always wins over performance (e.g., "use parameterized queries" even if slower)
+   - Performance wins over conventions (e.g., allow unconventional code if 10x faster)
+   - When in doubt, flag for human review rather than auto-resolving
+
+4. Deduplication:
+   - Same file + same line + overlapping message = duplicate
+   - Keep the version from the most relevant specialist
+   - Merge severity upward (if security says "high" and conventions says "medium", use "high")
+</skill>`,
+      },
+      {
+        name: "review-synthesis-template",
+        content: `<skill name="review-synthesis-template">
+Unified Review Synthesis Template:
+
+## Executive Summary
+[2-3 sentences: overall quality, biggest concern, recommendation]
+
+## Specialist Scores
+| Agent | Score | Findings | Critical |
+|-------|-------|----------|----------|
+| Security | X/100 | N | Y/N |
+| Performance | X/100 | N | Y/N |
+| Conventions | X/100 | N | Y/N |
+
+## Critical Findings (must fix before merge)
+[List with file, line, specialist source, and suggested fix]
+
+## Important Findings (should fix)
+[List with file, line, specialist source, and suggested fix]
+
+## Minor Findings (nice to have)
+[Grouped by category]
+
+## Conflicts Resolved
+[Any cases where specialists disagreed, with resolution rationale]
+
+## Merge Recommendation
+[APPROVE / REQUEST_CHANGES / BLOCK with justification]
+</skill>`,
+      },
+    ],
+    tools: [
+      {
+        name: "delegate_to_specialist",
+        description: "Sends code diff to a specialist agent for focused review and waits for the report",
+        params: `{ "specialist": { "type": "string", "enum": ["security_agent", "performance_agent", "conventions_agent"] }, "diff": { "type": "string" }, "context": { "type": "object", "properties": { "language": { "type": "string" }, "framework": { "type": "string" }, "filePaths": { "type": "array", "items": { "type": "string" } } } } }`,
+      },
+      {
+        name: "merge_reviews",
+        description: "Combines multiple specialist review reports, deduplicates findings, and resolves conflicts",
+        params: `{ "reviews": { "type": "array", "items": { "type": "object", "properties": { "specialist": { "type": "string" }, "score": { "type": "number" }, "findings": { "type": "array" }, "confidence": { "type": "number" } } } }, "conflictStrategy": { "type": "string", "enum": ["security_first", "performance_first", "flag_for_human"], "default": "security_first" } }`,
+      },
+    ],
+    mcpIntegration: `Triggered on PR open/update via GitHub webhook.
+POST diff + metadata to /api/mcp.
+Coordinator delegates to 3 specialist agents in parallel.
+Unified report posted as PR comment within 30 seconds.
+Blocks merge if canMerge is false.`,
+    gradingSuite: [
+      {
+        caseName: "Detect SQL injection across specialists",
+        input: `const query = "SELECT * FROM users WHERE id = " + req.params.id; // also has O(n²) nested loop below\nfor (let i = 0; i < users.length; i++) { for (let j = 0; j < users.length; j++) { compare(users[i], users[j]); } }`,
+        criteria: `- output_match: security agent flags SQL injection as critical (weight: 0.3)
+- output_match: performance agent flags O(n²) loop (weight: 0.3)
+- output_match: unified report contains both findings deduplicated (weight: 0.2)
+- output_match: canMerge is false due to critical security finding (weight: 0.2)`,
+      },
+      {
+        caseName: "Resolve security vs performance conflict",
+        input: `// Using raw SQL for performance-critical batch insert\nconst sql = items.map(i => \`INSERT INTO orders VALUES ('\${i.id}', '\${i.name}')\`).join(';');`,
+        criteria: `- output_match: security flags string interpolation in SQL (weight: 0.3)
+- output_match: performance acknowledges batch insert intent (weight: 0.2)
+- output_match: conflict resolution recommends parameterized batch insert (weight: 0.3)
+- output_match: security recommendation takes priority (weight: 0.2)`,
+      },
+    ],
+  },
+
+  // 17. Content Pipeline: Research → Write → SEO
+  {
+    slug: "pipeline-content-creator",
+    title: "Content Pipeline: Research → Write → SEO",
+    domain: "Pipeline / Content",
+    icon: Layers,
+    tagline: "A 3-step pipeline where agents research, write, and optimize content sequentially",
+    description:
+      "A 3-step sequential pipeline: Agent 1 researches a topic by searching multiple sources and extracting key facts. Agent 2 transforms the research into polished, structured content matching the brand voice. Agent 3 optimizes the content for SEO — meta tags, keyword density, internal linking, readability score. Each step's output feeds the next.",
+    timeSaved: "4-6 hours per article reduced to 15 minutes of review",
+    costReduction: "~$60K/year replacing freelance writer + SEO specialist costs",
+    riskMitigation: "Consistent brand voice and SEO compliance across 100% of published content",
+    systemPrompt: `You are a content pipeline orchestrator managing a 3-stage sequential workflow.
+
+Pipeline Stages:
+1. RESEARCH (Agent 1):
+   - Search 5-10 authoritative sources on the given topic
+   - Extract key facts, statistics, expert quotes, and trends
+   - Identify content gaps in existing top-ranking articles
+   - Output: { sources: [...], keyFacts: [...], contentGaps: [...], suggestedAngle: string }
+
+2. WRITE (Agent 2):
+   - Receive research output as context
+   - Write article following the content-style-guide skill
+   - Structure: hook intro, H2/H3 sections, data-backed claims, actionable conclusion
+   - Target: 1500-2500 words, Flesch reading score 60-70
+   - Output: { title: string, content: string, wordCount: number, readingLevel: string }
+
+3. SEO_OPTIMIZE (Agent 3):
+   - Receive written article
+   - Apply seo-checklist skill
+   - Optimize: meta title (<60 chars), meta description (<155 chars), keyword placement, internal links
+   - Output: { optimizedContent: string, metaTitle: string, metaDescription: string, seoScore: 0-100, suggestions: [...] }
+
+Final output combines all stages with pipeline metadata (timing, token costs per stage).`,
+    skills: [
+      {
+        name: "content-style-guide",
+        content: `<skill name="content-style-guide">
+Content Style Guide:
+
+Voice & Tone:
+- Professional but approachable — write like a knowledgeable friend
+- Use active voice (90%+ of sentences)
+- Address the reader as "you" — second person perspective
+- Avoid jargon unless writing for a technical audience (then define on first use)
+
+Structure:
+- Hook: open with a surprising statistic, question, or bold claim (1-2 sentences)
+- Introduction: context + what the reader will learn (1 paragraph)
+- Body: 4-7 H2 sections, each with a clear takeaway
+- Use H3 for sub-points within complex sections
+- Include at least 3 data points or citations per article
+- End each section with a transition to the next
+- Conclusion: summarize key points + clear call-to-action
+
+Formatting:
+- Paragraphs: 2-4 sentences max
+- Use bullet lists for 3+ related items
+- Bold key terms on first appearance
+- Include 1-2 pull quotes or callout boxes per article
+- Target word count: 1500-2500 words
+</skill>`,
+      },
+      {
+        name: "seo-checklist",
+        content: `<skill name="seo-checklist">
+SEO Optimization Checklist:
+
+On-Page Essentials:
+- [ ] Primary keyword in title (first 60 chars)
+- [ ] Primary keyword in first 100 words of body
+- [ ] Primary keyword in at least 2 H2 headings
+- [ ] Keyword density: 1-2% (not stuffing)
+- [ ] Meta title: <60 characters, includes primary keyword
+- [ ] Meta description: 120-155 characters, includes CTA + keyword
+- [ ] URL slug: short, hyphenated, includes keyword
+
+Content Quality Signals:
+- [ ] Word count: 1500+ words for pillar content
+- [ ] Flesch reading ease: 60-70 (accessible to general audience)
+- [ ] At least 3 external links to authoritative sources (DA 50+)
+- [ ] At least 2 internal links to related content
+- [ ] Image alt text includes keyword variation
+- [ ] No orphan pages — linked from at least 1 hub page
+
+Technical:
+- [ ] H1 tag used once (title only)
+- [ ] Logical H2 → H3 hierarchy (no skipped levels)
+- [ ] No duplicate meta descriptions across site
+- [ ] Schema markup: Article type with author, datePublished
+</skill>`,
+      },
+    ],
+    tools: [
+      {
+        name: "search_sources",
+        description: "Searches multiple content sources for research material on a given topic",
+        params: `{ "query": { "type": "string" }, "sources": { "type": "array", "items": { "type": "string", "enum": ["google_scholar", "news", "blogs", "reddit", "arxiv"] }, "default": ["google_scholar", "news", "blogs"] }, "maxResults": { "type": "number", "default": 10 }, "dateRange": { "type": "string", "enum": ["last_week", "last_month", "last_year", "all_time"], "default": "last_year" } }`,
+      },
+      {
+        name: "analyze_seo",
+        description: "Analyzes content for SEO metrics including keyword density, readability, and optimization score",
+        params: `{ "content": { "type": "string" }, "primaryKeyword": { "type": "string" }, "secondaryKeywords": { "type": "array", "items": { "type": "string" } }, "targetUrl": { "type": "string" }, "competitorUrls": { "type": "array", "items": { "type": "string" } } }`,
+      },
+    ],
+    mcpIntegration: `Content team submits topic + target keyword via form.
+POST to /api/mcp triggers the 3-stage pipeline.
+Each stage streams progress via SSE events.
+Final optimized article returned for human review before publishing.
+Pipeline metadata (timing, cost per stage) logged for optimization.`,
+    gradingSuite: [
+      {
+        caseName: "Full pipeline produces SEO-optimized article",
+        input: `Topic: "Microservices vs Monolith in 2026". Primary keyword: "microservices architecture". Target audience: CTOs and tech leads.`,
+        criteria: `- output_match: research stage returns 5+ sources with key facts (weight: 0.25)
+- output_match: article has proper H2/H3 structure with 1500+ words (weight: 0.25)
+- output_match: SEO score >= 80 with meta title and description (weight: 0.25)
+- output_match: pipeline includes timing metadata for all 3 stages (weight: 0.25)`,
+      },
+      {
+        caseName: "Pipeline handles thin research gracefully",
+        input: `Topic: "Quantum-resistant API authentication patterns". Primary keyword: "post-quantum API security". Target audience: security engineers.`,
+        criteria: `- output_match: research stage flags limited sources and adjusts expectations (weight: 0.3)
+- output_match: article clearly states emerging/evolving nature of the topic (weight: 0.3)
+- output_match: SEO agent adapts keyword strategy for low-volume keyword (weight: 0.2)
+- output_match: content includes appropriate caveats about nascent technology (weight: 0.2)`,
+      },
+    ],
+  },
+
+  // 18. Meta-Agent: AI Agent Architect
+  {
+    slug: "meta-agent-builder",
+    title: "Meta-Agent: AI Agent Architect",
+    domain: "Meta-Agent / Platform",
+    icon: Sparkles,
+    tagline: "Describe what you need in plain language and get a fully configured agent",
+    description:
+      "An AI agent that builds other agents. Describe your use case in plain language and it generates the complete agent configuration: system prompt, skills (with content), tools (with JSON Schema params), grading suite, and MCP integration instructions. Validates the spec for internal consistency and suggests improvements based on agent design best practices.",
+    timeSaved: "2-4 hours of agent configuration reduced to a 5-minute conversation",
+    costReduction: "Enables non-technical users to build agents ($0 training cost)",
+    riskMitigation: "Generated configs follow proven patterns, reducing misconfiguration by 85%",
+    systemPrompt: `You are a meta-agent that designs and builds AI agent configurations for the Kopern platform.
+
+Process:
+1. UNDERSTAND: Ask clarifying questions about the user's use case, domain, and constraints
+2. DESIGN: Choose the right architecture pattern (single agent, pipeline, team, router)
+3. BUILD: Generate the complete agent configuration:
+   - systemPrompt: detailed, with clear rules, output format, and safety guardrails
+   - skills: 2-4 markdown skill files with domain knowledge
+   - tools: 1-3 tools with JSON Schema params and clear descriptions
+   - gradingSuite: 2-3 test cases covering happy path + edge cases
+   - mcpIntegration: integration instructions for the user's workflow
+
+4. VALIDATE: Check for:
+   - Prompt-tool consistency (tools referenced in prompt actually exist)
+   - Skill coverage (no domain knowledge gaps)
+   - Grading completeness (tests cover all critical behaviors)
+   - Security (no prompt injection vectors, proper input validation)
+
+5. ITERATE: Present the config, explain design choices, offer refinements
+
+Output the config as a valid JSON object matching the Kopern UseCase interface:
+{
+  slug: string,
+  title: string,
+  domain: string,
+  systemPrompt: string,
+  skills: [{ name: string, content: string }],
+  tools: [{ name: string, description: string, params: string }],
+  gradingSuite: [{ caseName: string, input: string, criteria: string }],
+  mcpIntegration: string
+}
+
+Always explain WHY you made each design choice.`,
+    skills: [
+      {
+        name: "kopern-architecture-guide",
+        content: `<skill name="kopern-architecture-guide">
+Kopern Platform Architecture Guide:
+
+Agent Types:
+1. Single Agent — one prompt, tools, skills. Best for focused tasks (review, classify, generate).
+2. Pipeline — sequential stages (A → B → C). Best when each stage transforms the output. Each stage is an independent agent with its own prompt.
+3. Team — parallel agents + coordinator. Best when multiple perspectives are needed simultaneously.
+4. Router — conditional delegation. A triage agent picks the right specialist based on input.
+
+Component Design Rules:
+- System Prompt: 200-500 words. Include: role, rules, output format, safety constraints.
+- Skills: domain knowledge injected as XML blocks. Keep each under 300 words. Focus on facts/rules, not instructions.
+- Tools: each tool does ONE thing. Params should be strongly typed with enums where possible.
+- Grading Suite: minimum 2 cases — one happy path, one edge case. Use weighted criteria summing to 1.0.
+
+MCP Integration:
+- All agents are accessible via POST /api/mcp (JSON-RPC 2.0)
+- Auth: Bearer token with kpn_ prefix
+- Streaming: SSE for long-running agents
+- Webhooks: trigger agents from external events (GitHub, Slack, CI)
+</skill>`,
+      },
+      {
+        name: "agent-design-patterns",
+        content: `<skill name="agent-design-patterns">
+Agent Design Patterns & Anti-Patterns:
+
+PATTERNS (use these):
+- Deterministic Shell: 67-91% of workflow is code, LLM only for ambiguous reasoning
+- Grader Gates: every LLM output passes through deterministic validators before downstream use
+- Context Injection: use skills to inject domain knowledge rather than cramming into the prompt
+- Fail-Safe Defaults: if LLM is uncertain, output a safe default + flag for human review
+- Scoped Tools: tools have narrow permissions and validate inputs against schema
+
+ANTI-PATTERNS (avoid these):
+- God Prompt: trying to encode all behavior in one massive system prompt (>1000 words)
+- Tool Explosion: exposing 10+ tools to a single agent (causes selection confusion)
+- Missing Guardrails: no output validation, no safety checks, no grading suite
+- Implicit Knowledge: assuming the LLM knows domain-specific rules without skill injection
+- Unbounded Loops: agent can call tools indefinitely without a max-iteration check
+
+Prompt Engineering Tips:
+- Start with role ("You are a...") then context, then rules, then output format
+- Use numbered lists for sequential steps
+- Use "Never..." for hard constraints
+- Include an example output when the format is complex
+- End with the most important instruction (recency bias)
+</skill>`,
+      },
+    ],
+    tools: [
+      {
+        name: "create_agent_config",
+        description: "Generates a complete agent configuration from a natural language description of the use case",
+        params: `{ "description": { "type": "string", "description": "Natural language description of the desired agent" }, "domain": { "type": "string", "description": "Business domain (e.g., DevOps, Marketing, Finance)" }, "complexity": { "type": "string", "enum": ["single", "pipeline", "team", "router"], "default": "single" }, "constraints": { "type": "object", "properties": { "maxTools": { "type": "number", "default": 3 }, "maxSkills": { "type": "number", "default": 4 }, "requireGrading": { "type": "boolean", "default": true } } } }`,
+      },
+      {
+        name: "validate_agent_spec",
+        description: "Validates an agent configuration for internal consistency, security, and completeness",
+        params: `{ "config": { "type": "object", "description": "The agent configuration to validate" }, "checks": { "type": "array", "items": { "type": "string", "enum": ["prompt_tool_consistency", "skill_coverage", "grading_completeness", "security_audit", "output_format_validity"] }, "default": ["prompt_tool_consistency", "skill_coverage", "grading_completeness", "security_audit"] } }`,
+      },
+    ],
+    mcpIntegration: `User describes their agent need in natural language via the Kopern UI.
+POST description to /api/mcp.
+Meta-agent asks clarifying questions (streamed via SSE).
+Generates full agent config and validates it.
+Config is importable directly into Kopern as a new agent.`,
+    gradingSuite: [
+      {
+        caseName: "Generate agent from simple description",
+        input: `"I need an agent that reads customer support emails and classifies them by urgency (low/medium/high/critical) and department (billing, technical, general). It should work with our Zendesk webhook."`,
+        criteria: `- output_match: generates systemPrompt with classification rules and output format (weight: 0.3)
+- output_match: includes at least 1 skill with classification criteria (weight: 0.2)
+- output_match: includes a tool for fetching email content (weight: 0.2)
+- output_match: grading suite tests both urgency and department classification (weight: 0.2)
+- schema_validation: output matches Kopern UseCase interface (weight: 0.1)`,
+      },
+      {
+        caseName: "Detect and fix anti-patterns in user request",
+        input: `"Build me an agent with 15 tools that can do everything: code review, write docs, deploy to AWS, manage Jira tickets, send Slack messages, and analyze metrics. Put all the instructions in one big prompt."`,
+        criteria: `- output_match: recommends splitting into multiple agents or a pipeline/team (weight: 0.3)
+- output_match: warns about tool explosion anti-pattern (weight: 0.2)
+- output_match: warns about god prompt anti-pattern (weight: 0.2)
+- output_match: suggests a scoped alternative architecture (weight: 0.2)
+- output_match: explains why the suggested approach is better (weight: 0.1)`,
+      },
+    ],
+  },
+
+  // 19. Incident Response Squad
+  {
+    slug: "multi-agent-incident-response",
+    title: "Incident Response Squad",
+    domain: "Multi-Agent / SRE",
+    icon: GitMerge,
+    tagline: "Router agent triages alerts to the right specialist, who diagnoses and fixes while a comms agent updates stakeholders",
+    description:
+      "Conditional team execution for incident response. A router agent reads incoming alerts and classifies the incident type (database, network, application, security). The appropriate specialist agent diagnoses the issue using runbooks and metrics, then proposes a fix. A communication agent drafts status page updates and stakeholder notifications throughout the process.",
+    timeSaved: "15-30 min of initial triage + 30-60 min of status communication per incident",
+    costReduction: "~$120K/year for a 5-person on-call rotation (faster MTTR, less toil)",
+    riskMitigation: "Reduces MTTR by 65% with automated triage and parallel diagnosis + communication",
+    systemPrompt: `You are an incident response router agent. Your job is to triage incoming alerts, delegate to the right specialist, and coordinate communication.
+
+Workflow:
+1. TRIAGE: Analyze the alert payload (source, severity, affected service, error patterns)
+2. CLASSIFY: Determine incident type:
+   - database: connection pool exhaustion, replication lag, deadlocks, disk space
+   - network: DNS failures, certificate expiry, load balancer errors, latency spikes
+   - application: OOM kills, crash loops, error rate spikes, deployment failures
+   - security: unauthorized access, DDoS, data exfiltration, CVE exploitation
+3. ROUTE: Delegate to the matching specialist agent with full alert context
+4. COMMUNICATE: In parallel, activate the communication agent to begin drafting status updates
+5. SYNTHESIZE: Combine specialist diagnosis + proposed fix into an incident report
+
+Severity Levels:
+- SEV1 (critical): revenue-impacting, >50% users affected → page all on-call + VP Eng
+- SEV2 (high): degraded service, >10% users affected → page primary on-call
+- SEV3 (medium): non-critical service degraded → notify #incidents channel
+- SEV4 (low): cosmetic or monitoring false positive → log and auto-resolve
+
+Output JSON:
+{
+  "incidentId": string,
+  "severity": "SEV1" | "SEV2" | "SEV3" | "SEV4",
+  "type": "database" | "network" | "application" | "security",
+  "rootCause": string,
+  "diagnosis": { "specialist": string, "findings": [...], "confidence": number },
+  "proposedFix": { "steps": [...], "estimatedTime": string, "riskLevel": string },
+  "statusUpdate": { "external": string, "internal": string },
+  "timeline": [{ "timestamp": string, "event": string }]
+}
+
+Never auto-execute fixes for SEV1 incidents — always require human approval.`,
+    skills: [
+      {
+        name: "runbook-library",
+        content: `<skill name="runbook-library">
+Incident Runbook Library:
+
+DATABASE:
+- Connection pool exhaustion:
+  1. Check current connections: SELECT count(*) FROM pg_stat_activity
+  2. Identify long-running queries: SELECT * FROM pg_stat_activity WHERE state != 'idle' AND query_start < now() - interval '5 min'
+  3. Kill stuck connections if safe: SELECT pg_terminate_backend(pid)
+  4. Scale connection pool if recurring (PgBouncer max_client_conn)
+
+- Replication lag > 30s:
+  1. Check WAL sender status: SELECT * FROM pg_stat_replication
+  2. Verify network between primary and replica
+  3. Check disk I/O on replica (iostat -x 1)
+  4. If persistent: failover to standby, rebuild lagging replica
+
+NETWORK:
+- Certificate expiry:
+  1. Check cert: openssl s_client -connect host:443 | openssl x509 -noout -dates
+  2. Renew via cert-manager or manual renewal
+  3. Verify renewal: curl -vI https://host
+
+APPLICATION:
+- OOM Kill:
+  1. Check: dmesg | grep -i "out of memory"
+  2. Review memory limits in k8s: kubectl describe pod
+  3. Heap dump analysis if Java/Node
+  4. Increase limits or fix memory leak
+
+SECURITY:
+- Unauthorized access:
+  1. Identify source IP and affected accounts
+  2. Block IP at WAF level immediately
+  3. Force password reset for affected accounts
+  4. Check audit logs for data access
+</skill>`,
+      },
+      {
+        name: "communication-templates",
+        content: `<skill name="communication-templates">
+Incident Communication Templates:
+
+EXTERNAL STATUS PAGE (customer-facing):
+---
+**[Investigating/Identified/Monitoring/Resolved] - [Service Name]**
+
+We are currently investigating [brief description of impact].
+
+Affected services: [list]
+Impact: [percentage of users, specific functionality]
+Started: [timestamp UTC]
+
+We will provide updates every [15/30/60] minutes.
+
+Next update by: [timestamp UTC]
+---
+
+INTERNAL SLACK (#incidents):
+---
+🚨 **[SEV level] - [Service] - [One-line summary]**
+
+**Alert source:** [PagerDuty/Datadog/CloudWatch]
+**Impact:** [user-facing description]
+**Assigned to:** [specialist type]
+**Current status:** [Triaging/Diagnosing/Fixing/Verifying]
+
+**Timeline:**
+- HH:MM UTC — Alert received
+- HH:MM UTC — Triaged as [type], routed to [specialist]
+- HH:MM UTC — [Latest update]
+
+**Next steps:** [what's happening now]
+---
+
+EXECUTIVE SUMMARY (post-resolution):
+---
+**Incident #[ID] — [Title]**
+Duration: [X minutes/hours]
+Severity: [SEV level]
+Root cause: [1-2 sentences]
+Fix applied: [1-2 sentences]
+Action items: [numbered list]
+---
+</skill>`,
+      },
+    ],
+    tools: [
+      {
+        name: "query_metrics",
+        description: "Queries monitoring systems for real-time metrics related to the incident",
+        params: `{ "source": { "type": "string", "enum": ["datadog", "cloudwatch", "prometheus", "pagerduty"] }, "query": { "type": "string", "description": "Metric query (e.g., 'avg:system.cpu.user{service:api} last_15m')" }, "timeRange": { "type": "object", "properties": { "start": { "type": "string" }, "end": { "type": "string" } } }, "aggregation": { "type": "string", "enum": ["avg", "max", "min", "sum", "count"], "default": "avg" } }`,
+      },
+      {
+        name: "execute_runbook",
+        description: "Executes a predefined runbook step in the target environment (requires approval for SEV1)",
+        params: `{ "runbookId": { "type": "string", "description": "ID of the runbook to execute (e.g., 'db_kill_connections')" }, "stepIndex": { "type": "number", "description": "Which step to execute (0-indexed)" }, "targetEnvironment": { "type": "string", "enum": ["production", "staging"] }, "dryRun": { "type": "boolean", "default": true, "description": "If true, simulate the step without applying changes" }, "approvedBy": { "type": "string", "description": "Required for production SEV1 — email of approver" } }`,
+      },
+    ],
+    mcpIntegration: `Alert webhook (PagerDuty/Datadog) sends payload to /api/mcp.
+Router agent triages and delegates to specialist in <5 seconds.
+Communication agent streams status updates via SSE.
+Specialist diagnosis and proposed fix returned within 60 seconds.
+Human approves fix for SEV1; auto-applied for SEV3/SEV4.
+Full incident timeline logged for post-mortem generation.`,
+    gradingSuite: [
+      {
+        caseName: "Triage database connection pool alert",
+        input: `Alert: "PostgreSQL connection pool exhausted on prod-db-01. Active connections: 500/500. Service: payment-api. Error rate spike: 45% of requests returning 500. Started: 2 minutes ago."`,
+        criteria: `- output_match: classifies as "database" type (weight: 0.2)
+- output_match: severity is SEV1 or SEV2 (revenue-impacting payment service) (weight: 0.2)
+- output_match: routes to database specialist with connection pool runbook (weight: 0.2)
+- output_match: communication agent drafts status update mentioning payment impact (weight: 0.2)
+- output_match: proposed fix includes killing long-running queries + pool scaling (weight: 0.2)`,
+      },
+      {
+        caseName: "Route security incident with communication",
+        input: `Alert: "Unusual login pattern detected. 150 failed login attempts from IP 203.0.113.42 in 5 minutes targeting admin endpoints. 3 successful logins from same IP to different accounts. GeoIP: unexpected region."`,
+        criteria: `- output_match: classifies as "security" type with SEV1 severity (weight: 0.25)
+- output_match: proposes immediate IP block at WAF (weight: 0.25)
+- output_match: proposes forced password reset for compromised accounts (weight: 0.25)
+- output_match: communication includes internal alert to security team + external notice if data accessed (weight: 0.25)`,
+      },
+    ],
+  },
+
+  // 20. Observable Data Pipeline
+  {
+    slug: "orchestrated-data-pipeline",
+    title: "Observable Data Pipeline",
+    domain: "Pipeline / Observability",
+    icon: Eye,
+    tagline: "A fully traced ETL pipeline with token cost tracking, error handling, and quality validation at every step",
+    description:
+      "A pipeline with full observability across 4 stages: Extract (pull data from sources), Transform (clean, normalize, enrich), Validate (data quality checks), and Load (write to destination). Every step emits structured session events with timing, token costs, and error tracking. Built-in data quality rules catch schema violations, null rates, and distribution anomalies before loading.",
+    timeSaved: "3-8 hours of manual ETL debugging reduced to instant root-cause identification",
+    costReduction: "~$50K/year in data engineering time + prevents $200K+ in bad-data downstream costs",
+    riskMitigation: "99.5% data quality with pre-load validation — zero silent data corruption",
+    systemPrompt: `You are a data pipeline orchestrator with full observability. Manage a 4-stage ETL pipeline where every step is traced.
+
+Pipeline Stages:
+1. EXTRACT: Pull data from configured sources (APIs, databases, file stores)
+   - Emit event: { stage: "extract", status: "start|success|error", source: string, recordCount: number, durationMs: number }
+   - Handle pagination, rate limiting, retries (max 3, exponential backoff)
+
+2. TRANSFORM: Clean, normalize, and enrich the extracted data
+   - Apply transformation rules from the data-quality-rules skill
+   - Emit event: { stage: "transform", transformations: [...], recordsIn: number, recordsOut: number, droppedRecords: number, tokenCost: number }
+   - Track every LLM call cost (token in/out) for transformation steps
+
+3. VALIDATE: Run quality checks before loading
+   - Schema validation: all required fields present, correct types
+   - Null rate check: flag columns with >5% nulls
+   - Distribution check: detect outliers (>3 std deviations from mean)
+   - Referential integrity: foreign keys resolve
+   - Emit event: { stage: "validate", passed: boolean, checks: [...], failedRecords: number }
+
+4. LOAD: Write validated data to destination
+   - Batch insert with transaction safety
+   - Emit event: { stage: "load", destination: string, recordsLoaded: number, durationMs: number }
+
+Final output:
+{
+  "pipelineId": string,
+  "status": "success" | "partial" | "failed",
+  "stages": [{ stage: string, status: string, durationMs: number, tokenCost: number, events: [...] }],
+  "qualityReport": { "totalRecords": number, "validRecords": number, "qualityScore": number },
+  "totalCost": { "tokens": number, "estimatedUsd": number },
+  "errors": [{ "stage": string, "message": string, "recordId": string }]
+}
+
+Never load data that fails validation. Always emit events — observability is non-negotiable.`,
+    skills: [
+      {
+        name: "data-quality-rules",
+        content: `<skill name="data-quality-rules">
+Data Quality Rules Engine:
+
+SCHEMA RULES:
+- Every record must match the declared schema (field names, types, constraints)
+- Required fields with null values → reject record, log reason
+- Type coercion allowed for: string→number (if parseable), ISO date strings→Date
+- Unknown fields: warn but allow (forward compatibility)
+
+NULL RATE THRESHOLDS:
+- Critical fields (IDs, timestamps): 0% nulls allowed
+- Important fields (names, amounts): <2% nulls
+- Optional fields: <10% nulls
+- Above threshold → pipeline pauses, alerts data team
+
+DISTRIBUTION CHECKS:
+- Numeric columns: flag values > 3 standard deviations from rolling 30-day mean
+- Categorical columns: flag new categories not seen in last 90 days
+- Date columns: flag records with future dates or dates > 1 year old
+- Volume: flag if record count deviates >20% from same-day-last-week
+
+DEDUPLICATION:
+- Primary key duplicates: keep latest by timestamp, log dropped record
+- Fuzzy duplicates: flag for human review (don't auto-deduplicate)
+
+FRESHNESS:
+- Data older than configured SLA (default: 1 hour) triggers stale data warning
+- Pipeline run time > 2x historical average triggers performance alert
+</skill>`,
+      },
+      {
+        name: "etl-patterns",
+        content: `<skill name="etl-patterns">
+ETL Best Practices & Patterns:
+
+EXTRACTION PATTERNS:
+- Incremental: only pull records changed since last run (use watermark/cursor)
+- Full refresh: pull everything, compare with existing, apply delta
+- CDC (Change Data Capture): stream changes in real-time from source DB binlog
+- Always prefer incremental — full refresh is 10-100x more expensive
+
+TRANSFORMATION PATTERNS:
+- Idempotent: running the same transform twice produces the same result
+- Immutable staging: write raw data first, transform in a separate step
+- Schema-on-read: store raw, validate on query (flexible but risky)
+- Schema-on-write: validate before storing (strict, recommended for this pipeline)
+
+ERROR HANDLING:
+- Dead letter queue: failed records go to a separate store for manual review
+- Circuit breaker: if error rate > 10% in a batch, halt pipeline and alert
+- Partial success: load valid records, quarantine invalid ones, report both counts
+
+OBSERVABILITY:
+- Every stage emits structured events (not just logs)
+- Track: duration, record counts (in/out/dropped), token costs, error details
+- Pipeline-level metrics: total duration, overall quality score, cost per record
+- Alerting: Slack/PagerDuty on failure, daily digest on success with quality trends
+</skill>`,
+      },
+    ],
+    tools: [
+      {
+        name: "fetch_data_source",
+        description: "Extracts data from a configured source with pagination and retry support",
+        params: `{ "sourceId": { "type": "string", "description": "Registered data source identifier" }, "sourceType": { "type": "string", "enum": ["rest_api", "database", "s3", "gcs", "sftp"] }, "query": { "type": "object", "properties": { "endpoint": { "type": "string" }, "filters": { "type": "object" }, "cursor": { "type": "string" }, "limit": { "type": "number", "default": 1000 } } }, "retryConfig": { "type": "object", "properties": { "maxRetries": { "type": "number", "default": 3 }, "backoffMs": { "type": "number", "default": 1000 } } } }`,
+      },
+      {
+        name: "validate_schema",
+        description: "Validates a batch of records against a JSON Schema and returns quality metrics",
+        params: `{ "records": { "type": "array", "items": { "type": "object" } }, "schema": { "type": "object", "description": "JSON Schema to validate against" }, "rules": { "type": "object", "properties": { "maxNullRate": { "type": "number", "default": 0.05 }, "checkDistribution": { "type": "boolean", "default": true }, "checkReferentialIntegrity": { "type": "boolean", "default": false }, "historicalStats": { "type": "object", "description": "Mean/stddev from previous runs for anomaly detection" } } } }`,
+      },
+    ],
+    mcpIntegration: `Scheduled trigger (cron or webhook) sends pipeline config to /api/mcp.
+Each stage streams events via SSE for real-time dashboard updates.
+Quality report generated before load stage — blocks if quality score < 95%.
+Token costs tracked per stage for cost optimization.
+Full pipeline trace exportable as JSON for audit and debugging.`,
+    gradingSuite: [
+      {
+        caseName: "Detect and quarantine invalid records",
+        input: `Source returns 1000 records. 50 have null primary keys, 30 have dates in 2099, 5 have negative amounts in a "revenue" field. Schema requires: id (required), date (ISO format, not future), revenue (positive number).`,
+        criteria: `- output_match: extract stage reports 1000 records pulled (weight: 0.15)
+- output_match: validate stage catches all 85 invalid records with specific reasons (weight: 0.35)
+- output_match: load stage loads only 915 valid records (weight: 0.25)
+- output_match: quality report shows score reflecting 91.5% validity (weight: 0.15)
+- output_match: events emitted for each stage with timing and costs (weight: 0.1)`,
+      },
+      {
+        caseName: "Pipeline halts on high error rate",
+        input: `Source returns 100 records. 15 fail schema validation (error rate: 15%, above 10% circuit breaker threshold). Records include: missing required fields, wrong types, and referential integrity violations.`,
+        criteria: `- output_match: circuit breaker triggers at >10% error rate (weight: 0.3)
+- output_match: pipeline status is "failed", not "partial" (weight: 0.2)
+- output_match: zero records loaded (load stage skipped) (weight: 0.2)
+- output_match: all 15 failed records in dead letter queue with reasons (weight: 0.2)
+- output_match: alert event emitted with failure details (weight: 0.1)`,
       },
     ],
   },

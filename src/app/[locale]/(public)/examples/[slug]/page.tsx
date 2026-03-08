@@ -26,6 +26,27 @@ import { createAgent } from "@/actions/agents";
 import { createSkill } from "@/actions/skills";
 import { createTool } from "@/actions/tools";
 
+function generateToolStub(name: string, description: string, params: string): string {
+  return `// ${description}
+// Parameters: ${params}
+
+async function execute(params) {
+  // This tool was auto-generated from the "${name}" example template.
+  // Connect it to your data source or API to make it functional.
+
+  const result = {
+    status: "success",
+    tool: "${name}",
+    message: "Tool executed with provided parameters",
+    params: params,
+  };
+
+  return JSON.stringify(result, null, 2);
+}
+
+return execute(params);`;
+}
+
 function CopyBlock({ content, label }: { content: string; label: string }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = useCallback(async () => {
@@ -123,7 +144,7 @@ export default function ExampleDetailPage({
             label: tool.name,
             description: tool.description,
             parametersSchema: tool.params,
-            executeCode: "// TODO: implement",
+            executeCode: generateToolStub(tool.name, tool.description, tool.params),
           })
         )
       );

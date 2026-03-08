@@ -35,11 +35,54 @@
       "api": { "title": "API Endpoints", "description": "Expose agents as JSON-RPC endpoints with API key auth, rate limiting and usage tracking." },
       "security": { "title": "Secure by Design", "description": "Owner-only Firestore rules, hashed API keys, server-side key management, sandboxed execution." }
     },
+    "orchestration": {
+      "title": "Multi-Agent",
+      "titleAccent": "Orchestration",
+      "subtitle": "Build sophisticated workflows with agent teams, pipelines, and meta-agents that create other agents.",
+      "teams": {
+        "title": "Agent Teams",
+        "description": "Run multiple specialized agents in parallel, sequential, or conditional modes. A coordinator synthesizes their outputs into unified results."
+      },
+      "pipelines": {
+        "title": "Agent Pipelines",
+        "description": "Chain agents into step-by-step workflows where each agent's output feeds the next. Built-in error handling and input mapping."
+      },
+      "metaAgent": {
+        "title": "Meta-Agent",
+        "description": "Describe what you need in plain language. The meta-agent creates a fully configured agent — system prompt, skills, tools, and grading suite."
+      }
+    },
+    "observability": {
+      "title": "Observability &",
+      "titleAccent": "Billing",
+      "subtitle": "Track every token, every call, every cost — with full session tracing and pay-per-use billing.",
+      "sessions": {
+        "title": "Session Tracing",
+        "description": "Full observability with event timelines, token counts, cost tracking, and tool execution traces for every agent session."
+      },
+      "billing": {
+        "title": "Pay-per-Token",
+        "description": "Transparent usage-based billing with per-agent breakdown, historical charts, and multi-provider cost tracking."
+      }
+    },
+    "hero": {
+      "tagline": "Not just another coding agent. Mine.",
+      "placeholder": "e.g. I need an agent that reviews PRs for security vulnerabilities, checks OWASP Top 10, and generates fix suggestions...",
+      "generate": "Generate my Agent",
+      "generating": "Designing your agent...",
+      "specReady": "Your agent is ready",
+      "saveAgent": "Save & Deploy Agent",
+      "signInToSave": "Sign in to save your agent",
+      "tryAnother": "Try another",
+      "viewSpec": "View full specification"
+    },
     "footer": "Kopern — AI Agent Builder & Grader"
   },
   "nav": {
     "dashboard": "Dashboard",
     "agents": "Agents",
+    "teams": "Teams",
+    "billing": "Billing",
     "api": "API",
     "examples": "Examples",
     "settings": "Settings",
@@ -165,7 +208,28 @@
     "sendMessage": "Send a message...",
     "send": "Send",
     "clearChat": "Clear chat",
-    "thinking": "Thinking..."
+    "thinking": "Thinking...",
+    "purposePrompt": "What is the purpose of this session?",
+    "purposePlaceholder": "e.g. Explore and debug the authentication flow...",
+    "startSession": "Start Session",
+    "skipPurpose": "Skip",
+    "sessionMetrics": "Session Metrics",
+    "tokensIn": "Tokens In",
+    "tokensOut": "Tokens Out",
+    "estimatedCost": "Est. Cost",
+    "toolsCalled": "Tools Called",
+    "contextUsed": "Context Used",
+    "delegatedTo": "Delegated to",
+    "subAgentResult": "Sub-agent result",
+    "tillDone": {
+      "title": "Task List",
+      "pending": "Pending",
+      "inProgress": "In Progress",
+      "done": "Done",
+      "noTasks": "Agent must create tasks before executing",
+      "clearConfirm": "Clear completed tasks?",
+      "incomplete": "tasks remaining"
+    }
   },
   "grading": {
     "title": "Grading",
@@ -219,6 +283,146 @@
     "agentCreateFailed": "Failed to create agent",
     "copiedToClipboard": "{label} copied to clipboard"
   },
+  "teams": {
+    "title": "Agent Teams",
+    "newTeam": "New Team",
+    "noTeams": "No teams yet",
+    "noTeamsDesc": "Create agent teams to orchestrate multiple agents working together",
+    "createTeam": "Create Team",
+    "form": {
+      "name": "Team Name",
+      "namePlaceholder": "e.g. Plan-Build-Review Pipeline",
+      "description": "Description",
+      "descriptionPlaceholder": "What does this team accomplish?",
+      "executionMode": "Execution Mode",
+      "parallel": "Parallel — all agents run simultaneously",
+      "sequential": "Sequential — agents run in order, output chains",
+      "conditional": "Conditional — route based on content"
+    },
+    "members": "Team Members",
+    "addMember": "Add Agent",
+    "role": "Role",
+    "rolePlaceholder": "e.g. Scout, Planner, Builder, Reviewer",
+    "noMembers": "Add agents to this team",
+    "execute": "Run Team",
+    "executing": "Running team...",
+    "results": "Team Results",
+    "memberCompleted": "completed",
+    "memberRunning": "running"
+  },
+  "pipelines": {
+    "title": "Pipelines",
+    "newPipeline": "New Pipeline",
+    "noPipelines": "No pipelines yet",
+    "noPipelinesDesc": "Create pipelines to chain agents sequentially — output of one becomes input for the next",
+    "createPipeline": "Create Pipeline",
+    "form": {
+      "name": "Pipeline Name",
+      "namePlaceholder": "e.g. Scout → Analyze → Document",
+      "description": "Description",
+      "descriptionPlaceholder": "What does this pipeline produce?"
+    },
+    "steps": "Pipeline Steps",
+    "addStep": "Add Step",
+    "inputMapping": "Input Source",
+    "previousOutput": "Previous step output",
+    "originalInput": "Original user input",
+    "customTemplate": "Custom template",
+    "templatePlaceholder": "Use {{previous_output}} and {{original_input}}",
+    "continueOnError": "Continue on error",
+    "execute": "Run Pipeline",
+    "executing": "Running pipeline...",
+    "stepProgress": "Step {current} of {total}",
+    "stepCompleted": "Step completed",
+    "stepFailed": "Step failed"
+  },
+  "sessions": {
+    "title": "Sessions",
+    "noSessions": "No sessions yet",
+    "noSessionsDesc": "Chat with your agent to create session traces",
+    "purpose": "Purpose",
+    "duration": "Duration",
+    "tokens": "Tokens",
+    "cost": "Cost",
+    "tools": "Tool Calls",
+    "messages": "Messages",
+    "timeline": "Event Timeline",
+    "exportTrace": "Export Trace"
+  },
+  "billing": {
+    "title": "Billing & Usage",
+    "subtitle": "Monitor your token consumption and costs",
+    "currentMonth": "Current Month",
+    "inputTokens": "Input Tokens",
+    "outputTokens": "Output Tokens",
+    "totalCost": "Total Cost",
+    "requests": "Requests",
+    "agentBreakdown": "Per-Agent Breakdown",
+    "usageHistory": "Usage History",
+    "noUsage": "No usage recorded yet",
+    "noUsageDesc": "Start chatting with your agents to track usage",
+    "costEstimate": "Cost Estimate",
+    "perMillionInput": "per 1M input tokens",
+    "perMillionOutput": "per 1M output tokens"
+  },
+  "orchestration": {
+    "title": "Orchestration",
+    "subtitle": "Multi-agent teams, pipelines, and sub-agent delegation",
+    "delegateTool": "Delegate",
+    "delegateDesc": "Allow this agent to delegate tasks to other agents",
+    "targetAgent": "Target Agent",
+    "prompt": "Delegation Prompt"
+  },
+  "purposeGate": {
+    "title": "Purpose Gate",
+    "description": "Ask the user for a session purpose before starting the chat. The answer is injected into the system prompt for focused agent behavior.",
+    "enabled": "Enable Purpose Gate",
+    "question": "Purpose Question",
+    "questionPlaceholder": "What is the purpose of this session?",
+    "injectInPrompt": "Inject purpose in system prompt"
+  },
+  "tillDone": {
+    "title": "TillDone Mode",
+    "description": "Force the agent to maintain a task list. The agent must create tasks before executing and complete all tasks before finishing.",
+    "enabled": "Enable TillDone",
+    "requireTaskList": "Require task list before execution",
+    "autoPrompt": "Auto-prompt on incomplete tasks",
+    "confirmClear": "Confirm before clearing tasks"
+  },
+  "agentBranding": {
+    "title": "Agent Branding",
+    "description": "Customize the visual identity of this agent",
+    "themeColor": "Theme Color",
+    "accentColor": "Accent Color",
+    "icon": "Icon"
+  },
+  "toolOverrides": {
+    "title": "Tool Overrides",
+    "description": "Override default tool behavior with custom wrapper code",
+    "addOverride": "Add Override",
+    "toolName": "Tool Name",
+    "wrapperCode": "Wrapper Code",
+    "enabled": "Enabled",
+    "noOverrides": "No tool overrides",
+    "noOverridesDesc": "Override read, write, edit, or bash tools with custom behavior"
+  },
+  "metaAgent": {
+    "title": "Create with AI",
+    "description": "Describe what you need in plain language. The AI will design a complete agent specification — system prompt, skills, tools, and grading criteria.",
+    "prompt": "Describe the agent you want to build...",
+    "promptPlaceholder": "e.g. I need an agent that reviews pull requests for security vulnerabilities and coding standards, checks OWASP Top 10, and blocks merge if score is below 7/10...",
+    "generating": "Designing your agent...",
+    "generated": "Agent created successfully!",
+    "generate": "Generate Agent Spec",
+    "minChars": "Minimum 10 characters. Be as specific as possible for better results.",
+    "specReady": "Agent specification ready",
+    "agentName": "Name",
+    "domain": "Domain",
+    "skillsCount": "Skills",
+    "createFromSpec": "Create Agent",
+    "startOver": "Start Over",
+    "error": "Generation failed. Please try again."
+  },
   "pricing": {
     "title": "Simple, Transparent Pricing",
     "subtitle": "Start free, scale as you grow. All plans include core agent building features.",
@@ -228,10 +432,12 @@
     "mo": "/mo",
     "yr": "/yr",
     "popular": "Popular",
+    "payAsYouGo": "Flexible",
     "getStarted": "Get Started",
     "currentPlan": "Current Plan",
     "contactSales": "Contact Sales",
     "startFree": "Start Free",
+    "startUsage": "Start Pay-as-you-Go",
     "tiers": {
       "starter": {
         "name": "Starter",
@@ -244,6 +450,12 @@
         "price": "79",
         "priceAnnual": "790",
         "description": "For teams building production agents"
+      },
+      "usage": {
+        "name": "Usage",
+        "price": "0",
+        "priceAnnual": "0",
+        "description": "Pay only for what you use — no limits"
       },
       "enterprise": {
         "name": "Enterprise",
@@ -262,7 +474,15 @@
       "sso": "SSO",
       "auditLogs": "Audit Logs",
       "versionHistory": "Version History",
-      "batchProcessing": "Batch Processing"
+      "batchProcessing": "Batch Processing",
+      "teams": "Agent Teams",
+      "pipelines": "Pipelines",
+      "subAgents": "Sub-agent Delegation",
+      "metaAgent": "AI Agent Builder",
+      "observability": "Observability",
+      "inputTokenPrice": "Input tokens",
+      "outputTokenPrice": "Output tokens",
+      "gradingPrice": "Grading"
     },
     "featureValues": {
       "starter": {
@@ -271,7 +491,10 @@
         "mcpEndpoints": "1",
         "gradingRunsPerMonth": "5",
         "models": "Sonnet only",
-        "support": "Community"
+        "support": "Community",
+        "teams": "0",
+        "pipelines": "0",
+        "observability": "Basic"
       },
       "pro": {
         "agents": "25",
@@ -279,7 +502,24 @@
         "mcpEndpoints": "10",
         "gradingRunsPerMonth": "100",
         "models": "All models",
-        "support": "Priority email"
+        "support": "Priority email",
+        "teams": "5",
+        "pipelines": "10",
+        "observability": "Advanced"
+      },
+      "usage": {
+        "agents": "Unlimited",
+        "tokensPerMonth": "Pay per use",
+        "mcpEndpoints": "Unlimited",
+        "gradingRunsPerMonth": "$0.10 / run",
+        "models": "All models",
+        "support": "Email",
+        "teams": "Unlimited",
+        "pipelines": "Unlimited",
+        "observability": "Advanced",
+        "inputTokenPrice": "$3 / 1M",
+        "outputTokenPrice": "$15 / 1M",
+        "gradingPrice": "$0.10 / run"
       },
       "enterprise": {
         "agents": "Unlimited",
@@ -287,7 +527,10 @@
         "mcpEndpoints": "Unlimited",
         "gradingRunsPerMonth": "Unlimited",
         "models": "All + fine-tuned",
-        "support": "Dedicated + SLA"
+        "support": "Dedicated + SLA",
+        "teams": "Unlimited",
+        "pipelines": "Unlimited",
+        "observability": "Complete"
       }
     },
     "comparisonTitle": "Compare Plans",
@@ -366,6 +609,10 @@
     "settings": "Settings",
     "new": "New",
     "runs": "Runs",
-    "pricing": "Pricing"
+    "pricing": "Pricing",
+    "teams": "Teams",
+    "pipelines": "Pipelines",
+    "sessions": "Sessions",
+    "billing": "Billing"
   }
 }

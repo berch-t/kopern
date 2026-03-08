@@ -10,6 +10,7 @@ import { Plus } from "lucide-react";
 import { StaggerChildren, staggerItem } from "@/components/motion/StaggerChildren";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { AgentCard } from "@/components/agents/AgentCard";
+import { MetaAgentWizard } from "@/components/agents/MetaAgentWizard";
 import { motion } from "framer-motion";
 
 export default function AgentsPage() {
@@ -25,12 +26,15 @@ export default function AgentsPage() {
       <SlideUp>
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">{t.agents.title}</h1>
-          <LocalizedLink href="/agents/new">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              {t.agents.newAgent}
-            </Button>
-          </LocalizedLink>
+          <div className="flex gap-2">
+            {user && <MetaAgentWizard userId={user.uid} />}
+            <LocalizedLink href="/agents/new">
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                {t.agents.newAgent}
+              </Button>
+            </LocalizedLink>
+          </div>
         </div>
       </SlideUp>
 

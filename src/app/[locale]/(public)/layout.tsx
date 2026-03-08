@@ -9,7 +9,6 @@ import { LocalizedLink } from "@/components/LocalizedLink";
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
 import { Button } from "@/components/ui/button";
 import {
-  FlaskConical,
   Lightbulb,
   DollarSign,
   LayoutDashboard,
@@ -36,8 +35,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
         <LocalizedLink href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <FlaskConical className="h-7 w-7 text-primary" />
-          <span className="text-xl font-bold">Kopern</span>
+          <img src="/logo_small.png" alt="Kopern" className="h-7" />
         </LocalizedLink>
         <div className="flex items-center gap-3">
           <LocalizedLink href="/examples">

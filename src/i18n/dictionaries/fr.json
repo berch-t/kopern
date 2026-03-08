@@ -35,11 +35,54 @@
       "api": { "title": "Endpoints API", "description": "Exposez vos agents comme endpoints JSON-RPC avec authentification par clé API, limitation de débit et suivi d'utilisation." },
       "security": { "title": "Sécurisé par Conception", "description": "Règles Firestore propriétaire uniquement, clés API hashées, gestion des clés côté serveur, exécution sandboxée." }
     },
+    "orchestration": {
+      "title": "Orchestration",
+      "titleAccent": "Multi-Agent",
+      "subtitle": "Construisez des workflows sophistiqués avec des équipes d'agents, des pipelines et des méta-agents qui créent d'autres agents.",
+      "teams": {
+        "title": "Équipes d'Agents",
+        "description": "Exécutez plusieurs agents spécialisés en parallèle, séquentiel ou conditionnel. Un coordinateur synthétise leurs résultats en un rapport unifié."
+      },
+      "pipelines": {
+        "title": "Pipelines d'Agents",
+        "description": "Chaînez des agents en workflows étape par étape où la sortie de chaque agent alimente le suivant. Gestion d'erreurs et mapping des entrées intégrés."
+      },
+      "metaAgent": {
+        "title": "Méta-Agent",
+        "description": "Décrivez ce dont vous avez besoin en langage naturel. Le méta-agent crée un agent entièrement configuré — prompt système, skills, outils et suite de grading."
+      }
+    },
+    "observability": {
+      "title": "Observabilité &",
+      "titleAccent": "Facturation",
+      "subtitle": "Suivez chaque token, chaque appel, chaque coût — avec traçage complet des sessions et facturation à l'usage.",
+      "sessions": {
+        "title": "Traçage de Sessions",
+        "description": "Observabilité complète avec chronologie des événements, comptage de tokens, suivi des coûts et traces d'exécution des outils pour chaque session."
+      },
+      "billing": {
+        "title": "Paiement par Token",
+        "description": "Facturation transparente à l'usage avec ventilation par agent, graphiques historiques et suivi des coûts multi-fournisseur."
+      }
+    },
+    "hero": {
+      "tagline": "Pas un énième agent de code. Le mien.",
+      "placeholder": "ex. J'ai besoin d'un agent qui revoit les PRs pour les vulnérabilités de sécurité, vérifie l'OWASP Top 10 et génère des suggestions de correctifs...",
+      "generate": "Générer mon Agent",
+      "generating": "Conception de votre agent...",
+      "specReady": "Votre agent est prêt",
+      "saveAgent": "Sauvegarder & Déployer",
+      "signInToSave": "Connectez-vous pour sauvegarder votre agent",
+      "tryAnother": "Essayer un autre",
+      "viewSpec": "Voir la spécification complète"
+    },
     "footer": "Kopern — Constructeur & Évaluateur d'Agents IA"
   },
   "nav": {
     "dashboard": "Tableau de bord",
     "agents": "Agents",
+    "teams": "Équipes",
+    "billing": "Facturation",
     "api": "API",
     "examples": "Exemples",
     "settings": "Paramètres",
@@ -165,7 +208,28 @@
     "sendMessage": "Envoyer un message...",
     "send": "Envoyer",
     "clearChat": "Effacer le chat",
-    "thinking": "Réflexion..."
+    "thinking": "Réflexion...",
+    "purposePrompt": "Quel est le but de cette session ?",
+    "purposePlaceholder": "ex. Explorer et déboguer le flux d'authentification...",
+    "startSession": "Démarrer la Session",
+    "skipPurpose": "Passer",
+    "sessionMetrics": "Métriques de Session",
+    "tokensIn": "Tokens Entrants",
+    "tokensOut": "Tokens Sortants",
+    "estimatedCost": "Coût Est.",
+    "toolsCalled": "Outils Appelés",
+    "contextUsed": "Contexte Utilisé",
+    "delegatedTo": "Délégué à",
+    "subAgentResult": "Résultat du sous-agent",
+    "tillDone": {
+      "title": "Liste de Tâches",
+      "pending": "En attente",
+      "inProgress": "En cours",
+      "done": "Terminé",
+      "noTasks": "L'agent doit créer des tâches avant d'exécuter",
+      "clearConfirm": "Effacer les tâches terminées ?",
+      "incomplete": "tâches restantes"
+    }
   },
   "grading": {
     "title": "Notation",
@@ -219,6 +283,146 @@
     "agentCreateFailed": "Échec de création de l'agent",
     "copiedToClipboard": "{label} copié dans le presse-papiers"
   },
+  "teams": {
+    "title": "Équipes d'Agents",
+    "newTeam": "Nouvelle Équipe",
+    "noTeams": "Aucune équipe pour le moment",
+    "noTeamsDesc": "Créez des équipes d'agents pour orchestrer plusieurs agents travaillant ensemble",
+    "createTeam": "Créer une Équipe",
+    "form": {
+      "name": "Nom de l'Équipe",
+      "namePlaceholder": "ex. Pipeline Plan-Build-Review",
+      "description": "Description",
+      "descriptionPlaceholder": "Que fait cette équipe ?",
+      "executionMode": "Mode d'Exécution",
+      "parallel": "Parallèle — tous les agents s'exécutent simultanément",
+      "sequential": "Séquentiel — les agents s'exécutent en ordre, sortie chaînée",
+      "conditional": "Conditionnel — routage basé sur le contenu"
+    },
+    "members": "Membres de l'Équipe",
+    "addMember": "Ajouter un Agent",
+    "role": "Rôle",
+    "rolePlaceholder": "ex. Scout, Planificateur, Constructeur, Réviseur",
+    "noMembers": "Ajoutez des agents à cette équipe",
+    "execute": "Lancer l'Équipe",
+    "executing": "Exécution de l'équipe...",
+    "results": "Résultats de l'Équipe",
+    "memberCompleted": "terminé",
+    "memberRunning": "en cours"
+  },
+  "pipelines": {
+    "title": "Pipelines",
+    "newPipeline": "Nouveau Pipeline",
+    "noPipelines": "Aucun pipeline pour le moment",
+    "noPipelinesDesc": "Créez des pipelines pour chaîner des agents séquentiellement — la sortie de l'un devient l'entrée du suivant",
+    "createPipeline": "Créer un Pipeline",
+    "form": {
+      "name": "Nom du Pipeline",
+      "namePlaceholder": "ex. Scout → Analyse → Documentation",
+      "description": "Description",
+      "descriptionPlaceholder": "Que produit ce pipeline ?"
+    },
+    "steps": "Étapes du Pipeline",
+    "addStep": "Ajouter une Étape",
+    "inputMapping": "Source d'Entrée",
+    "previousOutput": "Sortie de l'étape précédente",
+    "originalInput": "Entrée utilisateur originale",
+    "customTemplate": "Template personnalisé",
+    "templatePlaceholder": "Utilisez {{previous_output}} et {{original_input}}",
+    "continueOnError": "Continuer en cas d'erreur",
+    "execute": "Lancer le Pipeline",
+    "executing": "Exécution du pipeline...",
+    "stepProgress": "Étape {current} sur {total}",
+    "stepCompleted": "Étape terminée",
+    "stepFailed": "Étape échouée"
+  },
+  "sessions": {
+    "title": "Sessions",
+    "noSessions": "Aucune session pour le moment",
+    "noSessionsDesc": "Discutez avec votre agent pour créer des traces de session",
+    "purpose": "Objectif",
+    "duration": "Durée",
+    "tokens": "Tokens",
+    "cost": "Coût",
+    "tools": "Appels d'Outils",
+    "messages": "Messages",
+    "timeline": "Chronologie des Événements",
+    "exportTrace": "Exporter la Trace"
+  },
+  "billing": {
+    "title": "Facturation & Utilisation",
+    "subtitle": "Suivez votre consommation de tokens et vos coûts",
+    "currentMonth": "Mois en Cours",
+    "inputTokens": "Tokens Entrants",
+    "outputTokens": "Tokens Sortants",
+    "totalCost": "Coût Total",
+    "requests": "Requêtes",
+    "agentBreakdown": "Ventilation par Agent",
+    "usageHistory": "Historique d'Utilisation",
+    "noUsage": "Aucune utilisation enregistrée",
+    "noUsageDesc": "Commencez à discuter avec vos agents pour suivre l'utilisation",
+    "costEstimate": "Estimation du Coût",
+    "perMillionInput": "par 1M tokens entrants",
+    "perMillionOutput": "par 1M tokens sortants"
+  },
+  "orchestration": {
+    "title": "Orchestration",
+    "subtitle": "Équipes multi-agents, pipelines et délégation de sous-agents",
+    "delegateTool": "Déléguer",
+    "delegateDesc": "Permettre à cet agent de déléguer des tâches à d'autres agents",
+    "targetAgent": "Agent Cible",
+    "prompt": "Prompt de Délégation"
+  },
+  "purposeGate": {
+    "title": "Purpose Gate",
+    "description": "Demander à l'utilisateur l'objectif de la session avant de démarrer le chat. La réponse est injectée dans le prompt système pour un comportement agent ciblé.",
+    "enabled": "Activer le Purpose Gate",
+    "question": "Question d'Objectif",
+    "questionPlaceholder": "Quel est le but de cette session ?",
+    "injectInPrompt": "Injecter l'objectif dans le prompt système"
+  },
+  "tillDone": {
+    "title": "Mode TillDone",
+    "description": "Forcer l'agent à maintenir une liste de tâches. L'agent doit créer des tâches avant d'exécuter et compléter toutes les tâches avant de terminer.",
+    "enabled": "Activer TillDone",
+    "requireTaskList": "Exiger une liste de tâches avant exécution",
+    "autoPrompt": "Re-prompter automatiquement sur tâches incomplètes",
+    "confirmClear": "Confirmer avant de vider les tâches"
+  },
+  "agentBranding": {
+    "title": "Identité Visuelle de l'Agent",
+    "description": "Personnalisez l'identité visuelle de cet agent",
+    "themeColor": "Couleur du Thème",
+    "accentColor": "Couleur d'Accent",
+    "icon": "Icône"
+  },
+  "toolOverrides": {
+    "title": "Surcharges d'Outils",
+    "description": "Surcharger le comportement par défaut des outils avec du code wrapper personnalisé",
+    "addOverride": "Ajouter une Surcharge",
+    "toolName": "Nom de l'Outil",
+    "wrapperCode": "Code Wrapper",
+    "enabled": "Activé",
+    "noOverrides": "Aucune surcharge d'outil",
+    "noOverridesDesc": "Surchargez les outils read, write, edit ou bash avec un comportement personnalisé"
+  },
+  "metaAgent": {
+    "title": "Créer avec l'IA",
+    "description": "Décrivez ce dont vous avez besoin en langage naturel. L'IA concevra une spécification complète d'agent — prompt système, skills, outils et critères de grading.",
+    "prompt": "Décrivez l'agent que vous souhaitez créer...",
+    "promptPlaceholder": "ex. J'ai besoin d'un agent qui revoit les pull requests pour les vulnérabilités de sécurité, vérifie l'OWASP Top 10 et bloque le merge si le score est inférieur à 7/10...",
+    "generating": "Conception de votre agent...",
+    "generated": "Agent créé avec succès !",
+    "generate": "Générer la Spécification",
+    "minChars": "Minimum 10 caractères. Soyez aussi précis que possible pour de meilleurs résultats.",
+    "specReady": "Spécification d'agent prête",
+    "agentName": "Nom",
+    "domain": "Domaine",
+    "skillsCount": "Skills",
+    "createFromSpec": "Créer l'Agent",
+    "startOver": "Recommencer",
+    "error": "Échec de la génération. Veuillez réessayer."
+  },
   "pricing": {
     "title": "Tarification Simple et Transparente",
     "subtitle": "Commencez gratuitement, évoluez selon vos besoins. Tous les plans incluent les fonctionnalités de base de construction d'agents.",
@@ -228,10 +432,12 @@
     "mo": "/mois",
     "yr": "/an",
     "popular": "Populaire",
+    "payAsYouGo": "Flexible",
     "getStarted": "Commencer",
     "currentPlan": "Plan Actuel",
     "contactSales": "Contacter les Ventes",
     "startFree": "Commencer Gratuitement",
+    "startUsage": "Démarrer à l'Usage",
     "tiers": {
       "starter": {
         "name": "Starter",
@@ -244,6 +450,12 @@
         "price": "79",
         "priceAnnual": "790",
         "description": "Pour les équipes construisant des agents en production"
+      },
+      "usage": {
+        "name": "Usage",
+        "price": "0",
+        "priceAnnual": "0",
+        "description": "Payez uniquement ce que vous utilisez — sans limites"
       },
       "enterprise": {
         "name": "Enterprise",
@@ -262,7 +474,15 @@
       "sso": "SSO",
       "auditLogs": "Journaux d'Audit",
       "versionHistory": "Historique des Versions",
-      "batchProcessing": "Traitement par Lots"
+      "batchProcessing": "Traitement par Lots",
+      "teams": "Équipes d'Agents",
+      "pipelines": "Pipelines",
+      "subAgents": "Délégation de Sous-agents",
+      "metaAgent": "Constructeur d'Agents IA",
+      "observability": "Observabilité",
+      "inputTokenPrice": "Tokens entrants",
+      "outputTokenPrice": "Tokens sortants",
+      "gradingPrice": "Notation"
     },
     "featureValues": {
       "starter": {
@@ -271,7 +491,10 @@
         "mcpEndpoints": "1",
         "gradingRunsPerMonth": "5",
         "models": "Sonnet uniquement",
-        "support": "Communauté"
+        "support": "Communauté",
+        "teams": "0",
+        "pipelines": "0",
+        "observability": "Basique"
       },
       "pro": {
         "agents": "25",
@@ -279,7 +502,24 @@
         "mcpEndpoints": "10",
         "gradingRunsPerMonth": "100",
         "models": "Tous les modèles",
-        "support": "Email prioritaire"
+        "support": "Email prioritaire",
+        "teams": "5",
+        "pipelines": "10",
+        "observability": "Avancée"
+      },
+      "usage": {
+        "agents": "Illimité",
+        "tokensPerMonth": "À l'usage",
+        "mcpEndpoints": "Illimité",
+        "gradingRunsPerMonth": "0,10$ / exécution",
+        "models": "Tous les modèles",
+        "support": "Email",
+        "teams": "Illimité",
+        "pipelines": "Illimité",
+        "observability": "Avancée",
+        "inputTokenPrice": "3$ / 1M",
+        "outputTokenPrice": "15$ / 1M",
+        "gradingPrice": "0,10$ / exécution"
       },
       "enterprise": {
         "agents": "Illimité",
@@ -287,7 +527,10 @@
         "mcpEndpoints": "Illimité",
         "gradingRunsPerMonth": "Illimité",
         "models": "Tous + fine-tunés",
-        "support": "Dédié + SLA"
+        "support": "Dédié + SLA",
+        "teams": "Illimité",
+        "pipelines": "Illimité",
+        "observability": "Complète"
       }
     },
     "comparisonTitle": "Comparer les Plans",
@@ -366,6 +609,10 @@
     "settings": "Paramètres",
     "new": "Nouveau",
     "runs": "Exécutions",
-    "pricing": "Tarifs"
+    "pricing": "Tarifs",
+    "teams": "Équipes",
+    "pipelines": "Pipelines",
+    "sessions": "Sessions",
+    "billing": "Facturation"
   }
 }
