@@ -4,9 +4,12 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   GithubAuthProvider,
+  linkWithCredential,
+  fetchSignInMethodsForEmail,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   type User,
+  type AuthError,
 } from "firebase/auth";
 import { auth } from "./config";
 
@@ -19,9 +22,37 @@ export async function signInWithGoogle() {
 }
 
 export async function signInWithGithub() {
-  const result = await signInWithPopup(auth, githubProvider);
-  const credential = GithubAuthProvider.credentialFromResult(result);
-  return { result, githubAccessToken: credential?.accessToken ?? null };
+  try {
+    const result = await signInWithPopup(auth, githubProvider);
+    const credential = GithubAuthProvider.credentialFromResult(result);
+    return { result, githubAccessToken: credential?.accessToken ?? null };
+  } catch (error) {
+    const authError = error as AuthError;
+
+    // Account exists with different credential — link them
+    if (authError.code === "auth/account-exists-with-different-credential") {
+      const pendingCred = GithubAuthProvider.credentialFromError(authError);
+      const email = authError.customData?.email as string | undefined;
+
+      if (!email || !pendingCred) throw error;
+
+      // Check which provider the existing account uses
+      const methods = await fetchSignInMethodsForEmail(auth, email);
+
+      if (methods.includes("google.com")) {
+        // Sign in with Google first, then link GitHub
+        const googleResult = await signInWithPopup(auth, googleProvider);
+        const linkResult = await linkWithCredential(googleResult.user, pendingCred);
+        const credential = GithubAuthProvider.credentialFromResult(linkResult);
+        return { result: linkResult, githubAccessToken: credential?.accessToken ?? null };
+      }
+
+      // If the existing provider is something else, re-throw
+      throw error;
+    }
+
+    throw error;
+  }
 }
 
 export async function signInWithEmail(email: string, password: string) {

@@ -117,7 +117,7 @@ export default function SessionsPage({
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <p className="font-medium truncate">
-                          {session.purpose ?? t.sessions.noSessions}
+                          {session.purpose || "Untitled session"}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {formatDate(session.startedAt)}

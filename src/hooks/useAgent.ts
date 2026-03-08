@@ -18,27 +18,57 @@ export interface ToolCallInfo {
   isError?: boolean;
 }
 
+export interface SessionMetrics {
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCost: number;
+  toolIterations: number;
+  toolCallCount: number;
+}
+
 export interface AgentPlaygroundConfig {
   systemPrompt: string;
   modelProvider: string;
   modelId: string;
   skills?: { name: string; content: string }[];
+  connectedRepos?: string[];
+  userId?: string;
 }
 
 export function useAgent(agentId: string, agentConfig: AgentPlaygroundConfig | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentAssistantContent, setCurrentAssistantContent] = useState("");
   const [currentToolCalls, setCurrentToolCalls] = useState<ToolCallInfo[]>([]);
+  const [sessionMetrics, setSessionMetrics] = useState<SessionMetrics | null>(null);
+  const [cumulativeMetrics, setCumulativeMetrics] = useState<SessionMetrics>({
+    inputTokens: 0,
+    outputTokens: 0,
+    estimatedCost: 0,
+    toolIterations: 0,
+    toolCallCount: 0,
+  });
 
   // Use refs to avoid stale closure in onMessage callbacks
   const contentRef = useRef("");
   const toolCallsRef = useRef<ToolCallInfo[]>([]);
   const messagesRef = useRef<ChatMessage[]>([]);
+  const sessionIdRef = useRef<string>("");
+  const cumulativeRef = useRef<SessionMetrics>({
+    inputTokens: 0,
+    outputTokens: 0,
+    estimatedCost: 0,
+    toolIterations: 0,
+    toolCallCount: 0,
+  });
 
   const { isStreaming, start, stop } = useSSE({
     onMessage: (msg) => {
       const { event, data } = msg;
       switch (event) {
+        case "session": {
+          sessionIdRef.current = (data as { sessionId: string }).sessionId;
+          break;
+        }
         case "token": {
           const text = (data as { text: string }).text;
           contentRef.current += text;
@@ -63,6 +93,21 @@ export function useAgent(agentId: string, agentConfig: AgentPlaygroundConfig | n
           break;
         }
         case "done": {
+          const doneData = data as { metrics?: SessionMetrics };
+
+          // Capture metrics
+          if (doneData.metrics) {
+            setSessionMetrics(doneData.metrics);
+            cumulativeRef.current = {
+              inputTokens: cumulativeRef.current.inputTokens + doneData.metrics.inputTokens,
+              outputTokens: cumulativeRef.current.outputTokens + doneData.metrics.outputTokens,
+              estimatedCost: cumulativeRef.current.estimatedCost + doneData.metrics.estimatedCost,
+              toolIterations: cumulativeRef.current.toolIterations + doneData.metrics.toolIterations,
+              toolCallCount: cumulativeRef.current.toolCallCount + doneData.metrics.toolCallCount,
+            };
+            setCumulativeMetrics({ ...cumulativeRef.current });
+          }
+
           const assistantMsg: ChatMessage = {
             id: crypto.randomUUID(),
             role: "assistant",
@@ -80,7 +125,6 @@ export function useAgent(agentId: string, agentConfig: AgentPlaygroundConfig | n
         }
         case "error": {
           const errMsg = (data as { message: string }).message;
-          // Show error as assistant message
           const errorMsg: ChatMessage = {
             id: crypto.randomUUID(),
             role: "assistant",
@@ -116,13 +160,17 @@ export function useAgent(agentId: string, agentConfig: AgentPlaygroundConfig | n
       toolCallsRef.current = [];
       setCurrentAssistantContent("");
       setCurrentToolCalls([]);
+      setSessionMetrics(null);
 
       start(`/api/agents/${agentId}/chat`, {
         message: content,
         history: messagesRef.current
           .filter((m) => m.role === "user" || m.role === "assistant")
-          .slice(0, -1) // exclude current user message, it's sent separately
+          .slice(0, -1)
           .map((m) => ({ role: m.role, content: m.content })),
+        userId: agentConfig.userId,
+        connectedRepos: agentConfig.connectedRepos,
+        sessionId: sessionIdRef.current || undefined,
         agentConfig: {
           systemPrompt: agentConfig.systemPrompt,
           modelProvider: agentConfig.modelProvider,
@@ -141,5 +189,8 @@ export function useAgent(agentId: string, agentConfig: AgentPlaygroundConfig | n
     isStreaming,
     sendMessage,
     stop,
+    sessionMetrics,
+    cumulativeMetrics,
+    sessionId: sessionIdRef.current,
   };
 }

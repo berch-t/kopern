@@ -179,7 +179,7 @@ export default function SessionDetailPage({
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <h1 className="text-2xl font-bold truncate">
-              {session.purpose ?? "Session"}
+              {session.purpose || "Untitled session"}
             </h1>
             <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">

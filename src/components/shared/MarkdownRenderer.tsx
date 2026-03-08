@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, Children } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -51,11 +51,30 @@ export function MarkdownRenderer({
   headingIds = false,
   slugify: slugifyFn = defaultSlugify,
 }: MarkdownRendererProps) {
+  // Extract plain text from React children (handles nested <code>, <strong>, etc.)
+  function extractText(node: React.ReactNode): string {
+    if (typeof node === "string") return node;
+    if (typeof node === "number") return String(node);
+    if (!node) return "";
+    if (Array.isArray(node)) return node.map(extractText).join("");
+    if (typeof node === "object" && node !== null && "props" in node) {
+      const el = node as React.ReactElement<{ children?: React.ReactNode }>;
+      return extractText(el.props.children);
+    }
+    return Children.toArray(node).map(extractText).join("");
+  }
+
+  // Track seen slugs to deduplicate heading IDs
+  const slugCounts = new Map<string, number>();
+
   const headingComponent = (Tag: "h1" | "h2" | "h3" | "h4" | "h5" | "h6") => {
     return function Heading({ children }: { children?: React.ReactNode }) {
       if (headingIds) {
-        const text = typeof children === "string" ? children : String(children);
-        const id = slugifyFn(text);
+        const text = extractText(children);
+        const baseSlug = slugifyFn(text);
+        const count = slugCounts.get(baseSlug) || 0;
+        slugCounts.set(baseSlug, count + 1);
+        const id = count === 0 ? baseSlug : `${baseSlug}-${count}`;
         return <Tag id={id} className="scroll-mt-6">{children}</Tag>;
       }
       return <Tag>{children}</Tag>;

@@ -50,8 +50,8 @@ export default function BillingPage() {
     async function loadUsage() {
       try {
         const [currentUsage, usageHistory] = await Promise.all([
-          getUsage(user!.uid).catch(() => null),
-          getUsageHistory(user!.uid, 6).catch(() => []),
+          getUsage(user!.uid).catch((e) => { console.warn("getUsage error:", e); return null; }),
+          getUsageHistory(user!.uid, 6).catch((e) => { console.warn("getUsageHistory error:", e); return []; }),
         ]);
         setUsage(currentUsage);
         setHistory(usageHistory);
@@ -73,22 +73,60 @@ export default function BillingPage() {
     agentNameMap[agent.id] = agent.name;
   }
 
-  // Build breakdown rows
-  const breakdownRows = usage
-    ? Object.entries(usage.agentBreakdown).map(([agentId, data]) => ({
-        agentId,
-        agentName: agentNameMap[agentId] ?? agentId.slice(0, 8) + "...",
-        ...data,
-      }))
-    : [];
+  // Build breakdown rows — handle both nested and legacy flat dot-notation keys
+  const breakdownRows: { agentId: string; agentName: string; inputTokens: number; outputTokens: number; cost: number }[] = [];
+  if (usage) {
+    if (usage.agentBreakdown && typeof usage.agentBreakdown === "object") {
+      // New format: nested object
+      for (const [id, data] of Object.entries(usage.agentBreakdown)) {
+        breakdownRows.push({
+          agentId: id,
+          agentName: agentNameMap[id] ?? id.slice(0, 8) + "...",
+          ...(data as { inputTokens: number; outputTokens: number; cost: number }),
+        });
+      }
+    } else {
+      // Legacy format: flat dot-notation keys like "agentBreakdown.xxx.cost"
+      const raw = usage as unknown as Record<string, unknown>;
+      const agentMap: Record<string, { inputTokens: number; outputTokens: number; cost: number }> = {};
+      for (const key of Object.keys(raw)) {
+        const match = key.match(/^agentBreakdown\.(.+)\.(inputTokens|outputTokens|cost)$/);
+        if (match) {
+          const [, id, field] = match;
+          if (!agentMap[id]) agentMap[id] = { inputTokens: 0, outputTokens: 0, cost: 0 };
+          agentMap[id][field as "inputTokens" | "outputTokens" | "cost"] = raw[key] as number;
+        }
+      }
+      for (const [id, data] of Object.entries(agentMap)) {
+        breakdownRows.push({
+          agentId: id,
+          agentName: agentNameMap[id] ?? id.slice(0, 8) + "...",
+          ...data,
+        });
+      }
+    }
+  }
 
-  // Chart data
-  const chartData = history.map((h) => ({
+  // Chart data — ensure current month is always included
+  const historyData = history.map((h) => ({
     yearMonth: h.yearMonth,
-    totalCost: h.totalCost,
-    inputTokens: h.inputTokens,
-    outputTokens: h.outputTokens,
+    totalCost: h.totalCost ?? 0,
+    inputTokens: h.inputTokens ?? 0,
+    outputTokens: h.outputTokens ?? 0,
   }));
+
+  // If history is empty but we have current usage, add it
+  const chartData =
+    historyData.length === 0 && usage
+      ? [
+          {
+            yearMonth: usage.yearMonth,
+            totalCost: usage.totalCost ?? 0,
+            inputTokens: usage.inputTokens ?? 0,
+            outputTokens: usage.outputTokens ?? 0,
+          },
+        ]
+      : historyData;
 
   const providerPricing = [
     { name: "Anthropic", input: TOKEN_PRICING.anthropic.input, output: TOKEN_PRICING.anthropic.output, color: "text-orange-500" },

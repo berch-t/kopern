@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signInWithGoogle, signInWithGithub, signInWithEmail, signUpWithEmail } from "@/lib/firebase/auth";
-import { updateDoc, serverTimestamp } from "firebase/firestore";
+import { setDoc, serverTimestamp } from "firebase/firestore";
 import { userDoc } from "@/lib/firebase/firestore";
 import { useDictionary } from "@/providers/LocaleProvider";
 import { useLocalizedRouter } from "@/hooks/useLocalizedRouter";
@@ -29,14 +29,15 @@ export default function LoginPage() {
       } else {
         const { result, githubAccessToken } = await signInWithGithub();
         if (githubAccessToken && result.user) {
-          await updateDoc(userDoc(result.user.uid), {
+          await setDoc(userDoc(result.user.uid), {
             githubAccessToken,
             updatedAt: serverTimestamp(),
-          });
+          }, { merge: true });
         }
       }
       router.push("/dashboard");
     } catch (err) {
+      console.error("OAuth error:", err);
       toast.error(t.auth.failedOAuth.replace("{provider}", provider));
     }
   }

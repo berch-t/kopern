@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { createSSEStream, sseResponse } from "@/lib/utils/sse";
-import { streamLLM, type LLMMessage } from "@/lib/llm/client";
+import { runAgentWithTools } from "@/lib/tools/run-agent";
 
 interface PipelineStepConfig {
   agentId: string;
@@ -29,7 +29,7 @@ export async function POST(
 ) {
   const { pipelineId } = await params;
   const body = (await request.json()) as PipelineExecuteBody;
-  const { prompt, pipelineName, steps } = body;
+  const { prompt, userId, pipelineName, steps } = body;
 
   const { stream, send, close } = createSSEStream();
 
@@ -82,24 +82,37 @@ export async function POST(
           systemPrompt += `\n\n<skills>\n${skillsXml}\n</skills>`;
         }
 
-        const messages: LLMMessage[] = [{ role: "user", content: stepInput }];
         let stepResult = "";
         let stepFailed = false;
 
         try {
-          await streamLLM(
-            { provider: step.modelProvider, model: step.modelId, systemPrompt, messages },
+          await runAgentWithTools(
+            {
+              provider: step.modelProvider,
+              model: step.modelId,
+              systemPrompt,
+              messages: [{ role: "user", content: stepInput }],
+              userId,
+              agentId: step.agentId,
+            },
             {
               onToken: (text) => {
                 stepResult += text;
                 send("step_token", { stepIndex: i, agentId: step.agentId, text });
               },
-              onDone: () => {
+              onToolStart: (tc) => {
+                send("step_tool_start", { stepIndex: i, agentId: step.agentId, name: tc.name, args: tc.args });
+              },
+              onToolEnd: (r) => {
+                send("step_tool_end", { stepIndex: i, agentId: step.agentId, name: r.name, result: r.result, isError: r.isError });
+              },
+              onDone: (metrics) => {
                 send("step_done", {
                   stepIndex: i,
                   agentId: step.agentId,
                   agentName: step.agentName,
                   result: stepResult,
+                  metrics,
                 });
               },
               onError: (error) => {

@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useMemo } from "react";
-import { TableOfContents, type TocItem } from "@/components/docs/TableOfContents";
+import { useRef } from "react";
+import { TableOfContents } from "@/components/docs/TableOfContents";
 import { docsMarkdown } from "@/components/docs/docs-content";
 import { docsMarkdownFr } from "@/components/docs/docs-content-fr";
 import { MarkdownRenderer } from "@/components/shared/MarkdownRenderer";
@@ -19,27 +19,12 @@ function slugify(text: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
-function extractToc(markdown: string): TocItem[] {
-  const items: TocItem[] = [];
-  const lines = markdown.split("\n");
-  for (const line of lines) {
-    const match = line.match(/^(#{2,4})\s+(.+)/);
-    if (match) {
-      const level = match[1].length;
-      const text = match[2].replace(/`/g, "");
-      items.push({ id: slugify(text), text, level });
-    }
-  }
-  return items;
-}
-
 export default function DocsPage() {
   const contentRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const t = useDictionary();
   const locale = useLocale();
   const content = locale === "fr" ? docsMarkdownFr : docsMarkdown;
-  const tocItems = useMemo(() => extractToc(content), [content]);
 
   const handleSaveMarkdown = () => {
     const blob = new Blob([content.trim()], { type: "text/markdown" });
@@ -103,7 +88,7 @@ export default function DocsPage() {
 
       {/* Right sidebar — Table of Contents */}
       <aside className="hidden xl:block w-64 shrink-0 border-l pl-6 sticky top-0 h-full overflow-y-auto py-6">
-        <TableOfContents items={tocItems} contentRef={contentRef} />
+        <TableOfContents contentRef={contentRef} />
       </aside>
     </div>
   );

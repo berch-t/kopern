@@ -3,10 +3,14 @@
 import { useEffect, useState } from "react";
 import { type User } from "firebase/auth";
 import { onAuthChanged } from "@/lib/firebase/auth";
+import { AuthProvider } from "@/providers/AuthProvider";
 import { useTheme } from "@/providers/ThemeProvider";
 import { useDictionary } from "@/providers/LocaleProvider";
 import { LocalizedLink } from "@/components/LocalizedLink";
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Header } from "@/components/layout/Header";
+import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { Button } from "@/components/ui/button";
 import {
   Lightbulb,
@@ -30,6 +34,23 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
     return unsubscribe;
   }, []);
 
+  // Authenticated: wrap in dashboard chrome (sidebar + header)
+  if (!loading && user) {
+    return (
+      <AuthProvider>
+        <div className="flex h-screen overflow-hidden">
+          <Sidebar />
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <Header />
+            <Breadcrumbs />
+            <main className="flex-1 overflow-y-auto p-6">{children}</main>
+          </div>
+        </div>
+      </AuthProvider>
+    );
+  }
+
+  // Not authenticated (or loading): public layout
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
@@ -60,13 +81,6 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           </Button>
           {loading ? (
             <div className="h-9 w-20 animate-pulse rounded-md bg-muted" />
-          ) : user ? (
-            <LocalizedLink href="/dashboard">
-              <Button variant="outline" className="gap-2">
-                <LayoutDashboard className="h-4 w-4" />
-                {t.landing.ctaDashboard}
-              </Button>
-            </LocalizedLink>
           ) : (
             <LocalizedLink href="/login">
               <Button variant="outline">{t.common.signIn}</Button>
@@ -76,7 +90,9 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       </nav>
 
       {/* Content */}
-      <main className="max-w-7xl mx-auto px-6 py-6">{children}</main>
+      <AuthProvider>
+        <main className="max-w-7xl mx-auto px-6 py-6">{children}</main>
+      </AuthProvider>
 
       {/* Footer */}
       <footer className="border-t py-6 text-center text-sm text-muted-foreground">

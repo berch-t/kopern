@@ -25,28 +25,44 @@ export function UsageBarChart({ data }: UsageBarChartProps) {
   if (data.length === 0) return null;
 
   const maxCost = Math.max(...data.map((d) => d.totalCost), 0.01);
+  // Pad to at least 6 slots for visual consistency
   const reversed = [...data].reverse();
+  const padded = [
+    ...reversed,
+    ...Array.from({ length: Math.max(0, 6 - reversed.length) }, (_, i) => ({
+      yearMonth: "",
+      totalCost: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      _placeholder: true as const,
+      _key: `empty-${i}`,
+    })),
+  ];
 
   return (
     <div className="relative">
       <div className="flex items-end gap-2" style={{ height: 180 }}>
-        {reversed.map((d, i) => {
-          const heightPercent = (d.totalCost / maxCost) * 100;
+        {padded.map((d, i) => {
+          const isPlaceholder = "_placeholder" in d;
+          const heightPercent = isPlaceholder ? 0 : (d.totalCost / maxCost) * 100;
+          const key = "_key" in d ? (d._key as string) : d.yearMonth;
+
           return (
             <div
-              key={d.yearMonth}
-              className="relative flex flex-1 flex-col items-center"
-              onMouseEnter={() => setHoveredIndex(i)}
+              key={key}
+              className="relative flex flex-1 flex-col items-center justify-end"
+              style={{ height: "100%" }}
+              onMouseEnter={() => !isPlaceholder && setHoveredIndex(i)}
               onMouseLeave={() => setHoveredIndex(null)}
             >
               {/* Tooltip */}
-              {hoveredIndex === i && (
+              {hoveredIndex === i && !isPlaceholder && (
                 <motion.div
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="absolute -top-20 z-10 rounded-md border bg-popover px-3 py-2 text-xs shadow-md whitespace-nowrap"
+                  className="absolute -top-16 z-10 rounded-md border bg-popover px-3 py-2 text-xs shadow-md whitespace-nowrap"
                 >
-                  <p className="font-semibold">${d.totalCost.toFixed(2)}</p>
+                  <p className="font-semibold">${d.totalCost.toFixed(4)}</p>
                   <p className="text-muted-foreground">
                     In: {formatTokens(d.inputTokens)} / Out: {formatTokens(d.outputTokens)}
                   </p>
@@ -54,12 +70,16 @@ export function UsageBarChart({ data }: UsageBarChartProps) {
               )}
 
               {/* Bar */}
-              <motion.div
-                initial={{ height: 0 }}
-                animate={{ height: `${Math.max(heightPercent, 2)}%` }}
-                transition={{ duration: 0.5, delay: i * 0.08 }}
-                className="w-full max-w-12 cursor-pointer rounded-t-md bg-primary/80 transition-colors hover:bg-primary"
-              />
+              {isPlaceholder ? (
+                <div className="w-full max-w-12 h-1 rounded-t-md bg-muted" />
+              ) : (
+                <motion.div
+                  initial={{ height: 0 }}
+                  animate={{ height: `${Math.max(heightPercent, 4)}%` }}
+                  transition={{ duration: 0.5, delay: i * 0.08 }}
+                  className="w-full max-w-12 cursor-pointer rounded-t-md bg-primary/80 transition-colors hover:bg-primary"
+                />
+              )}
             </div>
           );
         })}
@@ -67,11 +87,14 @@ export function UsageBarChart({ data }: UsageBarChartProps) {
 
       {/* Labels */}
       <div className="mt-2 flex gap-2">
-        {reversed.map((d) => (
-          <div key={d.yearMonth} className="flex-1 text-center text-xs text-muted-foreground">
-            {formatMonth(d.yearMonth)}
-          </div>
-        ))}
+        {padded.map((d, i) => {
+          const key = "_key" in d ? (d._key as string) : d.yearMonth;
+          return (
+            <div key={key} className="flex-1 text-center text-xs text-muted-foreground">
+              {d.yearMonth ? formatMonth(d.yearMonth) : ""}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

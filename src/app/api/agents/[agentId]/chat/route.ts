@@ -1,11 +1,16 @@
 import { NextRequest } from "next/server";
 import { createSSEStream, sseResponse } from "@/lib/utils/sse";
-import { streamLLM, type LLMMessage } from "@/lib/llm/client";
-import { estimateTokens, calculateTokenCost } from "@/lib/billing/pricing";
+import { calculateTokenCost } from "@/lib/billing/pricing";
+import { createSessionServer, endSessionServer, updateSessionMetrics, appendSessionEvents } from "@/lib/billing/track-usage-server";
+import { adminDb } from "@/lib/firebase/admin";
+import { runAgentWithTools } from "@/lib/tools/run-agent";
 
 interface ChatRequestBody {
   message: string;
   history: { role: "user" | "assistant"; content: string }[];
+  userId?: string;
+  connectedRepos?: string[];
+  sessionId?: string;
   agentConfig: {
     systemPrompt: string;
     modelProvider: string;
@@ -22,14 +27,37 @@ export async function POST(
 ) {
   const { agentId } = await params;
   const body = (await request.json()) as ChatRequestBody;
-  const { message, history, agentConfig } = body;
+  const { message, history, agentConfig, userId, connectedRepos } = body;
 
   const { stream, send, close } = createSSEStream();
 
   (async () => {
     try {
-      // Build system prompt with skills
+      // Create or reuse session
+      let sessionId = body.sessionId || "";
+      if (!sessionId && userId) {
+        try {
+          sessionId = await createSessionServer(userId, agentId, {
+            purpose: agentConfig.purpose || message.slice(0, 120) || null,
+            modelUsed: agentConfig.modelId,
+            providerUsed: agentConfig.modelProvider,
+          });
+          send("session", { sessionId });
+        } catch {
+          // Continue without session tracking
+        }
+      }
+
+      // Build system prompt
       let systemPrompt = agentConfig.systemPrompt || "";
+
+      // Inject connected GitHub repos context
+      if (connectedRepos && connectedRepos.length > 0 && userId) {
+        const repoContext = await fetchRepoContext(userId, connectedRepos);
+        if (repoContext) {
+          systemPrompt += `\n\n${repoContext}`;
+        }
+      }
       if (agentConfig.skills && agentConfig.skills.length > 0) {
         const skillsXml = agentConfig.skills
           .map((s) => `<skill name="${s.name}">\n${s.content}\n</skill>`)
@@ -37,12 +65,10 @@ export async function POST(
         systemPrompt += `\n\n<skills>\n${skillsXml}\n</skills>`;
       }
 
-      // Inject session purpose into system prompt (Purpose Gate)
       if (agentConfig.purpose) {
         systemPrompt += `\n\n<session-purpose>\n${agentConfig.purpose}\n</session-purpose>`;
       }
 
-      // Inject TillDone instructions if enabled
       if (agentConfig.tillDoneEnabled) {
         systemPrompt += `\n\n<till-done-mode>
 You MUST maintain a task list for this session. Before executing any action:
@@ -50,57 +76,92 @@ You MUST maintain a task list for this session. Before executing any action:
 2. Update the task status to "in_progress" when starting
 3. Mark it "done" when complete
 4. Do NOT finish until all tasks are marked done
-
-Use the task_management tool to manage your tasks. If tasks remain incomplete, continue working on them.
 </till-done-mode>`;
       }
 
       // Build message history
-      const messages: LLMMessage[] = [
-        ...history.map((m) => ({ role: m.role, content: m.content } as LLMMessage)),
+      const messages = [
+        ...(history || []).map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
         { role: "user" as const, content: message },
       ];
 
-      // Track token usage for observability
-      const inputText = systemPrompt + messages.map((m) => m.content).join(" ");
-      const estimatedInputTokens = estimateTokens(inputText);
-      let outputTokenCount = 0;
-
       send("status", { status: "thinking" });
-      send("metrics", {
-        estimatedInputTokens,
-        provider: agentConfig.modelProvider,
-      });
 
-      await streamLLM(
+      // Track events for session history
+      let assistantOutput = "";
+      const toolEvents: { type: string; data: Record<string, unknown> }[] = [];
+
+      // Record user message event
+      if (userId && sessionId) {
+        appendSessionEvents(userId, agentId, sessionId, [
+          { type: "message", data: { role: "user", content: message } },
+        ]).catch(() => {});
+      }
+
+      await runAgentWithTools(
         {
           provider: agentConfig.modelProvider,
           model: agentConfig.modelId,
           systemPrompt,
           messages,
+          userId,
+          agentId,
+          connectedRepos,
         },
         {
           onToken: (text) => {
-            outputTokenCount += estimateTokens(text);
+            assistantOutput += text;
             send("token", { text });
           },
-          onDone: () => {
+          onToolStart: (tc) => {
+            toolEvents.push({ type: "tool_call", data: { name: tc.name, args: tc.args } });
+            send("tool_start", { name: tc.name, args: tc.args });
+          },
+          onToolEnd: (result) => {
+            toolEvents.push({ type: "tool_result", data: { name: result.name, result: result.result, isError: result.isError } });
+            send("tool_end", { name: result.name, result: result.result, isError: result.isError });
+          },
+          onDone: (metrics) => {
             const cost = calculateTokenCost(
               agentConfig.modelProvider,
-              estimatedInputTokens,
-              outputTokenCount
+              metrics.inputTokens,
+              metrics.outputTokens
             );
+
+            // Persist session events + metrics (fire-and-forget)
+            if (userId && sessionId) {
+              const events = [
+                ...toolEvents,
+                { type: "message", data: { role: "assistant", content: assistantOutput.slice(0, 10000) } },
+              ];
+              appendSessionEvents(userId, agentId, sessionId, events).catch(() => {});
+              updateSessionMetrics(userId, agentId, sessionId, {
+                inputTokens: metrics.inputTokens,
+                outputTokens: metrics.outputTokens,
+                cost,
+                toolCallCount: metrics.toolCallCount,
+                messageCount: 2,
+              }).catch(() => {});
+            }
+
             send("done", {
               agentId,
+              sessionId,
               metrics: {
-                inputTokens: estimatedInputTokens,
-                outputTokens: outputTokenCount,
+                inputTokens: metrics.inputTokens,
+                outputTokens: metrics.outputTokens,
                 estimatedCost: cost,
+                toolIterations: metrics.toolIterations,
+                toolCallCount: metrics.toolCallCount,
               },
             });
             close();
           },
           onError: (error) => {
+            // End session on error
+            if (userId && sessionId) {
+              endSessionServer(userId, agentId, sessionId).catch(() => {});
+            }
             send("error", { message: error.message });
             close();
           },
@@ -113,4 +174,96 @@ Use the task_management tool to manage your tasks. If tasks remain incomplete, c
   })();
 
   return sseResponse(stream);
+}
+
+/**
+ * Fetch repo tree + README for connected repos and format as context.
+ */
+async function fetchRepoContext(
+  userId: string,
+  repos: string[]
+): Promise<string | null> {
+  try {
+    const userSnap = await adminDb.doc(`users/${userId}`).get();
+    const githubToken = userSnap.data()?.githubAccessToken;
+    if (!githubToken) return null;
+
+    const IGNORE_PATTERNS = [
+      /^node_modules\//,
+      /^\.git\//,
+      /^dist\//,
+      /^build\//,
+      /^\.next\//,
+      /^coverage\//,
+      /^__pycache__\//,
+      /\.lock$/,
+      /\.map$/,
+      /\.min\.(js|css)$/,
+    ];
+
+    const sections: string[] = [];
+
+    for (const repo of repos.slice(0, 3)) {
+      const treeRes = await fetch(
+        `https://api.github.com/repos/${repo}/git/trees/HEAD?recursive=1`,
+        {
+          headers: {
+            Authorization: `Bearer ${githubToken}`,
+            Accept: "application/vnd.github+json",
+          },
+        }
+      );
+      if (!treeRes.ok) continue;
+
+      const treeData = await treeRes.json();
+      const files = (treeData.tree || [])
+        .filter((item: { path: string; type: string }) =>
+          item.type === "blob" && !IGNORE_PATTERNS.some((p) => p.test(item.path))
+        )
+        .map((item: { path: string }) => item.path)
+        .slice(0, 300);
+
+      let repoSection = `<connected-repo name="${repo}">\n`;
+      repoSection += `<file-tree>\n${files.join("\n")}\n</file-tree>\n`;
+
+      const readmeEntry = (treeData.tree || []).find(
+        (item: { path: string }) => /^readme\.md$/i.test(item.path)
+      );
+      if (readmeEntry) {
+        try {
+          const readmeRes = await fetch(
+            `https://api.github.com/repos/${repo}/contents/${readmeEntry.path}`,
+            {
+              headers: {
+                Authorization: `Bearer ${githubToken}`,
+                Accept: "application/vnd.github.raw+json",
+              },
+            }
+          );
+          if (readmeRes.ok) {
+            let readme = await readmeRes.text();
+            if (readme.length > 2000) {
+              readme = readme.slice(0, 2000) + "\n[... truncated]";
+            }
+            repoSection += `<readme>\n${readme}\n</readme>\n`;
+          }
+        } catch {
+          // skip
+        }
+      }
+
+      repoSection += `</connected-repo>`;
+      sections.push(repoSection);
+    }
+
+    if (sections.length === 0) return null;
+
+    return `<github-context>
+You have access to the following connected GitHub repositories. Use the file tree to understand the project structure. You can use the read_file and search_files tools to inspect specific files.
+
+${sections.join("\n\n")}
+</github-context>`;
+  } catch {
+    return null;
+  }
 }

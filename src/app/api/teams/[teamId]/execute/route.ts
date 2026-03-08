@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { createSSEStream, sseResponse } from "@/lib/utils/sse";
-import { streamLLM, type LLMMessage } from "@/lib/llm/client";
+import { runAgentWithTools } from "@/lib/tools/run-agent";
 
 interface TeamExecuteBody {
   prompt: string;
@@ -27,7 +27,7 @@ export async function POST(
 ) {
   const { teamId } = await params;
   const body = (await request.json()) as TeamExecuteBody;
-  const { prompt, team } = body;
+  const { prompt, userId, team } = body;
 
   const { stream, send, close } = createSSEStream();
 
@@ -37,78 +37,83 @@ export async function POST(
 
       const sortedAgents = [...team.agents].sort((a, b) => a.order - b.order);
 
+      const runMember = async (
+        agent: typeof sortedAgents[0],
+        input: string
+      ): Promise<string> => {
+        send("member_start", { agentId: agent.agentId, agentName: agent.agentName, role: agent.role });
+
+        let systemPrompt = agent.systemPrompt || "";
+        systemPrompt += `\n\n<team-context>\nYou are operating as part of an agent team. Your role: ${agent.role}\nTeam objective: ${prompt}\n</team-context>`;
+
+        if (agent.skills && agent.skills.length > 0) {
+          const skillsXml = agent.skills
+            .map((s) => `<skill name="${s.name}">\n${s.content}\n</skill>`)
+            .join("\n\n");
+          systemPrompt += `\n\n<skills>\n${skillsXml}\n</skills>`;
+        }
+
+        let result = "";
+
+        await runAgentWithTools(
+          {
+            provider: agent.modelProvider,
+            model: agent.modelId,
+            systemPrompt,
+            messages: [{ role: "user", content: input }],
+            userId,
+            agentId: agent.agentId,
+          },
+          {
+            onToken: (text) => {
+              result += text;
+              send("member_token", { agentId: agent.agentId, text });
+            },
+            onToolStart: (tc) => {
+              send("member_tool_start", { agentId: agent.agentId, name: tc.name, args: tc.args });
+            },
+            onToolEnd: (r) => {
+              send("member_tool_end", { agentId: agent.agentId, name: r.name, result: r.result, isError: r.isError });
+            },
+            onDone: (metrics) => {
+              send("member_done", { agentId: agent.agentId, agentName: agent.agentName, result, metrics });
+            },
+            onError: (error) => {
+              send("member_error", { agentId: agent.agentId, message: error.message });
+            },
+          }
+        );
+
+        return result;
+      };
+
       if (team.executionMode === "parallel") {
-        // Run all agents simultaneously
-        const promises = sortedAgents.map(async (agent) => {
-          send("member_start", { agentId: agent.agentId, agentName: agent.agentName, role: agent.role });
-
-          let result = "";
-          const systemPrompt = buildTeamMemberPrompt(agent, prompt);
-          const messages: LLMMessage[] = [{ role: "user", content: prompt }];
-
-          await streamLLM(
-            { provider: agent.modelProvider, model: agent.modelId, systemPrompt, messages },
-            {
-              onToken: (text) => {
-                result += text;
-                send("member_token", { agentId: agent.agentId, text });
-              },
-              onDone: () => {
-                send("member_done", { agentId: agent.agentId, agentName: agent.agentName, result });
-              },
-              onError: (error) => {
-                send("member_error", { agentId: agent.agentId, message: error.message });
-              },
-            }
-          );
-
-          return { agentId: agent.agentId, agentName: agent.agentName, role: agent.role, result };
-        });
-
+        const promises = sortedAgents.map((agent) => runMember(agent, prompt));
         const results = await Promise.allSettled(promises);
         const successResults = results
-          .filter((r): r is PromiseFulfilledResult<{ agentId: string; agentName: string; role: string; result: string }> => r.status === "fulfilled")
-          .map((r) => r.value);
-
+          .map((r, i) => ({
+            agentId: sortedAgents[i].agentId,
+            agentName: sortedAgents[i].agentName,
+            role: sortedAgents[i].role,
+            result: r.status === "fulfilled" ? r.value : "",
+          }));
         send("team_done", { teamId, results: successResults });
       } else if (team.executionMode === "sequential") {
-        // Run agents in sequence, passing output forward
         let previousOutput = "";
         const allResults: { agentId: string; agentName: string; role: string; result: string }[] = [];
 
         for (const agent of sortedAgents) {
-          send("member_start", { agentId: agent.agentId, agentName: agent.agentName, role: agent.role });
-
-          let result = "";
-          const systemPrompt = buildTeamMemberPrompt(agent, prompt);
-          const contextMessage = previousOutput
+          const input = previousOutput
             ? `Original request: ${prompt}\n\nPrevious agent output:\n${previousOutput}`
             : prompt;
-          const messages: LLMMessage[] = [{ role: "user", content: contextMessage }];
-
-          await streamLLM(
-            { provider: agent.modelProvider, model: agent.modelId, systemPrompt, messages },
-            {
-              onToken: (text) => {
-                result += text;
-                send("member_token", { agentId: agent.agentId, text });
-              },
-              onDone: () => {
-                send("member_done", { agentId: agent.agentId, agentName: agent.agentName, result });
-              },
-              onError: (error) => {
-                send("member_error", { agentId: agent.agentId, message: error.message });
-              },
-            }
-          );
-
+          const result = await runMember(agent, input);
           previousOutput = result;
           allResults.push({ agentId: agent.agentId, agentName: agent.agentName, role: agent.role, result });
         }
 
         send("team_done", { teamId, results: allResults });
       } else {
-        // Conditional: first agent decides routing, then selected agent executes
+        // Conditional: first agent routes, selected agent executes
         const router = sortedAgents[0];
         if (!router) {
           send("error", { message: "No agents in team" });
@@ -116,42 +121,20 @@ export async function POST(
           return;
         }
 
-        send("member_start", { agentId: router.agentId, agentName: router.agentName, role: "router" });
-
-        let routerResult = "";
-        const routerPrompt = `You are a routing agent. Given the following request, decide which specialist agent should handle it.
+        const routerResult = await runMember(router,
+          `You are a routing agent. Given the following request, decide which specialist agent should handle it.
 Available agents: ${sortedAgents.slice(1).map((a) => `${a.agentName} (role: ${a.role})`).join(", ")}
-Respond with ONLY the agent name that should handle this request.`;
+Respond with ONLY the agent name that should handle this request.
 
-        await streamLLM(
-          { provider: router.modelProvider, model: router.modelId, systemPrompt: routerPrompt, messages: [{ role: "user", content: prompt }] },
-          {
-            onToken: (text) => { routerResult += text; },
-            onDone: () => { send("member_done", { agentId: router.agentId, agentName: router.agentName, result: routerResult }); },
-            onError: (error) => { send("member_error", { agentId: router.agentId, message: error.message }); },
-          }
+Request: ${prompt}`
         );
 
-        // Find the selected agent
         const selectedAgent = sortedAgents.slice(1).find((a) =>
           routerResult.toLowerCase().includes(a.agentName.toLowerCase())
         ) ?? sortedAgents[1];
 
         if (selectedAgent) {
-          send("member_start", { agentId: selectedAgent.agentId, agentName: selectedAgent.agentName, role: selectedAgent.role });
-
-          let selectedResult = "";
-          const systemPrompt = buildTeamMemberPrompt(selectedAgent, prompt);
-
-          await streamLLM(
-            { provider: selectedAgent.modelProvider, model: selectedAgent.modelId, systemPrompt, messages: [{ role: "user", content: prompt }] },
-            {
-              onToken: (text) => { selectedResult += text; send("member_token", { agentId: selectedAgent.agentId, text }); },
-              onDone: () => { send("member_done", { agentId: selectedAgent.agentId, agentName: selectedAgent.agentName, result: selectedResult }); },
-              onError: (error) => { send("member_error", { agentId: selectedAgent.agentId, message: error.message }); },
-            }
-          );
-
+          const selectedResult = await runMember(selectedAgent, prompt);
           send("team_done", { teamId, results: [{ agentId: selectedAgent.agentId, agentName: selectedAgent.agentName, role: selectedAgent.role, result: selectedResult }] });
         }
       }
@@ -164,22 +147,4 @@ Respond with ONLY the agent name that should handle this request.`;
   })();
 
   return sseResponse(stream);
-}
-
-function buildTeamMemberPrompt(
-  agent: { role: string; systemPrompt: string; skills?: { name: string; content: string }[] },
-  teamPrompt: string
-): string {
-  let prompt = agent.systemPrompt || "";
-
-  prompt += `\n\n<team-context>\nYou are operating as part of an agent team. Your role: ${agent.role}\nTeam objective: ${teamPrompt}\n</team-context>`;
-
-  if (agent.skills && agent.skills.length > 0) {
-    const skillsXml = agent.skills
-      .map((s) => `<skill name="${s.name}">\n${s.content}\n</skill>`)
-      .join("\n\n");
-    prompt += `\n\n<skills>\n${skillsXml}\n</skills>`;
-  }
-
-  return prompt;
 }

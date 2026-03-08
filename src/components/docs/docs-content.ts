@@ -1,68 +1,117 @@
 export const docsMarkdown = `
 ## Introduction
 
-Kopern is an AI Agent Builder & Grader platform. It lets you create custom business AI agents, validate them through deterministic grading pipelines, and expose them as API endpoints.
+Kopern is an AI Agent Builder & Grader platform. Build custom AI agents tailored to your business, validate their quality with deterministic grading, connect them to your GitHub repositories, and deploy them as API endpoints — all from a single dashboard.
 
-### Key Capabilities
+### What You Can Do
 
-- **Multi-model support** — Anthropic, OpenAI, Google Gemini, Ollama (local)
-- **Deterministic grading** — 6 criterion types to validate agent outputs
-- **API endpoints** — Expose agents as JSON-RPC services with key auth
-- **Real-time** — Firestore subscriptions, SSE streaming chat
-- **Extensible** — Skills, custom tools, and extensions
+- **Build agents** for any domain — support, legal, DevOps, sales, finance, HR, and more
+- **Connect your code** — agents can read and search your GitHub repositories
+- **Validate quality** — run automated test suites with 6 criterion types
+- **Deploy as API** — expose agents as JSON-RPC endpoints with secure API keys
+- **Track everything** — billing, sessions, conversations, grading runs
+- **Team collaboration** — orchestrate multiple agents working together
+
+---
+
+## Quick Start
+
+### 1. Create Your First Agent
+
+1. Go to **Agents** and click **New Agent**
+2. Give it a **name**, **description**, and select a **domain**
+3. Choose your **model provider** and **model**:
+   - Anthropic (Claude Sonnet, Claude Opus)
+   - OpenAI (GPT-4o, GPT-4.1)
+   - Google (Gemini 2.0 Flash, Gemini 2.5 Pro)
+   - Ollama (any local model)
+4. Write a **system prompt** — this defines the agent's personality and behavior
+5. Save — your agent is ready to test!
+
+### 2. Add Skills
+
+Skills are reusable knowledge blocks that get injected into the agent's system prompt. Think of them as modular instructions.
+
+Go to your agent's **Skills** tab and create skills for:
+- **Tone & style** — how the agent communicates
+- **Domain knowledge** — specific rules, policies, or procedures
+- **Output format** — structured responses (JSON, markdown, bullet points)
+
+### 3. Add Custom Tools
+
+Tools let your agent take real actions during conversations — call APIs, search databases, run calculations.
+
+Go to your agent's **Tools** tab and define:
+- **Name** — what the agent calls the tool
+- **Description** — what the tool does (the agent reads this to decide when to use it)
+- **Parameters** — JSON Schema defining expected inputs
+- **Execute code** — JavaScript that runs when the tool is called
+
+### 4. Test in the Playground
+
+Open the **Playground** tab to chat with your agent in real-time:
+- See tokens streamed as they're generated
+- Watch tool calls happen live with arguments and results
+- Track token usage and cost in the metrics bar
+- Click **View session** to see the full conversation history later
+
+### 5. Validate with Grading
+
+Create a **Grading Suite** to automatically test your agent's quality:
+1. Define test cases with specific inputs
+2. Add criteria (pattern matching, schema validation, safety checks, etc.)
+3. Run the suite — each case is tested and scored
+4. Iterate until your agent meets your quality threshold
+
+### 6. Deploy as API
+
+Create an **MCP Server** to expose your agent as an API:
+1. Go to your agent's **MCP Servers** tab
+2. Create a new server and copy the API key
+3. Call the JSON-RPC endpoint from any application
 
 ---
 
 ## Agents
 
-An agent is the core entity in Kopern. It combines a model configuration with a system prompt, skills, tools, and extensions.
+### Configuration Options
 
-### Creating an Agent
-
-1. Navigate to **Agents** > **New Agent**
-2. Fill in the configuration:
-   - **Name** — A human-readable identifier
-   - **Description** — What the agent does
-   - **Domain** — Category (accounting, legal, devops, support, sales, etc.)
-3. Select the model:
-   - **Provider** — \`anthropic\`, \`openai\`, \`google\`, \`ollama\`
-   - **Model ID** — e.g. \`claude-sonnet-4-5-20250514\`, \`gpt-4o\`, \`gemini-2.0-flash\`
-   - **Thinking Level** — \`off\`, \`minimal\`, \`low\`, \`medium\`, \`high\`, \`xhigh\`
-4. Write the system prompt
-5. Save — the agent is created at version 1
-
-### Agent Configuration
-
-\`\`\`typescript
-interface AgentDoc {
-  name: string;
-  description: string;
-  domain: string;
-  systemPrompt: string;
-  modelProvider: string;       // "anthropic" | "openai" | "google" | "ollama"
-  modelId: string;
-  thinkingLevel: "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
-  builtinTools: string[];      // ["read", "bash", ...]
-  connectedRepos: string[];    // ["owner/repo-name", ...]
-  version: number;
-  isPublished: boolean;
-  latestGradingScore: number | null;
-}
-\`\`\`
+| Setting | Description |
+|---------|-------------|
+| **Name** | Human-readable identifier |
+| **Description** | What the agent does |
+| **Domain** | Category (DevOps, Legal, Support, Sales, Finance, HR, etc.) |
+| **Provider** | Anthropic, OpenAI, Google, or Ollama |
+| **Model** | Specific model (e.g. claude-sonnet-4-6, gpt-4o, gemini-2.5-pro) |
+| **Thinking Level** | Controls reasoning depth: off, minimal, low, medium, high, xhigh |
+| **System Prompt** | The core instructions that define agent behavior |
+| **Connected Repos** | GitHub repositories the agent can read and search |
 
 ### Versioning
 
-Each agent has a \`version\` number. When you publish, a snapshot of the current configuration is saved as a \`VersionDoc\`. Grading runs are tied to specific versions so you can track regression.
+Every time you publish an agent, a version snapshot is saved. Grading runs are tied to specific versions so you can track improvements or regressions over time.
+
+### GitHub Integration
+
+Connect your GitHub repositories so agents can:
+- **Read files** — access any file in connected repos
+- **Search files** — find files by name pattern
+- **Understand context** — the repo's file tree and README are automatically included
+
+To connect a repo:
+1. Sign in with GitHub (grants the \`repo\` scope)
+2. On any agent detail page, click **Connect Repo**
+3. Select the repositories you want the agent to access
 
 ---
 
 ## Skills
 
-Skills are **reusable knowledge blocks** injected into the agent's system prompt. They allow you to modularize instructions without bloating the main prompt.
+Skills are **modular instruction blocks** injected into the agent's context at runtime. They let you separate concerns and reuse knowledge across agents.
 
-### How Skills Work
+### How They Work
 
-Skills are markdown templates stored in Firestore. At runtime, they are injected into the system prompt as XML:
+When your agent runs, all active skills are wrapped in XML tags and appended to the system prompt:
 
 \`\`\`xml
 <skills>
@@ -70,373 +119,216 @@ Skills are markdown templates stored in Firestore. At runtime, they are injected
     Always respond in a professional, concise manner.
     Use bullet points for lists.
   </skill>
-
-  <skill name="code-review-checklist">
-    When reviewing code, check for:
-    - Security vulnerabilities (XSS, injection)
-    - Performance issues
-    - Code style consistency
-    - Test coverage
+  <skill name="escalation-rules">
+    Escalate to a human agent when:
+    - The customer asks for a refund over $500
+    - Legal questions arise
+    - The customer expresses frustration 3+ times
   </skill>
 </skills>
 \`\`\`
 
-### Creating a Skill
+### Best Practices
 
-1. Go to **Agent Detail** > **Skills**
-2. Click **New Skill**
-3. Fill in:
-   - **Name** — identifier (used in the XML tag)
-   - **Description** — what this skill provides
-   - **Content** — the markdown/text content to inject
-4. Save — the skill is immediately available in the agent
-
-### Skill Examples
-
-**Tone Guide:**
-\`\`\`markdown
-You are a helpful assistant for a fintech company.
-- Be concise and professional
-- Use technical terms when appropriate
-- Always cite relevant regulations when discussing compliance
-\`\`\`
-
-**Output Format:**
-\`\`\`markdown
-Always structure your responses as:
-1. **Summary** — One-line answer
-2. **Details** — Full explanation
-3. **Next Steps** — Actionable recommendations
-\`\`\`
+- **Keep skills focused** — one skill per topic (tone, format, domain rules)
+- **Write clear instructions** — the LLM follows skills literally
+- **Test with grading** — verify skills produce the expected behavior
+- **Reuse across agents** — skills can be copied between agents using the Examples gallery
 
 ---
 
 ## Tools
 
-Tools give your agent the ability to **execute actions** during a conversation. Each tool has a JSON Schema for parameters and JavaScript code for execution.
+Tools give your agent the ability to **take actions** during a conversation — call APIs, query databases, perform calculations, or interact with external services.
 
 ### Built-in Tools
 
-Agents come with optional built-in tools:
-- \`read\` — Read file contents
-- \`bash\` — Execute shell commands
+When you connect GitHub repositories, two built-in tools are automatically available:
+
+| Tool | Description |
+|------|-------------|
+| **read_file** | Read the content of any file in a connected repository |
+| **search_files** | Search for files by name pattern across connected repos |
 
 ### Custom Tools
 
-You can define custom tools with:
-- **Name** — Tool identifier (called by the LLM)
-- **Label** — Display name
-- **Description** — What the tool does (shown to the LLM)
-- **Parameters Schema** — JSON Schema defining expected inputs
-- **Execute Code** — JavaScript function body
+Create your own tools with:
 
-### Tool Schema Example
+- **Name** — identifier the LLM uses to call the tool
+- **Description** — explains what the tool does (the LLM reads this to decide when to use it)
+- **Parameters Schema** — JSON Schema defining the expected input
 
 \`\`\`json
 {
   "type": "object",
   "properties": {
-    "query": {
-      "type": "string",
-      "description": "The search query"
-    },
-    "limit": {
-      "type": "number",
-      "description": "Maximum results to return",
-      "default": 10
-    }
+    "query": { "type": "string", "description": "Search query" },
+    "limit": { "type": "number", "description": "Max results", "default": 10 }
   },
   "required": ["query"]
 }
 \`\`\`
 
-### Tool Execution Code Example
+- **Execute Code** — JavaScript that runs when the tool is called
 
 \`\`\`javascript
-// The 'params' object contains the validated parameters
 const response = await fetch(
-  \\\`https://api.example.com/search?q=\\\${encodeURIComponent(params.query)}&limit=\\\${params.limit}\\\`
+  \\\`https://api.example.com/search?q=\\\${encodeURIComponent(params.query)}\\\`
 );
 const data = await response.json();
 return JSON.stringify(data.results);
 \`\`\`
 
+### Tool Calling Flow
+
+When the agent decides to use a tool:
+1. The LLM generates a tool call with arguments
+2. Kopern executes the tool code with those arguments
+3. The result is fed back to the LLM
+4. The LLM uses the result to formulate its response
+5. This can repeat up to 10 iterations in a single turn
+
 ---
 
 ## Extensions
 
-Extensions are **TypeScript modules** that hook into agent events to add custom behaviors. They can intercept messages, modify outputs, add slash commands, and persist state.
-
-### Extension Structure
-
-\`\`\`typescript
-// Extension code runs in a sandboxed environment
-export default {
-  name: "my-extension",
-  description: "Adds custom behavior",
-  enabled: true,
-
-  // Called when the agent starts
-  onAgentStart(context) {
-    console.log("Agent started:", context.agentId);
-  },
-
-  // Called before each turn
-  onTurnStart(context) {
-    // Can modify the message before processing
-  },
-
-  // Called after each turn
-  onTurnEnd(context, response) {
-    // Can modify or log the response
-  },
-};
-\`\`\`
+Extensions are **event hooks** that intercept and modify agent behavior. They can log interactions, filter content, add commands, or persist state.
 
 ### Use Cases
 
-- **Logging** — Track all agent interactions
-- **Content filtering** — Block or modify unsafe outputs
-- **Custom commands** — Add slash commands like \`/reset\` or \`/export\`
-- **State management** — Persist conversation state across sessions
+- **Logging** — track all agent interactions for compliance
+- **Content filtering** — block or modify unsafe outputs
+- **Custom commands** — add slash commands like \`/reset\` or \`/export\`
+- **State management** — persist data across conversation sessions
+- **Guardrails** — enforce business rules on agent responses
 
 ---
 
 ## Playground
 
-The Playground is a **live chat interface** for testing your agent. It uses Server-Sent Events (SSE) for real-time streaming.
+The Playground is your **live testing environment**. Chat with your agent and see everything in real-time.
 
 ### Features
 
-- **Real-time streaming** — Tokens appear as the LLM generates them
-- **Markdown rendering** — Agent responses are rendered with full markdown support
-- **Tool call visualization** — See which tools the agent calls and their results
-- **Message history** — Full conversation context is maintained
-- **Stream indicator** — Visual feedback while the agent is thinking
-
-### How It Works
-
-\`\`\`text
-User message → POST /api/agents/[agentId]/chat
-                    ↓
-              Build system prompt + inject skills
-                    ↓
-              streamLLM(provider, model, messages)
-                    ↓
-              SSE stream: status → token → token → ... → done
-                    ↓
-              Rendered in real-time in the UI
-\`\`\`
+| Feature | Description |
+|---------|-------------|
+| **Streaming** | Tokens appear as the LLM generates them |
+| **Tool visualization** | See tool calls, arguments, and results live |
+| **Markdown rendering** | Agent responses are rendered with full formatting |
+| **Metrics bar** | Track tokens in/out, cost, and tool calls |
+| **Session link** | Click to view the full conversation history |
+| **Session continuity** | Multiple messages share the same session for tracking |
 
 ### Testing Tips
 
-1. Start with simple queries to verify the system prompt works
-2. Test edge cases that should trigger specific skills
-3. Verify tool calls are happening when expected
-4. Check that the thinking level produces appropriate reasoning depth
+1. **Start simple** — verify the system prompt works with basic queries
+2. **Test edge cases** — try inputs that should trigger specific skills or tools
+3. **Check tool calls** — make sure the agent uses tools when appropriate
+4. **Iterate fast** — edit the prompt/skills, then test again immediately
 
 ---
 
 ## Grading
 
-The grading system provides **deterministic validation** of agent outputs. It lets you create test suites, define criteria, and track quality over time.
+The grading system provides **automated quality validation** for your agents. Build test suites, run them, and track scores over time.
 
 ### Concepts
 
-- **Suite** — A collection of test cases (e.g. "Customer Support Tests")
-- **Case** — A single test with input, expected behavior, and criteria
-- **Criterion** — A specific validation rule with a weight
-- **Run** — An execution of a suite, producing results and a score
+| Term | Description |
+|------|-------------|
+| **Suite** | A collection of test cases (e.g. "Customer Support Tests") |
+| **Case** | A single test with an input message and validation criteria |
+| **Criterion** | A specific validation rule with a weight |
+| **Run** | An execution of the full suite, producing scores |
 
-### Criterion Types
+### 6 Criterion Types
 
 #### 1. Output Match
-Checks if the agent output matches a pattern.
+Check if the agent's response contains (or matches) a specific pattern.
 
-\`\`\`json
-{
-  "type": "output_match",
-  "config": {
-    "pattern": "regex or substring",
-    "mode": "contains"
-  }
-}
-\`\`\`
+**Example:** Ensure the agent always apologizes when a customer reports a problem.
 
 #### 2. Schema Validation
-Validates the output against a JSON Schema (using ajv).
+Validate that the agent's response is valid JSON matching a specific structure.
 
-\`\`\`json
-{
-  "type": "schema_validation",
-  "config": {
-    "schema": {
-      "type": "object",
-      "required": ["summary", "recommendations"],
-      "properties": {
-        "summary": { "type": "string" },
-        "recommendations": { "type": "array" }
-      }
-    }
-  }
-}
-\`\`\`
+**Example:** Ensure a code review agent always outputs \`{ "vulnerabilities": [...], "score": number }\`.
 
 #### 3. Tool Usage
-Asserts that specific tools were called during execution.
+Assert that the agent called specific tools during the conversation.
 
-\`\`\`json
-{
-  "type": "tool_usage",
-  "config": {
-    "requiredTools": ["search", "calculate"],
-    "mode": "all"
-  }
-}
-\`\`\`
+**Example:** Ensure a research agent always uses the \`search_files\` tool before answering.
 
 #### 4. Safety Check
-Detects harmful patterns in the output (XSS, injection, etc.).
+Detect harmful patterns in the output — XSS, SQL injection, prompt injection, etc.
 
-\`\`\`json
-{
-  "type": "safety_check",
-  "config": {
-    "checks": ["xss", "sql_injection", "prompt_injection"]
-  }
-}
-\`\`\`
+**Example:** Ensure the agent never generates executable code in customer-facing responses.
 
 #### 5. Custom Script
-Runs arbitrary JavaScript evaluation against the output.
+Run arbitrary JavaScript to evaluate the agent's response.
 
-\`\`\`javascript
-// 'output' is the agent's response string
-// 'toolCalls' is an array of tool call records
-// Return { passed: boolean, score: number, message: string }
-
-const hasGreeting = output.toLowerCase().includes("hello");
-const isShort = output.length < 500;
-
-return {
-  passed: hasGreeting && isShort,
-  score: hasGreeting && isShort ? 1.0 : 0.0,
-  message: hasGreeting ? "Greeting found" : "Missing greeting"
-};
-\`\`\`
+**Example:** Check that the response length is within bounds, or that specific keywords appear in the right order.
 
 #### 6. LLM Judge
-Uses another LLM to evaluate the output quality.
+Use another LLM to evaluate response quality on subjective criteria.
 
-\`\`\`json
-{
-  "type": "llm_judge",
-  "config": {
-    "prompt": "Rate the following response for helpfulness and accuracy on a scale of 0-10.",
-    "provider": "anthropic",
-    "model": "claude-sonnet-4-5-20250514"
-  }
-}
-\`\`\`
+**Example:** "Rate this response for empathy and helpfulness on a scale of 0-10."
 
 ### Scoring
 
 Each criterion has a **weight**. The final score is a weighted average:
 
-\`\`\`text
-score = Σ (criterion_score × criterion_weight) / Σ (criterion_weight)
+\`\`\`
+Score = Sum(criterion_score x weight) / Sum(weights)
 \`\`\`
 
-A case passes if **all criteria pass**. The suite score is the average of all case scores.
+A case passes if all criteria pass. The suite score is the average of all case scores. Your agent's latest grading score appears on its detail page.
 
-### Running a Suite
+### Workflow
 
-1. Go to **Agent Detail** > **Grading**
-2. Select or create a test suite
-3. Add test cases with criteria
-4. Click **Run** — each case is executed against the agent
-5. View results: per-case scores, criteria details, agent output
+1. Create a grading suite for your agent
+2. Add test cases covering happy paths AND edge cases
+3. Add weighted criteria to each case
+4. Run the suite
+5. Review results — see per-case scores and agent outputs
+6. Improve your agent (prompt, skills, tools) and re-run
+7. Track progress across versions
 
 ---
 
-## MCP Servers
+## MCP Servers (API Deployment)
 
-MCP (Model Context Protocol) servers let you **expose agents as API endpoints** that external applications can call.
-
-### Architecture
-
-\`\`\`
-External App → POST /api/mcp (Bearer token)
-                    ↓
-              Hash API key → lookup apiKeys/{hash}
-                    ↓
-              Validate: enabled? rate limit?
-                    ↓
-              Load agent config + skills
-                    ↓
-              Build system prompt → call LLM
-                    ↓
-              Count tokens → track usage
-                    ↓
-              JSON-RPC response
-\`\`\`
+MCP Servers let you **expose your agent as an API endpoint** that any application can call.
 
 ### Creating a Server
 
-1. Go to **Agent Detail** > **MCP Servers**
-2. Click **New Server**
-3. Enter a **name** and **description**
-4. Copy the API key (shown once only!)
+1. Go to your agent's **MCP Servers** tab
+2. Click **New Server** — give it a name and description
+3. Copy the API key (shown only once — save it securely!)
 
-### API Key Security
+### Calling the API
 
-- Keys are prefixed with \`kpn_\` followed by 32 random hex bytes
-- Only the **SHA-256 hash** is stored in Firestore
-- The \`apiKeyPrefix\` (first 12 chars) is stored for display
-- Keys are looked up via a top-level \`apiKeys/{hash}\` collection (O(1))
-- The plaintext key is returned **once** at creation and **never stored**
+**Endpoint:** \`POST /api/mcp\`
 
-### JSON-RPC Endpoint
+**Authentication:** Include your API key as a Bearer token.
 
-**URL:** \`POST /api/mcp\`
-
-**Headers:**
-\`\`\`
-Authorization: Bearer kpn_your_api_key_here
-Content-Type: application/json
-\`\`\`
-
-#### Method: \`initialize\`
-
-Returns agent metadata.
+#### Get Agent Info
 
 \`\`\`json
-// Request
-{"jsonrpc": "2.0", "method": "initialize", "id": 1}
-
-// Response
 {
   "jsonrpc": "2.0",
-  "result": {
-    "name": "My Agent",
-    "description": "A helpful assistant",
-    "model": {"provider": "anthropic", "id": "claude-sonnet-4-5-20250514"}
-  },
+  "method": "initialize",
   "id": 1
 }
 \`\`\`
 
-#### Method: \`completion/create\`
-
-Sends a message and returns the full response.
+#### Send a Message
 
 \`\`\`json
-// Request
 {
   "jsonrpc": "2.0",
   "method": "completion/create",
   "params": {
-    "message": "Analyze this code for security issues",
+    "message": "Analyze this pull request for security issues",
     "history": [
       {"role": "user", "content": "Hello"},
       {"role": "assistant", "content": "Hi! How can I help?"}
@@ -444,216 +336,19 @@ Sends a message and returns the full response.
   },
   "id": 2
 }
-
-// Response
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "content": "I'll analyze the code for security vulnerabilities...",
-    "usage": {"inputTokens": 245, "outputTokens": 512}
-  },
-  "id": 2
-}
 \`\`\`
 
-### Usage Tracking
+### Code Examples
 
-Usage is tracked per month with atomic increments (no read-before-write):
-- **inputTokens** — Estimated input token count
-- **outputTokens** — Estimated output token count
-- **requestCount** — Number of API calls
-- **lastRequestAt** — Timestamp of the last request
-
-### Rate Limiting
-
-Each server has a \`rateLimitPerMinute\` setting (default: 60). Configure it per server based on your needs.
-
-### cURL Examples
-
-**Bash / Linux / macOS:**
+**cURL:**
 \`\`\`bash
 curl -X POST https://your-domain.com/api/mcp \\
-  -H "Authorization: Bearer kpn_your_key" \\
+  -H "Authorization: Bearer kpn_your_api_key" \\
   -H "Content-Type: application/json" \\
   -d '{"jsonrpc":"2.0","method":"completion/create","params":{"message":"Hello"},"id":1}'
 \`\`\`
 
-**PowerShell:**
-\`\`\`powershell
-Invoke-WebRequest -Uri "https://your-domain.com/api/mcp" \`
-  -Method POST -UseBasicParsing \`
-  -Headers @{"Authorization"="Bearer kpn_your_key";"Content-Type"="application/json"} \`
-  -Body '{"jsonrpc":"2.0","method":"completion/create","params":{"message":"Hello"},"id":1}'
-\`\`\`
-
----
-
-## Configuration
-
-### Environment Variables
-
-\`\`\`bash
-# Firebase Client (public, used in browser)
-NEXT_PUBLIC_FIREBASE_API_KEY=...
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
-NEXT_PUBLIC_FIREBASE_APP_ID=...
-
-# Firebase Admin (server-side only, for API routes)
-FIREBASE_PROJECT_ID=your-project
-FIREBASE_CLIENT_EMAIL=firebase-adminsdk-...@your-project.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n"
-
-# LLM API Keys (add the providers you use)
-ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=sk-...
-GOOGLE_AI_API_KEY=AI...
-OLLAMA_BASE_URL=http://localhost:11434
-\`\`\`
-
-### Firestore Security Rules
-
-\`\`\`javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Default deny
-    match /{document=**} { allow read, write: if false; }
-
-    // API keys — admin SDK only
-    match /apiKeys/{keyHash} { allow read, write: if false; }
-
-    // User data — owner only
-    match /users/{userId} {
-      allow read, write: if request.auth.uid == userId;
-
-      match /agents/{agentId} {
-        allow read, write: if request.auth.uid == userId;
-        // + skills, tools, extensions, versions, gradingSuites, mcpServers
-        // Usage subcollection: read-only for owner
-      }
-    }
-  }
-}
-\`\`\`
-
-### Authentication
-
-Kopern supports three auth methods via Firebase:
-- **Google OAuth** — One-click sign-in
-- **GitHub OAuth** — Developer-friendly
-- **Email/Password** — Traditional sign-up
-
----
-
-## Workflow
-
-### Recommended Development Flow
-
-\`\`\`text
-1. Create Agent
-   └── Define name, domain, model, system prompt
-
-2. Add Skills
-   └── Modularize instructions (tone, format, domain knowledge)
-
-3. Add Custom Tools (optional)
-   └── Give the agent capabilities (API calls, calculations)
-
-4. Test in Playground
-   └── Iterate on prompt and skills until behavior is correct
-
-5. Create Grading Suite
-   └── Define test cases with criteria
-
-6. Run Grading
-   └── Validate deterministically, check score
-
-7. Iterate (steps 2-6)
-   └── Improve until grading score meets threshold
-
-8. Publish Version
-   └── Snapshot the current config
-
-9. Deploy as MCP Server
-   └── Create API endpoint, distribute key
-
-10. Monitor Usage
-    └── Track tokens, requests, errors
-\`\`\`
-
-### Best Practices
-
-- **Start with the system prompt** — Get the core behavior right first
-- **Use skills for reusable patterns** — Don't repeat instructions across agents
-- **Write grading cases for edge cases** — Test failure modes, not just happy paths
-- **Use LLM Judge sparingly** — Prefer deterministic criteria when possible
-- **Set appropriate rate limits** — Match expected traffic patterns
-- **Regenerate keys periodically** — Rotate API keys for security
-- **Version before publishing** — Always have a rollback point
-
----
-
-## Examples
-
-### Example 1: Customer Support Agent
-
-**System Prompt:**
-\`\`\`text
-You are a customer support agent for an e-commerce platform.
-You help customers with order tracking, returns, and product questions.
-Always be polite, empathetic, and solution-oriented.
-If you don't know the answer, escalate to a human agent.
-\`\`\`
-
-**Skills:**
-- \`tone-guide\` — Professional, empathetic tone
-- \`return-policy\` — Company return policy details
-- \`escalation-rules\` — When to escalate to humans
-
-**Grading Case:**
-\`\`\`text
-Input: "I want to return my order, it arrived damaged"
-Expected: Apologize, ask for order number, explain return process
-Criteria:
-  - output_match: contains "sorry" or "apologize" (weight: 0.3)
-  - output_match: asks for order number (weight: 0.3)
-  - safety_check: no harmful content (weight: 0.2)
-  - llm_judge: helpful and empathetic (weight: 0.2)
-\`\`\`
-
-### Example 2: Code Review Agent
-
-**System Prompt:**
-\`\`\`text
-You are an expert code reviewer. When given code:
-1. Identify security vulnerabilities
-2. Check for performance issues
-3. Suggest improvements
-4. Rate overall quality (1-10)
-
-Always output structured JSON with your analysis.
-\`\`\`
-
-**Tools:**
-- \`analyze_complexity\` — Calculate cyclomatic complexity
-- \`check_dependencies\` — Verify dependency versions
-
-**Grading Case:**
-\`\`\`text
-Input: "Review this function: function login(user, pass) { db.query('SELECT * FROM users WHERE name='+user) }"
-Criteria:
-  - output_match: mentions "SQL injection" (weight: 0.4)
-  - schema_validation: output is valid JSON with "vulnerabilities" array (weight: 0.3)
-  - tool_usage: calls analyze_complexity (weight: 0.1)
-  - safety_check: no harmful code in output (weight: 0.2)
-\`\`\`
-
-### Example 3: MCP Integration
-
-**Node.js client:**
+**Node.js:**
 \`\`\`javascript
 const response = await fetch("https://your-domain.com/api/mcp", {
   method: "POST",
@@ -664,230 +359,181 @@ const response = await fetch("https://your-domain.com/api/mcp", {
   body: JSON.stringify({
     jsonrpc: "2.0",
     method: "completion/create",
-    params: { message: "Analyze this pull request..." },
+    params: { message: "Analyze this code..." },
     id: 1,
   }),
 });
-
 const { result } = await response.json();
 console.log(result.content);
-console.log(\\\`Tokens used: \\\${result.usage.inputTokens + result.usage.outputTokens}\\\`);
 \`\`\`
 
-**Python client:**
+**Python:**
 \`\`\`python
 import requests
 
 response = requests.post(
     "https://your-domain.com/api/mcp",
-    headers={
-        "Authorization": "Bearer kpn_your_api_key",
-        "Content-Type": "application/json",
-    },
-    json={
-        "jsonrpc": "2.0",
-        "method": "completion/create",
-        "params": {"message": "Summarize this document..."},
-        "id": 1,
-    },
+    headers={"Authorization": "Bearer kpn_your_api_key"},
+    json={"jsonrpc": "2.0", "method": "completion/create",
+          "params": {"message": "Summarize this..."}, "id": 1},
 )
-
-result = response.json()["result"]
-print(result["content"])
+print(response.json()["result"]["content"])
 \`\`\`
 
----
+### API Key Security
 
-## Internationalization (i18n)
+- Keys are prefixed with \`kpn_\` and use 32 random hex bytes
+- Only the SHA-256 hash is stored — the plaintext key is shown once at creation
+- Each server has configurable rate limiting (requests per minute)
 
-Kopern supports **English and French** with a lightweight custom i18n system — no heavy library required.
+### Usage Tracking
 
-### How It Works
-
-All routes live under \`src/app/[locale]/\` where \`locale\` is \`en\` or \`fr\`. A middleware detects the preferred locale from:
-1. URL path prefix (\`/en/...\` or \`/fr/...\`)
-2. \`NEXT_LOCALE\` cookie
-3. Browser \`Accept-Language\` header
-4. Falls back to \`en\`
-
-### Key Files
-
-| File | Purpose |
-|------|---------|
-| \`src/i18n/config.ts\` | Locale type definitions (\`"en" | "fr"\`) |
-| \`src/i18n/getDictionary.ts\` | Async dictionary loader via dynamic import |
-| \`src/i18n/dictionaries/en.json\` | English strings (~350 keys) |
-| \`src/i18n/dictionaries/fr.json\` | French strings |
-| \`src/providers/LocaleProvider.tsx\` | React Context: \`useLocale()\`, \`useDictionary()\` |
-| \`src/hooks/useLocalizedRouter.ts\` | Router with locale-prefixed \`push\`/\`replace\`/\`back\` |
-| \`src/components/LocalizedLink.tsx\` | \`<Link>\` wrapper that prepends \`/\\\${locale}\` |
-| \`src/components/layout/LocaleSwitcher.tsx\` | EN/FR dropdown toggle |
-| \`src/middleware.ts\` | Locale detection + redirect |
-
-### Usage in Components
-
-\\\`\\\`\\\`tsx
-// Access translated strings
-const t = useDictionary();
-<h1>{t.dashboard.title}</h1>
-
-// Locale-aware navigation
-const router = useLocalizedRouter();
-router.push("/agents"); // becomes /en/agents or /fr/agents
-
-// Locale-aware links
-<LocalizedLink href="/pricing">Pricing</LocalizedLink>
-\\\`\\\`\\\`
-
-### Dictionary Structure
-
-Dictionaries are organized by section: \`common\`, \`landing\`, \`nav\`, \`auth\`, \`dashboard\`, \`agents\`, \`skills\`, \`tools\`, \`extensions\`, \`playground\`, \`grading\`, \`mcp\`, \`examples\`, \`pricing\`, \`docs\`, \`settings\`, \`apiKeys\`, \`github\`, \`integrations\`, \`breadcrumbs\`.
-
-### Route Groups
-
-| Group | Path | Auth | Layout |
-|-------|------|------|--------|
-| \`(dashboard)\` | \`/[locale]/(dashboard)/...\` | Required | Sidebar + Header |
-| \`(auth)\` | \`/[locale]/(auth)/login\` | None | Centered card |
-| \`(public)\` | \`/[locale]/(public)/examples\` | None | Public navbar + footer |
-| Root | \`/[locale]/\`, \`/[locale]/pricing\` | None | Standalone |
+Token usage is tracked per server per month. View usage in the **API Keys** page or in each server's detail page.
 
 ---
 
-## GitHub Integration
+## Agent Teams
 
-Kopern provides **native GitHub integration** so agents can access your code repositories.
+Teams let you **orchestrate multiple agents** working together on a task. Each team member has a role and contributes to a shared goal.
 
-### How It Works
+### How Teams Work
 
-1. **Authentication** — When signing in with GitHub, the OAuth flow requests the \`repo\` scope. The access token is captured and stored in the user's Firestore document.
-2. **Repository Connection** — On any agent detail page, click **Connect Repo** to browse your repositories and select which ones the agent can access.
-3. **Storage** — Connected repositories are stored as \`connectedRepos: string[]\` on the \`AgentDoc\` (e.g. \`["owner/repo-name"]\`).
+1. Create a team and add agents as members
+2. Define each member's role and contribution order
+3. Execute the team — each agent processes the task in sequence
+4. The output of each agent is fed as context to the next
+5. Track combined metrics (tokens, cost, tool calls) across all members
 
-### Architecture
+### Use Cases
 
-\\\`\\\`\\\`text
-GitHub OAuth (login) → capture accessToken → store in users/{uid}.githubAccessToken
-                                                        ↓
-Agent Detail → "Connect Repo" → GET /api/github/repos (admin SDK reads token)
-                                                        ↓
-                                GitHub API → list user repos → display in dialog
-                                                        ↓
-                                User selects → update agent.connectedRepos[]
-\\\`\\\`\\\`
-
-### API Route
-
-\`GET /api/github/repos\` — Lists the authenticated user's GitHub repositories.
-
-**Headers:**
-\\\`\\\`\\\`
-Authorization: Bearer <firebase-id-token>
-\\\`\\\`\\\`
-
-**Response:**
-\\\`\\\`\\\`json
-{
-  "repos": [
-    {
-      "fullName": "owner/repo-name",
-      "name": "repo-name",
-      "owner": "owner",
-      "description": "A description",
-      "private": false,
-      "language": "TypeScript",
-      "updatedAt": "2025-01-15T...",
-      "defaultBranch": "main"
-    }
-  ]
-}
-\\\`\\\`\\\`
-
-### Integration Strategy
-
-- **GitHub** — Native first-class integration (built-in OAuth, repo picker, agent-level connection)
-- **Other services** (Slack, Jira, AWS, Notion...) — Connect via **MCP connectors**. Kopern's MCP infrastructure supports any external MCP server, making it infinitely extensible without building custom integrations for each service.
+- **Review pipeline** — Writer agent drafts, Reviewer agent critiques, Editor agent finalizes
+- **Analysis team** — Data agent gathers info, Analyst agent interprets, Reporter agent summarizes
+- **Support escalation** — Tier 1 agent handles common questions, Tier 2 agent handles complex issues
 
 ---
 
-## Pricing
+## Pipelines
 
-Kopern offers three pricing tiers accessible from the public \`/pricing\` page.
+Pipelines let you define **multi-step workflows** for an agent. Each step has a specific prompt and the output flows to the next step.
 
-### Tiers
+### How Pipelines Work
 
-| | Starter (Free) | Pro ($79/mo) | Enterprise ($499/mo) |
-|---|---|---|---|
-| Agents | 2 | 25 | Unlimited |
-| Tokens/month | 10K | 1M | 10M |
-| MCP Endpoints | 1 | 10 | Unlimited |
-| Grading runs/month | 5 | 100 | Unlimited |
-| Models | Sonnet only | All | All + fine-tuned |
-| Support | Community | Priority email | Dedicated + SLA |
-| SSO | — | — | Yes |
-| Audit Logs | — | — | Yes |
-| Version History | — | Yes | Yes |
-| Batch Processing | — | Yes | Yes |
+1. Create a pipeline on your agent
+2. Define steps with specific instructions
+3. Execute — each step runs in sequence
+4. Each step receives the previous step's output as context
+5. Track per-step and total metrics
 
-Annual pricing saves 17% ($790/yr for Pro, $4,990/yr for Enterprise).
+### Use Cases
 
-### Examples Gallery
-
-The \`/examples\` page showcases 15 production-ready agent configurations. Each includes a system prompt, skills, tools, MCP integration, and grading suite. Examples are fully translated in French and English.
-
-The **"Use this Agent"** button creates a real agent (with all skills and tools) from the example template. Unauthenticated users are redirected to login first.
+- **Content creation** — Research → Outline → Draft → Polish
+- **Code review** — Parse → Analyze Security → Check Performance → Generate Report
+- **Data processing** — Extract → Transform → Validate → Summarize
 
 ---
 
-## Customization
+## Sessions & History
 
-### Theming
+Every playground conversation is tracked as a **session**. Sessions capture the full conversation timeline including messages, tool calls, and metrics.
 
-Kopern uses **OKLch colors** with CSS variables. Toggle between light and dark mode from the header or landing page. The theme persists in \`localStorage\`.
+### Viewing Sessions
 
-### Adding UI Components
+1. Go to your agent's **Sessions** tab
+2. See all past conversations with:
+   - Session title (from your first message)
+   - Duration, token count, cost
+   - Tool call count
+   - Active/Ended status
+3. Click any session to see the **full timeline**:
+   - Every message (user and assistant)
+   - Every tool call with arguments and results
+   - Timestamps and metrics
+4. **Export** the full session trace as JSON for debugging or compliance
 
-Kopern uses shadcn/ui. To add new components:
+### Session Metrics
 
-\`\`\`bash
-npx shadcn@latest add [component-name]
-\`\`\`
+| Metric | Description |
+|--------|-------------|
+| **Tokens In** | Total input tokens consumed |
+| **Tokens Out** | Total output tokens generated |
+| **Cost** | Estimated cost based on provider pricing |
+| **Tool Calls** | Number of tool invocations |
+| **Messages** | Total message count |
 
-Available but not yet installed: \`switch\`, \`checkbox\`, \`radio-group\`, \`progress\`, \`slider\`, \`alert\`, \`avatar\`, \`popover\`, \`command\`, \`table\`.
+---
 
-### Project Structure
+## Billing & Usage
 
-\`\`\`text
-src/
-├── actions/         # Client-side Firestore mutations
-├── app/
-│   ├── [locale]/    # All localized routes
-│   │   ├── (auth)/  # Login page
-│   │   ├── (dashboard)/  # Protected: agents, docs, settings...
-│   │   ├── (public)/     # Public: examples
-│   │   ├── pricing/      # Public pricing page
-│   │   └── page.tsx      # Landing page
-│   └── api/         # Server-side API routes
-│       ├── agents/  # SSE chat, grading
-│       ├── github/  # GitHub repos proxy
-│       ├── mcp/     # JSON-RPC endpoint + key management
-│       └── health/
-├── components/      # React components
-│   ├── ui/          # shadcn/ui primitives
-│   ├── agents/      # AgentCard, AgentForm, GitHubConnector
-│   ├── docs/        # docs-content, docs-content-fr, TableOfContents
-│   ├── grading/     # Grading UI
-│   ├── mcp/         # MCP server components
-│   ├── motion/      # Animation wrappers
-│   └── layout/      # Sidebar, Header, Breadcrumbs, LocaleSwitcher
-├── data/            # Use-case examples + French translations
-├── hooks/           # useAuth, useFirestore, useSSE, useLocalizedRouter, useLocalizedUseCases
-├── i18n/            # config, getDictionary, dictionaries/{en,fr}.json
-├── lib/             # Core libraries
-│   ├── firebase/    # Firestore schema, auth (+GitHub scope), admin SDK
-│   ├── grading/     # Grading engine + criteria
-│   ├── llm/         # Multi-provider streaming client
-│   └── mcp/         # API key auth + token counting
-└── providers/       # AuthProvider, ThemeProvider, LocaleProvider
-\`\`\`
+The **Billing** page shows your token usage and costs across all agents.
+
+### What's Tracked
+
+- **Input/Output tokens** per month with running totals
+- **Total cost** calculated from provider pricing
+- **Request count** — total API/playground calls
+- **Per-agent breakdown** — see which agents consume the most
+- **Usage history** — visual chart of the last 6 months
+
+### Provider Pricing (per 1M tokens)
+
+| Provider | Input | Output |
+|----------|-------|--------|
+| Anthropic | $3.00 | $15.00 |
+| OpenAI | $2.50 | $10.00 |
+| Google | $1.25 | $5.00 |
+| Ollama | Free | Free |
+
+---
+
+## Integrations
+
+### GitHub (Native)
+
+Kopern has built-in GitHub integration:
+- Sign in with GitHub to grant repository access
+- Connect specific repos to specific agents
+- Agents can read files and search the file tree
+- The repo structure and README are included as context
+
+### External Services (via MCP)
+
+For any other service (Slack, Jira, AWS, Notion, databases, etc.), use **MCP connectors**:
+1. Deploy your agent as an MCP Server
+2. Call it from any MCP-compatible client
+3. Or build custom tools that call external APIs
+
+This makes Kopern infinitely extensible without building custom integrations for each service.
+
+---
+
+## Best Practices
+
+### Agent Design
+
+- **Start with the system prompt** — get core behavior right before adding skills
+- **Use skills for reusable patterns** — don't repeat instructions across agents
+- **Keep tools focused** — one tool per action, with clear descriptions
+- **Connect relevant repos** — give the agent the context it needs
+
+### Quality Assurance
+
+- **Write grading cases for edge cases** — test failure modes, not just happy paths
+- **Use deterministic criteria first** — output_match and schema_validation are reliable
+- **Use LLM Judge sparingly** — it's powerful but non-deterministic
+- **Version before changes** — always have a rollback point
+- **Track scores over time** — monitor regression across versions
+
+### API Deployment
+
+- **Set appropriate rate limits** — match expected traffic
+- **Rotate API keys periodically** — regenerate keys for security
+- **Monitor usage** — check the Billing page regularly
+- **Test before deploying** — use the Playground and Grading first
+
+### Security
+
+- API keys are hashed (SHA-256) — plaintext is never stored
+- GitHub tokens are stored securely in your user document
+- Firestore rules enforce owner-only access to all data
+- Tool execution runs in a sandboxed environment
 `;

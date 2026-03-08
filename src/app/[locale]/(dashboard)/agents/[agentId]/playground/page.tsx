@@ -30,8 +30,10 @@ export default function PlaygroundPage({
       modelProvider: agent.modelProvider,
       modelId: agent.modelId,
       skills: skills.map((s) => ({ name: s.name, content: s.content })),
+      connectedRepos: agent.connectedRepos ?? [],
+      userId: user?.uid,
     };
-  }, [agent, skills]);
+  }, [agent, skills, user]);
 
   return (
     <div className="space-y-4">

@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
 import { createSSEStream, sseResponse } from "@/lib/utils/sse";
 import { createEventCollector } from "@/lib/pi-mono/event-collector";
-import { streamLLM, type LLMMessage } from "@/lib/llm/client";
 import { adminDb } from "@/lib/firebase/admin";
+import { runAgentWithTools, type AgentRunMetrics } from "@/lib/tools/run-agent";
 
 export async function POST(
   request: NextRequest,
@@ -19,6 +19,7 @@ export async function POST(
       let systemPrompt = "You are a helpful AI agent.";
       let modelProvider = "anthropic";
       let modelId = "claude-sonnet-4-6";
+      let connectedRepos: string[] = [];
 
       if (userId) {
         const agentSnap = await adminDb
@@ -29,9 +30,10 @@ export async function POST(
           systemPrompt = agentData.systemPrompt || systemPrompt;
           modelProvider = agentData.modelProvider || modelProvider;
           modelId = agentData.modelId || modelId;
+          connectedRepos = agentData.connectedRepos || [];
         }
 
-        // Fetch skills from subcollection and inject into system prompt
+        // Fetch skills and inject into system prompt
         const skillsSnap = await adminDb
           .collection(`users/${userId}/agents/${agentId}/skills`)
           .get();
@@ -44,9 +46,20 @@ export async function POST(
             .join("\n\n");
           systemPrompt += `\n\n<skills>\n${skillsXml}\n</skills>`;
         }
+
+        // Inject repo context if connected
+        if (connectedRepos.length > 0) {
+          const fetchCtx = (await import("./fetch-repo-context")).default;
+          const repoCtx = await fetchCtx(userId, connectedRepos);
+          if (repoCtx) {
+            systemPrompt += `\n\n${repoCtx}`;
+          }
+        }
       }
 
       send("status", { status: "running", totalCases: cases.length });
+
+      let totalMetrics: AgentRunMetrics = { inputTokens: 0, outputTokens: 0, toolCallCount: 0, toolIterations: 0 };
 
       for (let i = 0; i < cases.length; i++) {
         const testCase = cases[i];
@@ -58,33 +71,47 @@ export async function POST(
         });
 
         const collector = createEventCollector();
+        let caseMetrics: AgentRunMetrics | null = null;
 
-        // Execute real LLM call for this test case
-        const messages: LLMMessage[] = [
-          { role: "user", content: testCase.inputPrompt },
-        ];
-
-        await new Promise<void>((resolve, reject) => {
-          streamLLM(
-            {
-              provider: modelProvider,
-              model: modelId,
-              systemPrompt,
-              messages,
+        await runAgentWithTools(
+          {
+            provider: modelProvider,
+            model: modelId,
+            systemPrompt,
+            messages: [{ role: "user", content: testCase.inputPrompt }],
+            userId,
+            agentId,
+            connectedRepos,
+          },
+          {
+            onToken: (text) => {
+              collector.addToken(text);
             },
-            {
-              onToken: (text) => {
-                collector.addToken(text);
-              },
-              onDone: () => {
-                resolve();
-              },
-              onError: (error) => {
-                reject(error);
-              },
-            }
-          );
-        });
+            onToolStart: (tc) => {
+              // Tool calls tracked in collector
+            },
+            onToolEnd: (result) => {
+              collector.addToolCall({
+                name: result.name,
+                args: {},
+                result: result.result,
+                isError: result.isError,
+              });
+            },
+            onDone: (metrics) => {
+              caseMetrics = metrics;
+              totalMetrics = {
+                inputTokens: totalMetrics.inputTokens + metrics.inputTokens,
+                outputTokens: totalMetrics.outputTokens + metrics.outputTokens,
+                toolCallCount: totalMetrics.toolCallCount + metrics.toolCallCount,
+                toolIterations: totalMetrics.toolIterations + metrics.toolIterations,
+              };
+            },
+            onError: (error) => {
+              collector.addToken(`\nError: ${error.message}`);
+            },
+          }
+        );
 
         collector.finalize();
 
@@ -103,10 +130,12 @@ export async function POST(
           score,
           criteriaResults,
           agentOutput: collector.assistantOutput,
+          toolCalls: collector.toolCalls,
+          metrics: caseMetrics,
         });
       }
 
-      send("done", { suiteId, agentId });
+      send("done", { suiteId, agentId, metrics: totalMetrics });
     } catch (err) {
       send("error", { message: (err as Error).message });
     } finally {

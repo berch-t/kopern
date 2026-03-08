@@ -27,7 +27,7 @@ export default function ExamplesPage() {
   );
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-6">
+    <div className="space-y-6">
       <SlideUp>
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">

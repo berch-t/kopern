@@ -7,12 +7,19 @@ import { ToolCallDisplay } from "./ToolCallDisplay";
 import { StreamIndicator } from "./StreamIndicator";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Square, Bot } from "lucide-react";
+import { Send, Square, Bot, ArrowDownToLine, ArrowUpFromLine, DollarSign, Wrench, ExternalLink } from "lucide-react";
 import { MarkdownContent } from "./MarkdownContent";
+import { LocalizedLink } from "@/components/LocalizedLink";
 
 interface ChatContainerProps {
   agentId: string;
   agentConfig: AgentPlaygroundConfig | null;
+}
+
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
 }
 
 export function ChatContainer({ agentId, agentConfig }: ChatContainerProps) {
@@ -23,6 +30,9 @@ export function ChatContainer({ agentId, agentConfig }: ChatContainerProps) {
     isStreaming,
     sendMessage,
     stop,
+    sessionMetrics,
+    cumulativeMetrics,
+    sessionId,
   } = useAgent(agentId, agentConfig);
 
   const [input, setInput] = useState("");
@@ -49,8 +59,45 @@ export function ChatContainer({ agentId, agentConfig }: ChatContainerProps) {
     }
   }
 
+  const hasMetrics = cumulativeMetrics.inputTokens > 0 || cumulativeMetrics.outputTokens > 0;
+
   return (
     <div className="flex h-[calc(100vh-12rem)] flex-col rounded-lg border">
+      {/* Metrics bar */}
+      {hasMetrics && (
+        <div className="flex items-center gap-4 border-b bg-muted/30 px-4 py-1.5 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <ArrowDownToLine className="h-3 w-3" />
+            {formatTokens(cumulativeMetrics.inputTokens)} in
+          </span>
+          <span className="flex items-center gap-1">
+            <ArrowUpFromLine className="h-3 w-3" />
+            {formatTokens(cumulativeMetrics.outputTokens)} out
+          </span>
+          <span className="flex items-center gap-1">
+            <DollarSign className="h-3 w-3" />
+            {cumulativeMetrics.estimatedCost < 0.01
+              ? "< $0.01"
+              : `$${cumulativeMetrics.estimatedCost.toFixed(4)}`}
+          </span>
+          {cumulativeMetrics.toolCallCount > 0 && (
+            <span className="flex items-center gap-1">
+              <Wrench className="h-3 w-3" />
+              {cumulativeMetrics.toolCallCount} tool calls
+            </span>
+          )}
+          {sessionId && (
+            <LocalizedLink
+              href={`/agents/${agentId}/sessions/${sessionId}`}
+              className="ml-auto flex items-center gap-1 text-primary hover:underline"
+            >
+              <ExternalLink className="h-3 w-3" />
+              View session
+            </LocalizedLink>
+          )}
+        </div>
+      )}
+
       {/* Messages area */}
       <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.length === 0 && !isStreaming && (
