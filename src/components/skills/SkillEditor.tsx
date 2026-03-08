@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useLocalizedRouter } from "@/hooks/useLocalizedRouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useDocument } from "@/hooks/useFirestore";
 import { skillDoc, type SkillDoc } from "@/lib/firebase/firestore";
@@ -21,7 +21,7 @@ interface SkillEditorProps {
 
 export function SkillEditor({ agentId, skillId, isNew }: SkillEditorProps) {
   const { user } = useAuth();
-  const router = useRouter();
+  const router = useLocalizedRouter();
 
   const { data: existing } = useDocument<SkillDoc>(
     user && skillId ? skillDoc(user.uid, agentId, skillId) : null

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { LocalizedLink } from "@/components/LocalizedLink";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Server, Key } from "lucide-react";
@@ -13,7 +13,7 @@ interface McpServerCardProps {
 
 export function McpServerCard({ server, agentId }: McpServerCardProps) {
   return (
-    <Link href={`/agents/${agentId}/mcp-servers/${server.id}`}>
+    <LocalizedLink href={`/agents/${agentId}/mcp-servers/${server.id}`}>
       <Card className="cursor-pointer transition-shadow hover:shadow-md">
         <CardContent className="p-4 space-y-3">
           <div className="flex items-center justify-between">
@@ -39,6 +39,6 @@ export function McpServerCard({ server, agentId }: McpServerCardProps) {
           </div>
         </CardContent>
       </Card>
-    </Link>
+    </LocalizedLink>
   );
 }

@@ -15,6 +15,7 @@ export interface UserDoc {
   apiKeys: Record<string, string>;
   defaultProvider: string;
   defaultModel: string;
+  githubAccessToken?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -28,6 +29,7 @@ export interface AgentDoc {
   modelId: string;
   thinkingLevel: "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
   builtinTools: string[];
+  connectedRepos: string[];
   version: number;
   isPublished: boolean;
   latestGradingScore: number | null;

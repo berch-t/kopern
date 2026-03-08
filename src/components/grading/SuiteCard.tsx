@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { LocalizedLink } from "@/components/LocalizedLink";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,16 +17,16 @@ export function SuiteCard({ agentId, suite, onDelete }: SuiteCardProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between py-3">
-        <Link href={`/agents/${agentId}/grading/${suite.id}`}>
+        <LocalizedLink href={`/agents/${agentId}/grading/${suite.id}`}>
           <CardTitle className="text-base hover:underline">{suite.name}</CardTitle>
-        </Link>
+        </LocalizedLink>
         <div className="flex gap-1">
-          <Link href={`/agents/${agentId}/grading/${suite.id}/runs`}>
+          <LocalizedLink href={`/agents/${agentId}/grading/${suite.id}/runs`}>
             <Button variant="ghost" size="sm">
               <History className="mr-1 h-4 w-4" />
               Runs
             </Button>
-          </Link>
+          </LocalizedLink>
           <Button
             variant="ghost"
             size="icon"

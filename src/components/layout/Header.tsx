@@ -11,15 +11,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LogOut, User, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/providers/ThemeProvider";
+import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
+import { useDictionary } from "@/providers/LocaleProvider";
 
 export function Header() {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
+  const t = useDictionary();
 
   return (
     <header className="flex h-14 items-center justify-between border-b px-6">
       <div />
       <div className="flex items-center gap-2">
+        <LocaleSwitcher />
         <Button
           variant="ghost"
           size="icon"
@@ -52,7 +56,7 @@ export function Header() {
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => signOut()}>
                 <LogOut className="mr-2 h-4 w-4" />
-                Sign out
+                {t.common.signOut}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

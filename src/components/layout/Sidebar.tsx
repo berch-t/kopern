@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -10,6 +9,7 @@ import {
   BookOpen,
   Cable,
   LayoutDashboard,
+  Lightbulb,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -17,17 +17,21 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/agents", label: "Agents", icon: Bot },
-  { href: "/api-keys", label: "API", icon: Cable },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
+import { LocalizedLink } from "@/components/LocalizedLink";
+import { useDictionary } from "@/providers/LocaleProvider";
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const t = useDictionary();
+
+  const navItems = [
+    { href: "/dashboard", label: t.nav.dashboard, icon: LayoutDashboard },
+    { href: "/agents", label: t.nav.agents, icon: Bot },
+    { href: "/api-keys", label: t.nav.api, icon: Cable },
+    { href: "/examples", label: t.nav.examples, icon: Lightbulb },
+    { href: "/settings", label: t.nav.settings, icon: Settings },
+  ];
 
   return (
     <motion.aside
@@ -43,17 +47,17 @@ export function Sidebar() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <LocalizedLink href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                 <FlaskConical className="h-6 w-6 text-sidebar-primary" />
                 <span className="text-lg font-bold">Kopern</span>
-              </Link>
+              </LocalizedLink>
             </motion.div>
           )}
         </AnimatePresence>
         {collapsed && (
-          <Link href="/" className="hover:opacity-80 transition-opacity">
+          <LocalizedLink href="/" className="hover:opacity-80 transition-opacity">
             <FlaskConical className="h-6 w-6 text-sidebar-primary" />
-          </Link>
+          </LocalizedLink>
         )}
         <Button
           variant="ghost"
@@ -67,10 +71,10 @@ export function Sidebar() {
 
       <nav className="flex-1 space-y-1 px-2 py-4">
         {navItems.map((item) => {
-          const isActive = pathname.startsWith(item.href);
+          const isActive = pathname.includes(item.href);
 
           const link = (
-            <Link
+            <LocalizedLink
               key={item.href}
               href={item.href}
               className={cn(
@@ -93,7 +97,7 @@ export function Sidebar() {
                   </motion.span>
                 )}
               </AnimatePresence>
-            </Link>
+            </LocalizedLink>
           );
 
           if (collapsed) {
@@ -112,9 +116,10 @@ export function Sidebar() {
       {/* Bottom nav */}
       <div className="border-t px-2 py-3">
         {(() => {
-          const isActive = pathname.startsWith("/docs");
+          const isActive = pathname.includes("/docs");
+          const docsLabel = t.nav.docs;
           const link = (
-            <Link
+            <LocalizedLink
               href="/docs"
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
@@ -132,17 +137,17 @@ export function Sidebar() {
                     exit={{ opacity: 0, width: 0 }}
                     className="overflow-hidden whitespace-nowrap"
                   >
-                    Documentation
+                    {docsLabel}
                   </motion.span>
                 )}
               </AnimatePresence>
-            </Link>
+            </LocalizedLink>
           );
           if (collapsed) {
             return (
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>{link}</TooltipTrigger>
-                <TooltipContent side="right">Documentation</TooltipContent>
+                <TooltipContent side="right">{docsLabel}</TooltipContent>
               </Tooltip>
             );
           }

@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2 } from "lucide-react";
 import { deleteTool } from "@/actions/tools";
 import { toast } from "sonner";
-import Link from "next/link";
+import { LocalizedLink } from "@/components/LocalizedLink";
 import { StaggerChildren, staggerItem } from "@/components/motion/StaggerChildren";
 import { motion } from "framer-motion";
 
@@ -52,7 +52,7 @@ export function ToolList({ agentId }: ToolListProps) {
         <motion.div key={tool.id} variants={staggerItem}>
           <Card>
             <CardContent className="flex items-center justify-between p-4">
-              <Link
+              <LocalizedLink
                 href={`/agents/${agentId}/tools/${tool.id}`}
                 className="flex-1"
               >
@@ -61,7 +61,7 @@ export function ToolList({ agentId }: ToolListProps) {
                   <span className="text-sm font-medium">{tool.label}</span>
                   <span className="text-sm text-muted-foreground">{tool.description}</span>
                 </div>
-              </Link>
+              </LocalizedLink>
               <Button
                 variant="ghost"
                 size="icon"

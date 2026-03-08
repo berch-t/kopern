@@ -1,0 +1,371 @@
+{
+  "common": {
+    "loading": "Chargement...",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "back": "Retour",
+    "create": "Créer",
+    "edit": "Modifier",
+    "signIn": "Se connecter",
+    "signOut": "Se déconnecter",
+    "viewAll": "Voir tout",
+    "noResults": "Aucun résultat",
+    "copy": "Copier",
+    "copied": "Copié !",
+    "or": "ou",
+    "none": "Aucun",
+    "active": "Actif",
+    "disabled": "Désactivé",
+    "published": "Publié",
+    "all": "Tout",
+    "saving": "Enregistrement...",
+    "creating": "Création..."
+  },
+  "landing": {
+    "title": "Construisez, Testez & Déployez",
+    "titleAccent": "des Agents IA",
+    "subtitle": "Créez des agents IA métier personnalisés, validez-les via des pipelines de notation déterministes et exposez-les comme endpoints API — le tout depuis une seule plateforme.",
+    "cta": "Commencer",
+    "ctaDashboard": "Aller au Tableau de bord",
+    "examples": "Exemples de Workflows",
+    "features": {
+      "agentBuilder": { "title": "Constructeur d'Agents", "description": "Configurez des agents avec des prompts système, des compétences, des outils et des extensions. Support multi-modèle." },
+      "grading": { "title": "Notation Déterministe", "description": "6 types de critères : correspondance de sortie, validation de schéma, utilisation d'outils, vérification de sécurité, juge LLM et plus." },
+      "api": { "title": "Endpoints API", "description": "Exposez vos agents comme endpoints JSON-RPC avec authentification par clé API, limitation de débit et suivi d'utilisation." },
+      "security": { "title": "Sécurisé par Conception", "description": "Règles Firestore propriétaire uniquement, clés API hashées, gestion des clés côté serveur, exécution sandboxée." }
+    },
+    "footer": "Kopern — Constructeur & Évaluateur d'Agents IA"
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "agents": "Agents",
+    "api": "API",
+    "examples": "Exemples",
+    "settings": "Paramètres",
+    "docs": "Documentation",
+    "pricing": "Tarifs"
+  },
+  "auth": {
+    "title": "Kopern",
+    "subtitle": "Construisez et validez des agents IA avec une notation déterministe",
+    "google": "Google",
+    "github": "GitHub",
+    "email": "Email",
+    "password": "Mot de passe",
+    "emailPlaceholder": "vous@entreprise.com",
+    "passwordPlaceholder": "********",
+    "signInBtn": "Se connecter",
+    "signUpBtn": "Créer un compte",
+    "switchToSignUp": "Pas encore de compte ?",
+    "switchToSignIn": "Déjà un compte ?",
+    "signUp": "S'inscrire",
+    "failedOAuth": "Échec de connexion avec {provider}",
+    "failedSignUp": "Échec de création du compte",
+    "failedSignIn": "Identifiants invalides"
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "subtitle": "Vue d'ensemble de vos agents et endpoints",
+    "newAgent": "Nouvel Agent",
+    "stats": {
+      "agents": "Agents",
+      "published": "Publiés",
+      "apiEndpoints": "Endpoints API",
+      "avgScore": "Score Moy.",
+      "na": "N/A"
+    },
+    "recentAgents": "Agents Récents",
+    "apiEndpoints": "Endpoints API",
+    "noAgents": "Aucun agent pour le moment",
+    "noAgentsDesc": "Créez votre premier agent IA pour commencer",
+    "createAgent": "Créer un Agent",
+    "noEndpoints": "Aucun endpoint API pour le moment.",
+    "noEndpointsDesc": "Allez sur la page Serveurs MCP d'un agent pour en créer un."
+  },
+  "agents": {
+    "title": "Agents",
+    "newAgent": "Nouvel Agent",
+    "noAgents": "Aucun agent pour le moment",
+    "noAgentsDesc": "Créez votre premier agent IA pour commencer",
+    "createAgent": "Créer un Agent",
+    "createTitle": "Créer un Agent",
+    "createSubtitle": "Configurez un nouvel agent IA avec un prompt système, un modèle et un domaine",
+    "detail": {
+      "editConfig": "Modifier la Config",
+      "skills": "Compétences",
+      "tools": "Outils",
+      "extensions": "Extensions",
+      "playground": "Playground",
+      "grading": "Notation",
+      "mcpServers": "Serveurs MCP",
+      "overview": "Vue d'ensemble",
+      "systemPrompt": "Prompt Système",
+      "configuration": "Configuration",
+      "provider": "Fournisseur",
+      "model": "Modèle",
+      "thinking": "Réflexion",
+      "builtinTools": "Outils Intégrés",
+      "gradingScore": "Score de Notation",
+      "notFound": "Agent introuvable",
+      "loadingAgent": "Chargement de l'agent...",
+      "noPrompt": "Aucun prompt système défini"
+    },
+    "form": {
+      "name": "Nom",
+      "namePlaceholder": "Mon Agent IA",
+      "description": "Description",
+      "descriptionPlaceholder": "Que fait cet agent ?",
+      "domain": "Domaine",
+      "domainPlaceholder": "ex. Support Client, DevOps",
+      "systemPrompt": "Prompt Système",
+      "systemPromptPlaceholder": "Vous êtes un assistant IA utile...",
+      "modelProvider": "Fournisseur de Modèle",
+      "modelId": "ID du Modèle",
+      "thinkingLevel": "Niveau de Réflexion",
+      "builtinTools": "Outils Intégrés",
+      "save": "Enregistrer l'Agent",
+      "create": "Créer l'Agent",
+      "saving": "Enregistrement...",
+      "creating": "Création..."
+    }
+  },
+  "skills": {
+    "title": "Compétences",
+    "addSkill": "Ajouter une Compétence",
+    "noSkills": "Aucune compétence pour le moment",
+    "noSkillsDesc": "Les compétences sont des templates markdown injectés dans le prompt système",
+    "form": {
+      "name": "Nom",
+      "description": "Description",
+      "content": "Contenu"
+    }
+  },
+  "tools": {
+    "title": "Outils",
+    "addTool": "Ajouter un Outil",
+    "noTools": "Aucun outil pour le moment",
+    "noToolsDesc": "Les outils permettent à votre agent d'effectuer des actions avec des paramètres JSON Schema",
+    "form": {
+      "name": "Nom",
+      "label": "Libellé",
+      "description": "Description",
+      "parametersSchema": "Schéma des Paramètres (JSON)",
+      "executeCode": "Code d'Exécution (JavaScript)"
+    }
+  },
+  "extensions": {
+    "title": "Extensions",
+    "addExtension": "Ajouter une Extension",
+    "noExtensions": "Aucune extension pour le moment",
+    "noExtensionsDesc": "Les extensions sont des hooks d'événements TypeScript pour personnaliser le comportement de l'agent"
+  },
+  "playground": {
+    "title": "Playground",
+    "sendMessage": "Envoyer un message...",
+    "send": "Envoyer",
+    "clearChat": "Effacer le chat",
+    "thinking": "Réflexion..."
+  },
+  "grading": {
+    "title": "Notation",
+    "addSuite": "Ajouter une Suite",
+    "noSuites": "Aucune suite de notation pour le moment",
+    "noSuitesDesc": "Créez une suite de notation pour valider le comportement de votre agent",
+    "criteria": {
+      "outputMatch": "Correspondance de Sortie",
+      "schemaValidation": "Validation de Schéma",
+      "toolUsage": "Utilisation d'Outils",
+      "safetyCheck": "Vérification de Sécurité",
+      "customScript": "Script Personnalisé",
+      "llmJudge": "Juge LLM"
+    },
+    "runs": {
+      "title": "Exécutions",
+      "noRuns": "Aucune exécution pour le moment",
+      "runGrading": "Lancer la Notation",
+      "running": "En cours...",
+      "passed": "Réussi",
+      "failed": "Échoué",
+      "score": "Score"
+    }
+  },
+  "mcp": {
+    "title": "Serveurs MCP",
+    "createServer": "Créer un Serveur",
+    "noServers": "Aucun serveur MCP pour le moment",
+    "noServersDesc": "Créez un serveur MCP pour exposer votre agent comme endpoint API",
+    "quickStart": "Démarrage Rapide",
+    "endpoint": "Endpoint",
+    "apiKey": "Clé API",
+    "rateLimit": "Limite de Débit",
+    "usage": "Utilisation",
+    "tokens": "Tokens",
+    "requests": "Requêtes"
+  },
+  "examples": {
+    "title": "Exemples de Workflows",
+    "subtitle": "15 configurations d'agents prêtes pour la production pour des workflows métier réels. Chaque exemple inclut un prompt système, des compétences, des outils, une intégration MCP et une suite de notation — prêt à déployer sur Kopern.",
+    "useThisAgent": "Utiliser cet Agent",
+    "creating": "Création...",
+    "allExamples": "Tous les exemples",
+    "backToExamples": "Retour aux exemples",
+    "exampleNotFound": "Exemple introuvable.",
+    "copyFull": "Exemple complet",
+    "timeSaved": "Temps Économisé",
+    "costReduction": "Réduction des Coûts",
+    "riskMitigation": "Atténuation des Risques",
+    "agentCreated": "Agent créé avec succès !",
+    "agentCreateFailed": "Échec de création de l'agent",
+    "copiedToClipboard": "{label} copié dans le presse-papiers"
+  },
+  "pricing": {
+    "title": "Tarification Simple et Transparente",
+    "subtitle": "Commencez gratuitement, évoluez selon vos besoins. Tous les plans incluent les fonctionnalités de base de construction d'agents.",
+    "monthly": "Mensuel",
+    "annual": "Annuel",
+    "savePercent": "Économisez 17%",
+    "mo": "/mois",
+    "yr": "/an",
+    "popular": "Populaire",
+    "getStarted": "Commencer",
+    "currentPlan": "Plan Actuel",
+    "contactSales": "Contacter les Ventes",
+    "startFree": "Commencer Gratuitement",
+    "tiers": {
+      "starter": {
+        "name": "Starter",
+        "price": "0",
+        "priceAnnual": "0",
+        "description": "Pour les individus explorant les agents IA"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "79",
+        "priceAnnual": "790",
+        "description": "Pour les équipes construisant des agents en production"
+      },
+      "enterprise": {
+        "name": "Enterprise",
+        "price": "499",
+        "priceAnnual": "4990",
+        "description": "Pour les organisations aux besoins avancés"
+      }
+    },
+    "features": {
+      "agents": "Agents",
+      "tokensPerMonth": "Tokens / mois",
+      "mcpEndpoints": "Endpoints MCP",
+      "gradingRunsPerMonth": "Exécutions de notation / mois",
+      "models": "Modèles",
+      "support": "Support",
+      "sso": "SSO",
+      "auditLogs": "Journaux d'Audit",
+      "versionHistory": "Historique des Versions",
+      "batchProcessing": "Traitement par Lots"
+    },
+    "featureValues": {
+      "starter": {
+        "agents": "2",
+        "tokensPerMonth": "10K",
+        "mcpEndpoints": "1",
+        "gradingRunsPerMonth": "5",
+        "models": "Sonnet uniquement",
+        "support": "Communauté"
+      },
+      "pro": {
+        "agents": "25",
+        "tokensPerMonth": "1M",
+        "mcpEndpoints": "10",
+        "gradingRunsPerMonth": "100",
+        "models": "Tous les modèles",
+        "support": "Email prioritaire"
+      },
+      "enterprise": {
+        "agents": "Illimité",
+        "tokensPerMonth": "10M",
+        "mcpEndpoints": "Illimité",
+        "gradingRunsPerMonth": "Illimité",
+        "models": "Tous + fine-tunés",
+        "support": "Dédié + SLA"
+      }
+    },
+    "comparisonTitle": "Comparer les Plans",
+    "comparisonSubtitle": "Tout ce dont vous avez besoin pour construire, tester et déployer des agents IA"
+  },
+  "docs": {
+    "title": "Documentation",
+    "subtitle": "Guide complet pour construire des agents avec Kopern",
+    "saveMarkdown": "Enregistrer en Markdown",
+    "saveSkill": "Enregistrer comme Compétence",
+    "savedMarkdown": "Documentation enregistrée en Markdown",
+    "copiedSkill": "Documentation copiée — collez-la comme contenu d'une compétence",
+    "loginRequired": "Vous devez être connecté"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "apiKeys": "Clés API",
+    "defaults": "Valeurs par Défaut",
+    "defaultProvider": "Fournisseur par Défaut",
+    "defaultModel": "Modèle par Défaut",
+    "saveSettings": "Enregistrer les Paramètres",
+    "saved": "Paramètres enregistrés",
+    "saveFailed": "Échec de l'enregistrement des paramètres",
+    "language": "Langue",
+    "theme": "Thème"
+  },
+  "apiKeys": {
+    "title": "Endpoints API",
+    "subtitle": "Tous les serveurs MCP de vos agents",
+    "noEndpoints": "Aucun endpoint API pour le moment",
+    "noEndpointsDesc": "Allez sur la page de détail d'un agent et créez un serveur MCP pour l'exposer comme API"
+  },
+  "github": {
+    "connectRepo": "Connecter un Repo",
+    "connectDesc": "Sélectionnez les dépôts auxquels votre agent peut accéder pour lire le code, revoir les PRs et analyser les projets.",
+    "searchRepos": "Rechercher des dépôts...",
+    "connected": "{repo} connecté",
+    "disconnected": "{repo} déconnecté",
+    "noToken": "Aucune connexion GitHub trouvée. Connectez-vous avec GitHub pour accéder à vos dépôts.",
+    "reloginHint": "Déconnectez-vous puis reconnectez-vous avec GitHub pour autoriser l'accès aux dépôts.",
+    "fetchFailed": "Échec du chargement des dépôts",
+    "updateFailed": "Échec de la mise à jour des dépôts connectés",
+    "connectedRepos": "Dépôts Connectés"
+  },
+  "integrations": {
+    "title": "Connectez Vos Outils,",
+    "titleAccent": "Livrez Plus Vite",
+    "subtitle": "Liez vos dépôts GitHub pour des agents qui comprennent votre code, ou connectez n'importe quel service via MCP — Slack, Jira, AWS, Notion, et bien plus.",
+    "github": {
+      "title": "Intégration GitHub",
+      "description": "Les agents lisent votre code, révisent les PRs, analysent les dépendances et suggèrent des correctifs — directement depuis vos dépôts."
+    },
+    "mcp": {
+      "title": "Connecteurs MCP",
+      "description": "Connectez n'importe quel service externe via le Model Context Protocol. Slack, Linear, Notion, bases de données — vos agents y accèdent tous."
+    },
+    "workflow": {
+      "title": "Workflows de Bout en Bout",
+      "description": "Chaînez les intégrations : un agent lit une PR GitHub, vérifie Jira pour le contexte, poste une revue et met à jour Slack — entièrement automatisé."
+    }
+  },
+  "breadcrumbs": {
+    "home": "Accueil",
+    "dashboard": "Tableau de bord",
+    "agents": "Agents",
+    "edit": "Modifier",
+    "skills": "Compétences",
+    "tools": "Outils",
+    "extensions": "Extensions",
+    "playground": "Playground",
+    "grading": "Notation",
+    "mcpServers": "Serveurs MCP",
+    "apiKeys": "API",
+    "examples": "Exemples de Workflows",
+    "docs": "Documentation",
+    "settings": "Paramètres",
+    "new": "Nouveau",
+    "runs": "Exécutions",
+    "pricing": "Tarifs"
+  }
+}

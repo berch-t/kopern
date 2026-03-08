@@ -1,0 +1,371 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "back": "Back",
+    "create": "Create",
+    "edit": "Edit",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "viewAll": "View all",
+    "noResults": "No results",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "or": "or",
+    "none": "None",
+    "active": "Active",
+    "disabled": "Disabled",
+    "published": "Published",
+    "all": "All",
+    "saving": "Saving...",
+    "creating": "Creating..."
+  },
+  "landing": {
+    "title": "Build, Test & Deploy",
+    "titleAccent": "AI Agents",
+    "subtitle": "Create custom business AI agents, validate them through deterministic grading pipelines, and expose them as API endpoints — all from one platform.",
+    "cta": "Get Started",
+    "ctaDashboard": "Go to Dashboard",
+    "examples": "Workflow Examples",
+    "features": {
+      "agentBuilder": { "title": "Agent Builder", "description": "Configure agents with system prompts, skills, tools and extensions. Multi-model support." },
+      "grading": { "title": "Deterministic Grading", "description": "6 criterion types: output match, schema validation, tool usage, safety check, LLM judge and more." },
+      "api": { "title": "API Endpoints", "description": "Expose agents as JSON-RPC endpoints with API key auth, rate limiting and usage tracking." },
+      "security": { "title": "Secure by Design", "description": "Owner-only Firestore rules, hashed API keys, server-side key management, sandboxed execution." }
+    },
+    "footer": "Kopern — AI Agent Builder & Grader"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "agents": "Agents",
+    "api": "API",
+    "examples": "Examples",
+    "settings": "Settings",
+    "docs": "Documentation",
+    "pricing": "Pricing"
+  },
+  "auth": {
+    "title": "Kopern",
+    "subtitle": "Build and validate AI agents with deterministic grading",
+    "google": "Google",
+    "github": "GitHub",
+    "email": "Email",
+    "password": "Password",
+    "emailPlaceholder": "you@company.com",
+    "passwordPlaceholder": "********",
+    "signInBtn": "Sign in",
+    "signUpBtn": "Create account",
+    "switchToSignUp": "No account yet?",
+    "switchToSignIn": "Already have an account?",
+    "signUp": "Sign up",
+    "failedOAuth": "Failed to sign in with {provider}",
+    "failedSignUp": "Failed to create account",
+    "failedSignIn": "Invalid credentials"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Overview of your agents and endpoints",
+    "newAgent": "New Agent",
+    "stats": {
+      "agents": "Agents",
+      "published": "Published",
+      "apiEndpoints": "API Endpoints",
+      "avgScore": "Avg. Score",
+      "na": "N/A"
+    },
+    "recentAgents": "Recent Agents",
+    "apiEndpoints": "API Endpoints",
+    "noAgents": "No agents yet",
+    "noAgentsDesc": "Create your first AI agent to get started",
+    "createAgent": "Create Agent",
+    "noEndpoints": "No API endpoints yet.",
+    "noEndpointsDesc": "Go to an agent's MCP Servers page to create one."
+  },
+  "agents": {
+    "title": "Agents",
+    "newAgent": "New Agent",
+    "noAgents": "No agents yet",
+    "noAgentsDesc": "Create your first AI agent to get started",
+    "createAgent": "Create Agent",
+    "createTitle": "Create Agent",
+    "createSubtitle": "Set up a new AI agent with a system prompt, model, and domain",
+    "detail": {
+      "editConfig": "Edit Config",
+      "skills": "Skills",
+      "tools": "Tools",
+      "extensions": "Extensions",
+      "playground": "Playground",
+      "grading": "Grading",
+      "mcpServers": "MCP Servers",
+      "overview": "Overview",
+      "systemPrompt": "System Prompt",
+      "configuration": "Configuration",
+      "provider": "Provider",
+      "model": "Model",
+      "thinking": "Thinking",
+      "builtinTools": "Built-in Tools",
+      "gradingScore": "Grading Score",
+      "notFound": "Agent not found",
+      "loadingAgent": "Loading agent...",
+      "noPrompt": "No system prompt defined"
+    },
+    "form": {
+      "name": "Name",
+      "namePlaceholder": "My AI Agent",
+      "description": "Description",
+      "descriptionPlaceholder": "What does this agent do?",
+      "domain": "Domain",
+      "domainPlaceholder": "e.g. Customer Support, DevOps",
+      "systemPrompt": "System Prompt",
+      "systemPromptPlaceholder": "You are a helpful AI assistant...",
+      "modelProvider": "Model Provider",
+      "modelId": "Model ID",
+      "thinkingLevel": "Thinking Level",
+      "builtinTools": "Built-in Tools",
+      "save": "Save Agent",
+      "create": "Create Agent",
+      "saving": "Saving...",
+      "creating": "Creating..."
+    }
+  },
+  "skills": {
+    "title": "Skills",
+    "addSkill": "Add Skill",
+    "noSkills": "No skills yet",
+    "noSkillsDesc": "Skills are markdown templates injected into the system prompt",
+    "form": {
+      "name": "Name",
+      "description": "Description",
+      "content": "Content"
+    }
+  },
+  "tools": {
+    "title": "Tools",
+    "addTool": "Add Tool",
+    "noTools": "No tools yet",
+    "noToolsDesc": "Tools let your agent perform actions with JSON Schema parameters",
+    "form": {
+      "name": "Name",
+      "label": "Label",
+      "description": "Description",
+      "parametersSchema": "Parameters Schema (JSON)",
+      "executeCode": "Execute Code (JavaScript)"
+    }
+  },
+  "extensions": {
+    "title": "Extensions",
+    "addExtension": "Add Extension",
+    "noExtensions": "No extensions yet",
+    "noExtensionsDesc": "Extensions are TypeScript event hooks for custom agent behavior"
+  },
+  "playground": {
+    "title": "Playground",
+    "sendMessage": "Send a message...",
+    "send": "Send",
+    "clearChat": "Clear chat",
+    "thinking": "Thinking..."
+  },
+  "grading": {
+    "title": "Grading",
+    "addSuite": "Add Suite",
+    "noSuites": "No grading suites yet",
+    "noSuitesDesc": "Create a grading suite to validate your agent's behavior",
+    "criteria": {
+      "outputMatch": "Output Match",
+      "schemaValidation": "Schema Validation",
+      "toolUsage": "Tool Usage",
+      "safetyCheck": "Safety Check",
+      "customScript": "Custom Script",
+      "llmJudge": "LLM Judge"
+    },
+    "runs": {
+      "title": "Runs",
+      "noRuns": "No runs yet",
+      "runGrading": "Run Grading",
+      "running": "Running...",
+      "passed": "Passed",
+      "failed": "Failed",
+      "score": "Score"
+    }
+  },
+  "mcp": {
+    "title": "MCP Servers",
+    "createServer": "Create Server",
+    "noServers": "No MCP servers yet",
+    "noServersDesc": "Create an MCP server to expose your agent as an API endpoint",
+    "quickStart": "Quick Start",
+    "endpoint": "Endpoint",
+    "apiKey": "API Key",
+    "rateLimit": "Rate Limit",
+    "usage": "Usage",
+    "tokens": "Tokens",
+    "requests": "Requests"
+  },
+  "examples": {
+    "title": "Workflow Examples",
+    "subtitle": "15 production-ready agent configurations for real business workflows. Each example includes system prompt, skills, tools, MCP integration, and grading suite — ready to deploy on Kopern.",
+    "useThisAgent": "Use this Agent",
+    "creating": "Creating...",
+    "allExamples": "All examples",
+    "backToExamples": "Back to examples",
+    "exampleNotFound": "Example not found.",
+    "copyFull": "Full example",
+    "timeSaved": "Time Saved",
+    "costReduction": "Cost Reduction",
+    "riskMitigation": "Risk Mitigation",
+    "agentCreated": "Agent created successfully!",
+    "agentCreateFailed": "Failed to create agent",
+    "copiedToClipboard": "{label} copied to clipboard"
+  },
+  "pricing": {
+    "title": "Simple, Transparent Pricing",
+    "subtitle": "Start free, scale as you grow. All plans include core agent building features.",
+    "monthly": "Monthly",
+    "annual": "Annual",
+    "savePercent": "Save 17%",
+    "mo": "/mo",
+    "yr": "/yr",
+    "popular": "Popular",
+    "getStarted": "Get Started",
+    "currentPlan": "Current Plan",
+    "contactSales": "Contact Sales",
+    "startFree": "Start Free",
+    "tiers": {
+      "starter": {
+        "name": "Starter",
+        "price": "0",
+        "priceAnnual": "0",
+        "description": "For individuals exploring AI agents"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "79",
+        "priceAnnual": "790",
+        "description": "For teams building production agents"
+      },
+      "enterprise": {
+        "name": "Enterprise",
+        "price": "499",
+        "priceAnnual": "4990",
+        "description": "For organizations with advanced needs"
+      }
+    },
+    "features": {
+      "agents": "Agents",
+      "tokensPerMonth": "Tokens / month",
+      "mcpEndpoints": "MCP Endpoints",
+      "gradingRunsPerMonth": "Grading runs / month",
+      "models": "Models",
+      "support": "Support",
+      "sso": "SSO",
+      "auditLogs": "Audit Logs",
+      "versionHistory": "Version History",
+      "batchProcessing": "Batch Processing"
+    },
+    "featureValues": {
+      "starter": {
+        "agents": "2",
+        "tokensPerMonth": "10K",
+        "mcpEndpoints": "1",
+        "gradingRunsPerMonth": "5",
+        "models": "Sonnet only",
+        "support": "Community"
+      },
+      "pro": {
+        "agents": "25",
+        "tokensPerMonth": "1M",
+        "mcpEndpoints": "10",
+        "gradingRunsPerMonth": "100",
+        "models": "All models",
+        "support": "Priority email"
+      },
+      "enterprise": {
+        "agents": "Unlimited",
+        "tokensPerMonth": "10M",
+        "mcpEndpoints": "Unlimited",
+        "gradingRunsPerMonth": "Unlimited",
+        "models": "All + fine-tuned",
+        "support": "Dedicated + SLA"
+      }
+    },
+    "comparisonTitle": "Compare Plans",
+    "comparisonSubtitle": "Everything you need to build, test, and deploy AI agents"
+  },
+  "docs": {
+    "title": "Documentation",
+    "subtitle": "Complete guide to building agents with Kopern",
+    "saveMarkdown": "Save as Markdown",
+    "saveSkill": "Save as Skill",
+    "savedMarkdown": "Documentation saved as Markdown",
+    "copiedSkill": "Documentation copied — paste it as a skill's content",
+    "loginRequired": "You must be logged in"
+  },
+  "settings": {
+    "title": "Settings",
+    "apiKeys": "API Keys",
+    "defaults": "Defaults",
+    "defaultProvider": "Default Provider",
+    "defaultModel": "Default Model",
+    "saveSettings": "Save Settings",
+    "saved": "Settings saved",
+    "saveFailed": "Failed to save settings",
+    "language": "Language",
+    "theme": "Theme"
+  },
+  "apiKeys": {
+    "title": "API Endpoints",
+    "subtitle": "All MCP servers across your agents",
+    "noEndpoints": "No API endpoints yet",
+    "noEndpointsDesc": "Go to an agent's detail page and create an MCP server to expose it as an API"
+  },
+  "github": {
+    "connectRepo": "Connect Repo",
+    "connectDesc": "Select repositories your agent can access to read code, review PRs, and analyze projects.",
+    "searchRepos": "Search repositories...",
+    "connected": "{repo} connected",
+    "disconnected": "{repo} disconnected",
+    "noToken": "No GitHub connection found. Please sign in with GitHub to connect repositories.",
+    "reloginHint": "Sign out and sign back in with GitHub to grant repository access.",
+    "fetchFailed": "Failed to fetch repositories",
+    "updateFailed": "Failed to update connected repos",
+    "connectedRepos": "Connected Repos"
+  },
+  "integrations": {
+    "title": "Connect Your Tools",
+    "titleAccent": "Ship Faster",
+    "subtitle": "Link GitHub repos for code-aware agents, or connect any service via MCP — Slack, Jira, AWS, Notion, and more.",
+    "github": {
+      "title": "GitHub Integration",
+      "description": "Agents read your code, review PRs, analyze dependencies, and suggest fixes — directly from your repositories."
+    },
+    "mcp": {
+      "title": "MCP Connectors",
+      "description": "Connect any external service via the Model Context Protocol. Slack, Linear, Notion, databases — your agents access them all."
+    },
+    "workflow": {
+      "title": "End-to-End Workflows",
+      "description": "Chain integrations: an agent reads a GitHub PR, checks Jira for context, posts a review, and updates Slack — fully automated."
+    }
+  },
+  "breadcrumbs": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "agents": "Agents",
+    "edit": "Edit",
+    "skills": "Skills",
+    "tools": "Tools",
+    "extensions": "Extensions",
+    "playground": "Playground",
+    "grading": "Grading",
+    "mcpServers": "MCP Servers",
+    "apiKeys": "API",
+    "examples": "Workflow Examples",
+    "docs": "Documentation",
+    "settings": "Settings",
+    "new": "New",
+    "runs": "Runs",
+    "pricing": "Pricing"
+  }
+}

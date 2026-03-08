@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { LocalizedLink } from "@/components/LocalizedLink";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Bot } from "lucide-react";
@@ -24,7 +24,7 @@ export function AgentCard({ agent }: AgentCardProps) {
   const colorClass = domainColors[agent.domain] || domainColors.default;
 
   return (
-    <Link href={`/agents/${agent.id}`}>
+    <LocalizedLink href={`/agents/${agent.id}`}>
       <Card className="cursor-pointer transition-shadow hover:shadow-md">
         <CardHeader className="flex flex-row items-center gap-3 pb-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -56,6 +56,6 @@ export function AgentCard({ agent }: AgentCardProps) {
           </div>
         </CardContent>
       </Card>
-    </Link>
+    </LocalizedLink>
   );
 }

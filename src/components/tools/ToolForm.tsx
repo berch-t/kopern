@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useLocalizedRouter } from "@/hooks/useLocalizedRouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useDocument } from "@/hooks/useFirestore";
 import { toolDoc, type ToolDoc } from "@/lib/firebase/firestore";
@@ -36,7 +36,7 @@ return \`Processed: \${input}\`;`;
 
 export function ToolForm({ agentId, toolId, isNew }: ToolFormProps) {
   const { user } = useAuth();
-  const router = useRouter();
+  const router = useLocalizedRouter();
 
   const { data: existing } = useDocument<ToolDoc>(
     user && toolId ? toolDoc(user.uid, agentId, toolId) : null

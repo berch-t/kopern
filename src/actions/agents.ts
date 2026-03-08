@@ -29,6 +29,7 @@ export async function createAgent(
 ) {
   const ref = await addDoc(agentsCollection(userId), {
     ...data,
+    connectedRepos: [],
     version: 1,
     isPublished: false,
     latestGradingScore: null,
@@ -52,6 +53,7 @@ export async function updateAgent(
       | "modelId"
       | "thinkingLevel"
       | "builtinTools"
+      | "connectedRepos"
     >
   >
 ) {

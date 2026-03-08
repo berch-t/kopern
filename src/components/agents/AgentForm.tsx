@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useLocalizedRouter } from "@/hooks/useLocalizedRouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +38,7 @@ const STEPS = ["Basics", "Model", "Prompt"] as const;
 
 export function AgentForm() {
   const { user } = useAuth();
-  const router = useRouter();
+  const router = useLocalizedRouter();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
 

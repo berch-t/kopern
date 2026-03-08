@@ -43,6 +43,7 @@ interface AgentDoc {
   modelId: string;
   thinkingLevel: "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
   builtinTools: string[];      // ["read", "bash", ...]
+  connectedRepos: string[];    // ["owner/repo-name", ...]
   version: number;
   isPublished: boolean;
   latestGradingScore: number | null;
@@ -697,6 +698,147 @@ print(result["content"])
 
 ---
 
+## Internationalization (i18n)
+
+Kopern supports **English and French** with a lightweight custom i18n system — no heavy library required.
+
+### How It Works
+
+All routes live under \`src/app/[locale]/\` where \`locale\` is \`en\` or \`fr\`. A middleware detects the preferred locale from:
+1. URL path prefix (\`/en/...\` or \`/fr/...\`)
+2. \`NEXT_LOCALE\` cookie
+3. Browser \`Accept-Language\` header
+4. Falls back to \`en\`
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| \`src/i18n/config.ts\` | Locale type definitions (\`"en" | "fr"\`) |
+| \`src/i18n/getDictionary.ts\` | Async dictionary loader via dynamic import |
+| \`src/i18n/dictionaries/en.json\` | English strings (~350 keys) |
+| \`src/i18n/dictionaries/fr.json\` | French strings |
+| \`src/providers/LocaleProvider.tsx\` | React Context: \`useLocale()\`, \`useDictionary()\` |
+| \`src/hooks/useLocalizedRouter.ts\` | Router with locale-prefixed \`push\`/\`replace\`/\`back\` |
+| \`src/components/LocalizedLink.tsx\` | \`<Link>\` wrapper that prepends \`/\\\${locale}\` |
+| \`src/components/layout/LocaleSwitcher.tsx\` | EN/FR dropdown toggle |
+| \`src/middleware.ts\` | Locale detection + redirect |
+
+### Usage in Components
+
+\\\`\\\`\\\`tsx
+// Access translated strings
+const t = useDictionary();
+<h1>{t.dashboard.title}</h1>
+
+// Locale-aware navigation
+const router = useLocalizedRouter();
+router.push("/agents"); // becomes /en/agents or /fr/agents
+
+// Locale-aware links
+<LocalizedLink href="/pricing">Pricing</LocalizedLink>
+\\\`\\\`\\\`
+
+### Dictionary Structure
+
+Dictionaries are organized by section: \`common\`, \`landing\`, \`nav\`, \`auth\`, \`dashboard\`, \`agents\`, \`skills\`, \`tools\`, \`extensions\`, \`playground\`, \`grading\`, \`mcp\`, \`examples\`, \`pricing\`, \`docs\`, \`settings\`, \`apiKeys\`, \`github\`, \`integrations\`, \`breadcrumbs\`.
+
+### Route Groups
+
+| Group | Path | Auth | Layout |
+|-------|------|------|--------|
+| \`(dashboard)\` | \`/[locale]/(dashboard)/...\` | Required | Sidebar + Header |
+| \`(auth)\` | \`/[locale]/(auth)/login\` | None | Centered card |
+| \`(public)\` | \`/[locale]/(public)/examples\` | None | Public navbar + footer |
+| Root | \`/[locale]/\`, \`/[locale]/pricing\` | None | Standalone |
+
+---
+
+## GitHub Integration
+
+Kopern provides **native GitHub integration** so agents can access your code repositories.
+
+### How It Works
+
+1. **Authentication** — When signing in with GitHub, the OAuth flow requests the \`repo\` scope. The access token is captured and stored in the user's Firestore document.
+2. **Repository Connection** — On any agent detail page, click **Connect Repo** to browse your repositories and select which ones the agent can access.
+3. **Storage** — Connected repositories are stored as \`connectedRepos: string[]\` on the \`AgentDoc\` (e.g. \`["owner/repo-name"]\`).
+
+### Architecture
+
+\\\`\\\`\\\`text
+GitHub OAuth (login) → capture accessToken → store in users/{uid}.githubAccessToken
+                                                        ↓
+Agent Detail → "Connect Repo" → GET /api/github/repos (admin SDK reads token)
+                                                        ↓
+                                GitHub API → list user repos → display in dialog
+                                                        ↓
+                                User selects → update agent.connectedRepos[]
+\\\`\\\`\\\`
+
+### API Route
+
+\`GET /api/github/repos\` — Lists the authenticated user's GitHub repositories.
+
+**Headers:**
+\\\`\\\`\\\`
+Authorization: Bearer <firebase-id-token>
+\\\`\\\`\\\`
+
+**Response:**
+\\\`\\\`\\\`json
+{
+  "repos": [
+    {
+      "fullName": "owner/repo-name",
+      "name": "repo-name",
+      "owner": "owner",
+      "description": "A description",
+      "private": false,
+      "language": "TypeScript",
+      "updatedAt": "2025-01-15T...",
+      "defaultBranch": "main"
+    }
+  ]
+}
+\\\`\\\`\\\`
+
+### Integration Strategy
+
+- **GitHub** — Native first-class integration (built-in OAuth, repo picker, agent-level connection)
+- **Other services** (Slack, Jira, AWS, Notion...) — Connect via **MCP connectors**. Kopern's MCP infrastructure supports any external MCP server, making it infinitely extensible without building custom integrations for each service.
+
+---
+
+## Pricing
+
+Kopern offers three pricing tiers accessible from the public \`/pricing\` page.
+
+### Tiers
+
+| | Starter (Free) | Pro ($79/mo) | Enterprise ($499/mo) |
+|---|---|---|---|
+| Agents | 2 | 25 | Unlimited |
+| Tokens/month | 10K | 1M | 10M |
+| MCP Endpoints | 1 | 10 | Unlimited |
+| Grading runs/month | 5 | 100 | Unlimited |
+| Models | Sonnet only | All | All + fine-tuned |
+| Support | Community | Priority email | Dedicated + SLA |
+| SSO | — | — | Yes |
+| Audit Logs | — | — | Yes |
+| Version History | — | Yes | Yes |
+| Batch Processing | — | Yes | Yes |
+
+Annual pricing saves 17% ($790/yr for Pro, $4,990/yr for Enterprise).
+
+### Examples Gallery
+
+The \`/examples\` page showcases 15 production-ready agent configurations. Each includes a system prompt, skills, tools, MCP integration, and grading suite. Examples are fully translated in French and English.
+
+The **"Use this Agent"** button creates a real agent (with all skills and tools) from the example template. Unauthenticated users are redirected to login first.
+
+---
+
 ## Customization
 
 ### Theming
@@ -718,20 +860,34 @@ Available but not yet installed: \`switch\`, \`checkbox\`, \`radio-group\`, \`pr
 \`\`\`text
 src/
 ├── actions/         # Client-side Firestore mutations
-├── app/             # Next.js App Router pages
+├── app/
+│   ├── [locale]/    # All localized routes
+│   │   ├── (auth)/  # Login page
+│   │   ├── (dashboard)/  # Protected: agents, docs, settings...
+│   │   ├── (public)/     # Public: examples
+│   │   ├── pricing/      # Public pricing page
+│   │   └── page.tsx      # Landing page
+│   └── api/         # Server-side API routes
+│       ├── agents/  # SSE chat, grading
+│       ├── github/  # GitHub repos proxy
+│       ├── mcp/     # JSON-RPC endpoint + key management
+│       └── health/
 ├── components/      # React components
 │   ├── ui/          # shadcn/ui primitives
-│   ├── agents/      # Agent-specific components
+│   ├── agents/      # AgentCard, AgentForm, GitHubConnector
+│   ├── docs/        # docs-content, docs-content-fr, TableOfContents
 │   ├── grading/     # Grading UI
 │   ├── mcp/         # MCP server components
 │   ├── motion/      # Animation wrappers
-│   └── layout/      # Sidebar, Header, Breadcrumbs
-├── hooks/           # React hooks (useAuth, useFirestore, useSSE)
+│   └── layout/      # Sidebar, Header, Breadcrumbs, LocaleSwitcher
+├── data/            # Use-case examples + French translations
+├── hooks/           # useAuth, useFirestore, useSSE, useLocalizedRouter, useLocalizedUseCases
+├── i18n/            # config, getDictionary, dictionaries/{en,fr}.json
 ├── lib/             # Core libraries
-│   ├── firebase/    # Firestore schema, auth, admin SDK
+│   ├── firebase/    # Firestore schema, auth (+GitHub scope), admin SDK
 │   ├── grading/     # Grading engine + criteria
 │   ├── llm/         # Multi-provider streaming client
 │   └── mcp/         # API key auth + token counting
-└── providers/       # AuthProvider, ThemeProvider
+└── providers/       # AuthProvider, ThemeProvider, LocaleProvider
 \`\`\`
 `;

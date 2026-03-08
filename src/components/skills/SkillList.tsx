@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2 } from "lucide-react";
 import { deleteSkill } from "@/actions/skills";
 import { toast } from "sonner";
-import Link from "next/link";
+import { LocalizedLink } from "@/components/LocalizedLink";
 import { StaggerChildren, staggerItem } from "@/components/motion/StaggerChildren";
 import { motion } from "framer-motion";
 
@@ -52,7 +52,7 @@ export function SkillList({ agentId }: SkillListProps) {
         <motion.div key={skill.id} variants={staggerItem}>
           <Card>
             <CardContent className="flex items-center justify-between p-4">
-              <Link
+              <LocalizedLink
                 href={`/agents/${agentId}/skills/${skill.id}`}
                 className="flex-1"
               >
@@ -62,7 +62,7 @@ export function SkillList({ agentId }: SkillListProps) {
                     {skill.description}
                   </span>
                 </div>
-              </Link>
+              </LocalizedLink>
               <Button
                 variant="ghost"
                 size="icon"

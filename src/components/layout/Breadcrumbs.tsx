@@ -11,36 +11,18 @@ import {
   type McpServerDoc,
 } from "@/lib/firebase/firestore";
 import { ChevronRight } from "lucide-react";
+import { useDictionary, useLocale } from "@/providers/LocaleProvider";
+import { locales } from "@/i18n/config";
 
-// Readable labels for known route segments
-const staticLabels: Record<string, string> = {
-  dashboard: "Dashboard",
-  agents: "Agents",
-  edit: "Edit",
-  skills: "Skills",
-  tools: "Tools",
-  extensions: "Extensions",
-  playground: "Playground",
-  grading: "Grading",
-  "mcp-servers": "MCP Servers",
-  "api-keys": "API",
-  docs: "Documentation",
-  settings: "Settings",
-  new: "New",
-  runs: "Runs",
-};
-
-function useEntityName(segments: string[]) {
+function useEntityName(segments: string[], staticLabels: Record<string, string>) {
   const { user } = useAuth();
 
-  // Detect agentId: segments like ["agents", "<id>", ...]
   const agentIdx = segments.indexOf("agents");
   const agentId =
     agentIdx !== -1 && agentIdx + 1 < segments.length
       ? segments[agentIdx + 1]
       : null;
 
-  // Detect serverId: segments like [..., "mcp-servers", "<id>"]
   const mcpIdx = segments.indexOf("mcp-servers");
   const serverId =
     mcpIdx !== -1 && mcpIdx + 1 < segments.length
@@ -68,15 +50,39 @@ function useEntityName(segments: string[]) {
 
 export function Breadcrumbs() {
   const pathname = usePathname();
-  const segments = pathname.split("/").filter(Boolean);
-  const entityNames = useEntityName(segments);
+  const locale = useLocale();
+  const t = useDictionary();
+
+  const staticLabels: Record<string, string> = {
+    dashboard: t.breadcrumbs.dashboard,
+    agents: t.breadcrumbs.agents,
+    edit: t.breadcrumbs.edit,
+    skills: t.breadcrumbs.skills,
+    tools: t.breadcrumbs.tools,
+    extensions: t.breadcrumbs.extensions,
+    playground: t.breadcrumbs.playground,
+    grading: t.breadcrumbs.grading,
+    "mcp-servers": t.breadcrumbs.mcpServers,
+    "api-keys": t.breadcrumbs.apiKeys,
+    examples: t.breadcrumbs.examples,
+    docs: t.breadcrumbs.docs,
+    settings: t.breadcrumbs.settings,
+    new: t.breadcrumbs.new,
+    runs: t.breadcrumbs.runs,
+    pricing: t.breadcrumbs.pricing,
+  };
+
+  // Remove locale prefix from segments
+  const allSegments = pathname.split("/").filter(Boolean);
+  const segments = allSegments.filter((s) => !locales.includes(s as typeof locale));
+  const entityNames = useEntityName(segments, staticLabels);
 
   if (segments.length === 0) return null;
 
   const crumbs = segments.map((segment, index) => {
-    const href = "/" + segments.slice(0, index + 1).join("/");
+    // Build href with locale prefix
+    const href = "/" + [locale, ...segments.slice(0, index + 1)].join("/");
 
-    // Priority: entity name from Firestore > static label > formatted segment
     const label =
       entityNames[segment] ||
       staticLabels[segment] ||
@@ -87,8 +93,8 @@ export function Breadcrumbs() {
 
   return (
     <nav className="flex items-center gap-1 px-6 py-2 text-sm text-muted-foreground">
-      <Link href="/" className="hover:text-foreground transition-colors">
-        Home
+      <Link href={`/${locale}`} className="hover:text-foreground transition-colors">
+        {t.breadcrumbs.home}
       </Link>
       {crumbs.map((crumb) => (
         <span key={crumb.href} className="flex items-center gap-1">

@@ -12,13 +12,16 @@ import { auth } from "./config";
 
 const googleProvider = new GoogleAuthProvider();
 const githubProvider = new GithubAuthProvider();
+githubProvider.addScope("repo");
 
 export async function signInWithGoogle() {
   return signInWithPopup(auth, googleProvider);
 }
 
 export async function signInWithGithub() {
-  return signInWithPopup(auth, githubProvider);
+  const result = await signInWithPopup(auth, githubProvider);
+  const credential = GithubAuthProvider.credentialFromResult(result);
+  return { result, githubAccessToken: credential?.accessToken ?? null };
 }
 
 export async function signInWithEmail(email: string, password: string) {
