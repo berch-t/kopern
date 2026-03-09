@@ -419,7 +419,7 @@ export default function LandingPage() {
           {/* Logo + Beta badge */}
           <div className="relative mb-4">
             <img src="/logo_small.png" alt="Kopern" className="h-16" />
-            <span className="absolute -top-1 -right-10 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
+            <span className="absolute -top-1 -right-10 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-black">
               beta
             </span>
           </div>
