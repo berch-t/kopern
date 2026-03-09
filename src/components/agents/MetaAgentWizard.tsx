@@ -15,6 +15,10 @@ import {
 } from "@/components/ui/dialog";
 import { Sparkles, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { createAgent } from "@/actions/agents";
+import { createSkill } from "@/actions/skills";
+import { createTool } from "@/actions/tools";
+import { createGradingSuite } from "@/actions/grading-suites";
+import { createGradingCase } from "@/actions/grading-cases";
 import { toast } from "sonner";
 
 interface MetaAgentWizardProps {
@@ -29,6 +33,9 @@ interface AgentSpec {
   domain: string;
   systemPrompt: string;
   skills: { name: string; content: string }[];
+  tools: { name: string; description: string; parametersSchema: string; executeCode: string }[];
+  gradingCases: { name: string; input: string; expected: string; criterionType: string }[];
+  settings: { model?: string; thinking?: string; purposeGate?: string; tillDone?: string };
   rawSpec: string;
 }
 
@@ -88,6 +95,7 @@ export function MetaAgentWizard({ userId, onCreated }: MetaAgentWizardProps) {
       const decoder = new TextDecoder();
       let buffer = "";
       let accumulated = "";
+      let currentEvent = "";
 
       while (true) {
         const { done, value } = await reader.read();
@@ -98,17 +106,22 @@ export function MetaAgentWizard({ userId, onCreated }: MetaAgentWizardProps) {
         buffer = lines.pop() || "";
 
         for (const line of lines) {
-          if (line.startsWith("data: ")) {
+          if (line.startsWith("event: ")) {
+            currentEvent = line.slice(7).trim();
+          } else if (line.startsWith("data: ")) {
             try {
-              const { event, data } = JSON.parse(line.slice(6));
-              if (event === "token") {
+              const data = JSON.parse(line.slice(6));
+              const evt = currentEvent;
+              currentEvent = "";
+
+              if (evt === "token") {
                 accumulated += data.text;
                 setStreamText(accumulated);
-              } else if (event === "spec") {
+              } else if (evt === "spec") {
                 setSpec(data as AgentSpec);
-              } else if (event === "done") {
+              } else if (evt === "done") {
                 setStep("review");
-              } else if (event === "error") {
+              } else if (evt === "error") {
                 throw new Error(data.message);
               }
             } catch (e) {
@@ -149,6 +162,57 @@ export function MetaAgentWizard({ userId, onCreated }: MetaAgentWizardProps) {
         thinkingLevel: "off",
         builtinTools: ["read", "bash"],
       });
+
+      // Create skills in sub-collection
+      if (spec?.skills?.length) {
+        await Promise.all(
+          spec.skills.map((s) =>
+            createSkill(userId, agentId, { name: s.name, description: s.name, content: s.content })
+          )
+        );
+      }
+
+      // Create tools in sub-collection
+      if (spec?.tools?.length) {
+        await Promise.all(
+          spec.tools.map((t) =>
+            createTool(userId, agentId, {
+              name: t.name,
+              label: t.name,
+              description: t.description,
+              parametersSchema: t.parametersSchema,
+              executeCode: t.executeCode,
+            })
+          )
+        );
+      }
+
+      // Create grading suite + cases
+      if (spec?.gradingCases?.length) {
+        const suiteId = await createGradingSuite(userId, agentId, {
+          name: "Auto-generated Suite",
+          description: `Generated from meta-agent for: ${agentName}`,
+        });
+        await Promise.all(
+          spec.gradingCases.map((c, i) =>
+            createGradingCase(userId, agentId, suiteId, {
+              name: c.name,
+              inputPrompt: c.input,
+              expectedBehavior: c.expected,
+              orderIndex: i,
+              criteria: [
+                {
+                  id: crypto.randomUUID(),
+                  type: c.criterionType as "output_match" | "schema_validation" | "tool_usage" | "safety_check" | "custom_script" | "llm_judge",
+                  name: c.name,
+                  config: {},
+                  weight: 1,
+                },
+              ],
+            })
+          )
+        );
+      }
 
       toast.success(t.metaAgent.generated);
       setOpen(false);

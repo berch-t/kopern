@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { type User } from "firebase/auth";
 import { onAuthChanged } from "@/lib/firebase/auth";
 import { AuthProvider } from "@/providers/AuthProvider";
-import { useTheme } from "@/providers/ThemeProvider";
 import { useDictionary } from "@/providers/LocaleProvider";
 import { LocalizedLink } from "@/components/LocalizedLink";
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
@@ -16,14 +15,11 @@ import {
   Lightbulb,
   DollarSign,
   LayoutDashboard,
-  Moon,
-  Sun,
 } from "lucide-react";
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const { theme, setTheme } = useTheme();
   const t = useDictionary();
 
   useEffect(() => {
@@ -72,13 +68,6 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             </Button>
           </LocalizedLink>
           <LocaleSwitcher />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          >
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </Button>
           {loading ? (
             <div className="h-9 w-20 animate-pulse rounded-md bg-muted" />
           ) : (

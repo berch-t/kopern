@@ -9,14 +9,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, Moon, Sun } from "lucide-react";
-import { useTheme } from "@/providers/ThemeProvider";
+import { LogOut, User } from "lucide-react";
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
 import { useDictionary } from "@/providers/LocaleProvider";
 
 export function Header() {
   const { user } = useAuth();
-  const { theme, setTheme } = useTheme();
   const t = useDictionary();
 
   return (
@@ -24,13 +22,6 @@ export function Header() {
       <div />
       <div className="flex items-center gap-2">
         <LocaleSwitcher />
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-        >
-          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-        </Button>
 
         {user && (
           <DropdownMenu>

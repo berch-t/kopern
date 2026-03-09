@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { type User } from "firebase/auth";
 import { onAuthChanged } from "@/lib/firebase/auth";
-import { useTheme } from "@/providers/ThemeProvider";
 import { useDictionary } from "@/providers/LocaleProvider";
 import { LocalizedLink } from "@/components/LocalizedLink";
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
@@ -16,8 +15,6 @@ import { StaggerChildren, staggerItem } from "@/components/motion/StaggerChildre
 import {
   Check,
   Minus,
-  Moon,
-  Sun,
   Lightbulb,
   DollarSign,
   LayoutDashboard,
@@ -31,7 +28,6 @@ export default function PricingPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [billing, setBilling] = useState<BillingPeriod>("monthly");
-  const { theme, setTheme } = useTheme();
   const t = useDictionary();
 
   useEffect(() => {
@@ -116,13 +112,6 @@ export default function PricingPage() {
             </Button>
           </LocalizedLink>
           <LocaleSwitcher />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          >
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </Button>
           {loading ? (
             <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />
           ) : user ? (

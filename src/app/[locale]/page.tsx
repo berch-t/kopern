@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, lazy, Suspense } from "react";
 import { type User } from "firebase/auth";
 import { onAuthChanged } from "@/lib/firebase/auth";
-import { useTheme } from "@/providers/ThemeProvider";
 import { useDictionary } from "@/providers/LocaleProvider";
 import { useLocalizedRouter } from "@/hooks/useLocalizedRouter";
 import { LocalizedLink } from "@/components/LocalizedLink";
@@ -12,6 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { createAgent } from "@/actions/agents";
+import { createSkill } from "@/actions/skills";
+import { createTool } from "@/actions/tools";
+import { createGradingSuite } from "@/actions/grading-suites";
+import { createGradingCase } from "@/actions/grading-cases";
 import { toast } from "sonner";
 import {
   ArrowRight,
@@ -24,9 +27,7 @@ import {
   LayoutDashboard,
   Lightbulb,
   Loader2,
-  Moon,
   Sparkles,
-  Sun,
   Users,
   CheckCircle2,
   Save,
@@ -39,6 +40,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const PixelBlast = lazy(() => import("@/components/ui/PixelBlast"));
+
 // --- Hero Agent Creator types ---
 type HeroStep = "input" | "generating" | "review" | "error";
 
@@ -47,13 +50,15 @@ interface AgentSpec {
   domain: string;
   systemPrompt: string;
   skills: { name: string; content: string }[];
+  tools: { name: string; description: string; parametersSchema: string; executeCode: string }[];
+  gradingCases: { name: string; input: string; expected: string; criterionType: string }[];
+  settings: { model?: string; thinking?: string; purposeGate?: string; tillDone?: string };
   rawSpec: string;
 }
 
 export default function LandingPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const { theme, setTheme } = useTheme();
   const t = useDictionary();
   const router = useLocalizedRouter();
 
@@ -63,6 +68,7 @@ export default function LandingPage() {
   const [heroStreamText, setHeroStreamText] = useState("");
   const [heroSpec, setHeroSpec] = useState<AgentSpec | null>(null);
   const [heroSaving, setHeroSaving] = useState(false);
+  const [heroPhase, setHeroPhase] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -79,6 +85,7 @@ export default function LandingPage() {
     setHeroStreamText("");
     setHeroSpec(null);
     setHeroSaving(false);
+    setHeroPhase(0);
     if (abortRef.current) {
       abortRef.current.abort();
       abortRef.current = null;
@@ -118,6 +125,7 @@ export default function LandingPage() {
       const decoder = new TextDecoder();
       let buffer = "";
       let accumulated = "";
+      let currentEvent = "";
 
       while (true) {
         const { done, value } = await reader.read();
@@ -128,17 +136,35 @@ export default function LandingPage() {
         buffer = lines.pop() || "";
 
         for (const line of lines) {
-          if (line.startsWith("data: ")) {
+          if (line.startsWith("event: ")) {
+            currentEvent = line.slice(7).trim();
+          } else if (line.startsWith("data: ")) {
             try {
-              const { event, data } = JSON.parse(line.slice(6));
-              if (event === "token") {
+              const data = JSON.parse(line.slice(6));
+              const evt = currentEvent;
+              currentEvent = "";
+
+              if (evt === "token") {
                 accumulated += data.text;
                 setHeroStreamText(accumulated);
-              } else if (event === "spec") {
+                // Detect phase from section headings in the stream
+                const lower = accumulated.toLowerCase();
+                if (lower.includes("### recommended") || lower.includes("### settings") || lower.includes("### config")) {
+                  setHeroPhase(5);
+                } else if (lower.includes("### grading") || lower.includes("### test") || lower.includes("### evaluation")) {
+                  setHeroPhase(4);
+                } else if (lower.includes("### tool")) {
+                  setHeroPhase(3);
+                } else if (lower.includes("### skill")) {
+                  setHeroPhase(2);
+                } else if (lower.includes("### system prompt") || lower.includes("### prompt")) {
+                  setHeroPhase(1);
+                }
+              } else if (evt === "spec") {
                 setHeroSpec(data as AgentSpec);
-              } else if (event === "done") {
+              } else if (evt === "done") {
                 setHeroStep("review");
-              } else if (event === "error") {
+              } else if (evt === "error") {
                 throw new Error(data.message);
               }
             } catch (e) {
@@ -191,6 +217,57 @@ export default function LandingPage() {
         builtinTools: ["read", "bash"],
       });
 
+      // Create skills in sub-collection
+      if (heroSpec?.skills?.length) {
+        await Promise.all(
+          heroSpec.skills.map((s) =>
+            createSkill(user.uid, agentId, { name: s.name, description: s.name, content: s.content })
+          )
+        );
+      }
+
+      // Create tools in sub-collection
+      if (heroSpec?.tools?.length) {
+        await Promise.all(
+          heroSpec.tools.map((t) =>
+            createTool(user.uid, agentId, {
+              name: t.name,
+              label: t.name,
+              description: t.description,
+              parametersSchema: t.parametersSchema,
+              executeCode: t.executeCode,
+            })
+          )
+        );
+      }
+
+      // Create grading suite + cases
+      if (heroSpec?.gradingCases?.length) {
+        const suiteId = await createGradingSuite(user.uid, agentId, {
+          name: "Auto-generated Suite",
+          description: `Generated from meta-agent for: ${agentName}`,
+        });
+        await Promise.all(
+          heroSpec.gradingCases.map((c, i) =>
+            createGradingCase(user.uid, agentId, suiteId, {
+              name: c.name,
+              inputPrompt: c.input,
+              expectedBehavior: c.expected,
+              orderIndex: i,
+              criteria: [
+                {
+                  id: crypto.randomUUID(),
+                  type: c.criterionType as "output_match" | "schema_validation" | "tool_usage" | "safety_check" | "custom_script" | "llm_judge",
+                  name: c.name,
+                  config: {},
+                  weight: 1,
+                },
+              ],
+            })
+          )
+        );
+      }
+
       toast.success(t.metaAgent.generated);
       router.push(`/agents/${agentId}`);
     } catch {
@@ -223,13 +300,6 @@ export default function LandingPage() {
             </Button>
           </LocalizedLink>
           <LocaleSwitcher />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          >
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </Button>
           {loading ? (
             <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />
           ) : user ? (
@@ -266,16 +336,42 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <div style={{ background: "var(--landing-section-hero)" }}>
-      <main className="max-w-6xl mx-auto px-6">
+      <div className="relative overflow-hidden" style={{ background: "var(--landing-section-hero)" }}>
+        {/* PixelBlast background */}
+        <Suspense fallback={null}>
+          <PixelBlast
+            variant="diamond"
+            pixelSize={9}
+            color="#37005e"
+            patternScale={2.25}
+            patternDensity={0.55}
+            pixelSizeJitter={1.25}
+            enableRipples
+            rippleSpeed={0.05}
+            rippleThickness={0.12}
+            rippleIntensityScale={1.5}
+            liquid={false}
+            speed={1.2}
+            edgeFade={0.15}
+            transparent
+            style={{ zIndex: 0, pointerEvents: "none" }}
+          />
+        </Suspense>
+
+      <main className="relative z-10 max-w-6xl mx-auto px-6">
         <motion.section
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           className="flex flex-col items-center text-center pt-20 pb-16"
         >
-          {/* Logo */}
-          <img src="/logo_small.png" alt="Kopern" className="h-16 mb-4" />
+          {/* Logo + Beta badge */}
+          <div className="relative mb-4">
+            <img src="/logo_small.png" alt="Kopern" className="h-16" />
+            <span className="absolute -top-1 -right-10 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
+              beta
+            </span>
+          </div>
 
           {/* Tagline */}
           <p className="text-xl font-bold text-muted-foreground mb-10">
@@ -319,7 +415,7 @@ export default function LandingPage() {
                 </motion.div>
               )}
 
-              {/* Generating step */}
+              {/* Generating step — animated status phases */}
               {heroStep === "generating" && (
                 <motion.div
                   key="generating"
@@ -327,17 +423,59 @@ export default function LandingPage() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.25 }}
-                  className="space-y-4"
+                  className="space-y-5"
                 >
-                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    {t.landing.hero.generating}
+                  <div className="flex flex-col items-center gap-4">
+                    {/* Animated thinking phases */}
+                    <div className="flex flex-col items-center gap-2 min-h-[80px] justify-center">
+                      <AnimatePresence mode="wait">
+                        <motion.p
+                          key={heroPhase}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -8 }}
+                          transition={{ duration: 0.4 }}
+                          className="text-sm font-medium text-transparent bg-clip-text animate-shimmer"
+                          style={{
+                            backgroundImage: "linear-gradient(90deg, hsl(var(--primary)), hsl(280 80% 70%), hsl(var(--primary)))",
+                            backgroundSize: "200% 100%",
+                          }}
+                        >
+                          {[
+                            "Analyzing your requirements...",
+                            "Crafting the system prompt...",
+                            "Designing skills & knowledge...",
+                            "Building custom tools...",
+                            "Creating test suite...",
+                            "Finalizing configuration...",
+                          ][heroPhase]}
+                        </motion.p>
+                      </AnimatePresence>
+
+                      {/* Phase progress dots */}
+                      <div className="flex gap-1.5">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                          <motion.div
+                            key={i}
+                            className="h-1.5 rounded-full"
+                            initial={{ width: 6, backgroundColor: "hsl(var(--muted))" }}
+                            animate={{
+                              width: i === heroPhase ? 20 : 6,
+                              backgroundColor: i <= heroPhase ? "hsl(var(--primary))" : "hsl(var(--muted))",
+                            }}
+                            transition={{ duration: 0.3 }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Subtle pulsing indicator */}
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>{Math.min(heroStreamText.length, 9999).toLocaleString()} characters generated</span>
+                    </div>
                   </div>
-                  <ScrollArea className="h-[280px] rounded-xl border-2 border-primary/20 bg-card p-5 text-left">
-                    <pre className="whitespace-pre-wrap text-sm font-mono leading-relaxed text-foreground/80">
-                      {heroStreamText || "..."}
-                    </pre>
-                  </ScrollArea>
+
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -351,47 +489,86 @@ export default function LandingPage() {
                 </motion.div>
               )}
 
-              {/* Review step */}
+              {/* Review step — spec summary + preview + deploy */}
               {heroStep === "review" && (
                 <motion.div
                   key="review"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.25 }}
+                  transition={{ duration: 0.35 }}
                   className="space-y-4"
                 >
-                  <div className="flex items-center justify-center gap-2 text-sm text-emerald-600">
+                  {/* Success banner */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="flex items-center justify-center gap-2 text-sm text-emerald-400"
+                  >
                     <CheckCircle2 className="h-4 w-4" />
                     {t.landing.hero.specReady}
-                  </div>
+                  </motion.div>
 
                   {/* Spec summary card */}
                   {heroSpec && (
-                    <div className="rounded-xl border-2 border-emerald-500/20 bg-card p-5 text-left space-y-2">
-                      <p className="text-lg font-semibold">{heroSpec.name}</p>
-                      <p className="text-sm text-muted-foreground">{heroSpec.domain}</p>
-                      {heroSpec.skills.length > 0 && (
-                        <div className="flex gap-2 flex-wrap mt-2">
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="rounded-xl border border-border/60 bg-card/80 backdrop-blur-sm p-5 text-left space-y-3"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-lg font-semibold">{heroSpec.name}</p>
+                          <p className="text-sm text-muted-foreground">{heroSpec.domain}</p>
+                        </div>
+                        <Bot className="h-8 w-8 text-primary/40" />
+                      </div>
+
+                      {/* Capability badges */}
+                      <div className="flex gap-2 flex-wrap">
+                        {heroSpec.skills.length > 0 && (
+                          <span className="text-xs bg-primary/10 text-primary rounded-full px-2.5 py-0.5 font-medium">
+                            {heroSpec.skills.length} skill{heroSpec.skills.length > 1 ? "s" : ""}
+                          </span>
+                        )}
+                        {heroSpec.tools?.length > 0 && (
+                          <span className="text-xs bg-blue-500/10 text-blue-400 rounded-full px-2.5 py-0.5 font-medium">
+                            {heroSpec.tools.length} tool{heroSpec.tools.length > 1 ? "s" : ""}
+                          </span>
+                        )}
+                        {heroSpec.gradingCases?.length > 0 && (
+                          <span className="text-xs bg-emerald-500/10 text-emerald-400 rounded-full px-2.5 py-0.5 font-medium">
+                            {heroSpec.gradingCases.length} test{heroSpec.gradingCases.length > 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Skill & tool names */}
+                      {(heroSpec.skills.length > 0 || (heroSpec.tools?.length ?? 0) > 0) && (
+                        <div className="flex gap-1.5 flex-wrap">
                           {heroSpec.skills.map((s) => (
-                            <span
-                              key={s.name}
-                              className="text-xs bg-primary/10 text-primary rounded-full px-2.5 py-0.5 font-medium"
-                            >
+                            <span key={s.name} className="text-[11px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5">
                               {s.name}
+                            </span>
+                          ))}
+                          {heroSpec.tools?.map((tool) => (
+                            <span key={tool.name} className="text-[11px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5">
+                              {tool.name}
                             </span>
                           ))}
                         </div>
                       )}
-                    </div>
+                    </motion.div>
                   )}
 
-                  {/* Collapsible raw spec */}
+                  {/* Collapsible raw spec preview */}
                   <details className="group">
                     <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors flex items-center justify-center gap-1">
                       {t.landing.hero.viewSpec}
                     </summary>
-                    <ScrollArea className="h-[200px] mt-2 rounded-xl border bg-card p-4 text-left">
+                    <ScrollArea className="h-[200px] mt-2 rounded-xl border bg-card/50 p-4 text-left">
                       <pre className="whitespace-pre-wrap text-xs font-mono leading-relaxed text-muted-foreground">
                         {heroStreamText}
                       </pre>
@@ -399,7 +576,12 @@ export default function LandingPage() {
                   </details>
 
                   {/* Action buttons */}
-                  <div className="flex gap-3">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="flex gap-3"
+                  >
                     <Button
                       variant="outline"
                       onClick={heroReset}
@@ -422,7 +604,7 @@ export default function LandingPage() {
                       )}
                       {user ? t.landing.hero.saveAgent : t.landing.hero.signInToSave}
                     </Button>
-                  </div>
+                  </motion.div>
                 </motion.div>
               )}
 
