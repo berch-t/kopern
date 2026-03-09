@@ -86,7 +86,7 @@ export function Sidebar() {
                   : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
               )}
             >
-              <item.icon className="h-5 w-5 shrink-0" />
+              <item.icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary")} />
               <AnimatePresence>
                 {!collapsed && (
                   <motion.span
@@ -130,7 +130,7 @@ export function Sidebar() {
                   : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
               )}
             >
-              <BookOpen className="h-5 w-5 shrink-0" />
+              <BookOpen className={cn("h-5 w-5 shrink-0", isActive && "text-primary")} />
               <AnimatePresence>
                 {!collapsed && (
                   <motion.span

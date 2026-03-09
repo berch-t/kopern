@@ -18,7 +18,7 @@ export function Header() {
   const t = useDictionary();
 
   return (
-    <header className="flex h-14 items-center justify-between border-b px-6">
+    <header className="flex h-14 items-center justify-between border-b border-border/60 px-6">
       <div />
       <div className="flex items-center gap-2">
         <LocaleSwitcher />
@@ -27,7 +27,7 @@ export function Header() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               {user.photoURL ? (
-                <button className="h-8 w-8 rounded-full overflow-hidden border hover:ring-2 hover:ring-primary/50 transition-all">
+                <button className="h-8 w-8 rounded-full overflow-hidden border hover:ring-2 hover:ring-primary/40 transition-all">
                   <img
                     src={user.photoURL}
                     alt={user.displayName || "Profile"}

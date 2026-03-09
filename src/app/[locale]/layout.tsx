@@ -5,7 +5,37 @@ import { ThemeProvider } from "@/providers/ThemeProvider";
 import { LocaleProvider } from "@/providers/LocaleProvider";
 import { getDictionary } from "@/i18n/getDictionary";
 import { locales, type Locale } from "@/i18n/config";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { OrganizationJsonLd, SoftwareApplicationJsonLd, FAQJsonLd } from "@/components/seo/JsonLd";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopern.vercel.app";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const isEn = locale === "en";
+
+  return {
+    title: isEn
+      ? "Kopern — AI Agent Builder, Orchestrator & Grader"
+      : "Kopern — Constructeur, Orchestrateur et Évaluateur d'agents IA",
+    description: isEn
+      ? "Build, test, and deploy production-grade AI agents with tool calling, grading pipelines, multi-agent teams, and MCP endpoints. Supports Claude, GPT, and Gemini."
+      : "Créez, testez et déployez des agents IA de qualité production avec tool calling, pipelines de grading, équipes multi-agents et endpoints MCP. Compatible Claude, GPT et Gemini.",
+    alternates: {
+      canonical: `${SITE_URL}/${locale}`,
+      languages: { en: `${SITE_URL}/en`, fr: `${SITE_URL}/fr` },
+    },
+    openGraph: {
+      url: `${SITE_URL}/${locale}`,
+      locale: isEn ? "en_US" : "fr_FR",
+    },
+  };
+}
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,6 +68,11 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
+      <head>
+        <OrganizationJsonLd />
+        <SoftwareApplicationJsonLd />
+        <FAQJsonLd />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

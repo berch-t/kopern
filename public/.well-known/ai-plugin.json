@@ -1,0 +1,17 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Kopern — AI Agent Builder",
+  "name_for_model": "kopern",
+  "description_for_human": "Build, test, and deploy production-grade AI agents with tool calling, grading pipelines, multi-agent teams, and MCP endpoints.",
+  "description_for_model": "Kopern is an AI agent builder platform. Users create custom AI agents with system prompts, skills (markdown knowledge), custom tools (JSON Schema + JS), extensions (lifecycle hooks), and grading suites (6 criterion types). Agents support multi-provider LLMs (Claude, GPT, Gemini), GitHub repo integration, multi-agent teams, pipelines, and MCP server endpoints. Key capabilities: tool calling, deterministic evaluation, real-time streaming, session management, billing tracking.",
+  "auth": {
+    "type": "none"
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://kopern.vercel.app/api/health"
+  },
+  "logo_url": "https://kopern.vercel.app/logo_small.png",
+  "contact_email": "contact@kopern.vercel.app",
+  "legal_info_url": "https://kopern.vercel.app/en/docs"
+}

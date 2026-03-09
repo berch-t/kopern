@@ -1,0 +1,36 @@
+import type { MetadataRoute } from "next";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopern.vercel.app";
+
+export default function sitemap(): MetadataRoute.Sitemap {
+  const locales = ["en", "fr"];
+  const now = new Date().toISOString();
+
+  // Public pages to index
+  const publicRoutes = [
+    { path: "", priority: 1.0, changeFrequency: "weekly" as const },
+    { path: "/examples", priority: 0.9, changeFrequency: "weekly" as const },
+    { path: "/pricing", priority: 0.8, changeFrequency: "monthly" as const },
+    { path: "/docs", priority: 0.8, changeFrequency: "weekly" as const },
+  ];
+
+  const entries: MetadataRoute.Sitemap = [];
+
+  for (const locale of locales) {
+    for (const route of publicRoutes) {
+      entries.push({
+        url: `${SITE_URL}/${locale}${route.path}`,
+        lastModified: now,
+        changeFrequency: route.changeFrequency,
+        priority: route.priority,
+        alternates: {
+          languages: Object.fromEntries(
+            locales.map((l) => [l, `${SITE_URL}/${l}${route.path}`])
+          ),
+        },
+      });
+    }
+  }
+
+  return entries;
+}

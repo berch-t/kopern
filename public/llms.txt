@@ -1,0 +1,58 @@
+# Kopern — AI Agent Builder, Orchestrator & Grader
+
+> Build, test, and deploy production-grade AI agents with tool calling, deterministic grading, multi-agent teams, and MCP server endpoints.
+
+## What Kopern Does
+
+Kopern is a web platform for creating custom AI agents that go beyond simple chatbots. Each agent can have:
+
+- **System Prompt**: Core instructions defining behavior, role, and output format
+- **Skills**: Markdown knowledge templates injected as XML into the agent's context
+- **Custom Tools**: JSON Schema parameters + sandboxed JavaScript execution code — agents call these as functions
+- **GitHub Integration**: Connect repos → agents get `read_file` + `search_files` tools + repo tree context
+- **Extensions**: TypeScript lifecycle hooks for safety, logging, cost control (25+ event types)
+- **Grading Suites**: Automated testing with 6 criterion types (output_match, schema_validation, tool_usage, safety_check, custom_script, llm_judge)
+- **Purpose Gate**: Session-scoped question to focus agent behavior
+- **TillDone Mode**: Multi-step task enforcement with auto-prompting
+- **Branding**: Custom icons and colors per agent
+
+## LLM Support
+
+Multi-provider with native tool calling:
+- Anthropic Claude (Opus 4.6, Sonnet 4.6, Haiku 4.5)
+- OpenAI GPT (GPT-4o, GPT-4o-mini)
+- Google Gemini (2.5 Flash)
+- Ollama (local models)
+
+## Orchestration
+
+- **Agent Teams**: Parallel, sequential, or conditional execution of multiple agents
+- **Pipelines**: Sequential chains where each step's output feeds the next
+- **MCP Servers**: Expose any agent as a JSON-RPC endpoint with API key authentication (Model Context Protocol)
+
+## Architecture
+
+- Next.js 16 + React 19 + TypeScript
+- Firebase (Firestore real-time, Auth)
+- SSE streaming for all agent interactions
+- Sandboxed tool execution (Node.js vm module)
+- Real-time billing and usage tracking per agent
+
+## Key Pages
+
+- `/en` — Landing page with meta-agent creator (create an agent from a text prompt)
+- `/en/examples` — Gallery of 15+ agent templates
+- `/en/pricing` — 4 tiers (Starter free, Pro, Usage, Enterprise)
+- `/en/docs` — Full documentation
+
+## API
+
+- `POST /api/agents/{id}/chat` — SSE streaming chat with tool calling
+- `POST /api/agents/{id}/grading/{suiteId}/run` — Run grading suite
+- `POST /api/teams/{id}/execute` — Execute agent team
+- `POST /api/mcp` — MCP JSON-RPC endpoint
+- All API routes support real-time token tracking and billing
+
+## Languages
+
+Available in English and French.

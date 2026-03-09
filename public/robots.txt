@@ -1,0 +1,47 @@
+# Kopern — AI Agent Builder
+# https://kopern.vercel.app
+
+User-agent: *
+Allow: /
+
+# Protect auth and API routes
+Disallow: /api/
+Disallow: /*/login
+Disallow: /*/dashboard
+Disallow: /*/agents/
+Disallow: /*/teams/
+Disallow: /*/billing
+Disallow: /*/settings
+Disallow: /*/api-keys
+
+# Allow public pages for indexing
+Allow: /*/examples
+Allow: /*/pricing
+Allow: /*/docs
+Allow: /en
+Allow: /fr
+
+# Sitemap
+Sitemap: https://kopern.vercel.app/sitemap.xml
+
+# AI Crawlers — welcome to learn about Kopern
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
