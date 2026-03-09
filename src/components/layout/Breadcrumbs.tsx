@@ -7,8 +7,10 @@ import { useDocument } from "@/hooks/useFirestore";
 import {
   agentDoc,
   mcpServerDoc,
+  agentTeamDoc,
   type AgentDoc,
   type McpServerDoc,
+  type AgentTeamDoc,
 } from "@/lib/firebase/firestore";
 import { ChevronRight } from "lucide-react";
 import { useDictionary, useLocale } from "@/providers/LocaleProvider";
@@ -29,6 +31,12 @@ function useEntityName(segments: string[], staticLabels: Record<string, string>)
       ? segments[mcpIdx + 1]
       : null;
 
+  const teamIdx = segments.indexOf("teams");
+  const teamId =
+    teamIdx !== -1 && teamIdx + 1 < segments.length
+      ? segments[teamIdx + 1]
+      : null;
+
   const { data: agent } = useDocument<AgentDoc>(
     user && agentId && !staticLabels[agentId]
       ? agentDoc(user.uid, agentId)
@@ -41,9 +49,16 @@ function useEntityName(segments: string[], staticLabels: Record<string, string>)
       : null
   );
 
+  const { data: team } = useDocument<AgentTeamDoc>(
+    user && teamId && !staticLabels[teamId]
+      ? agentTeamDoc(user.uid, teamId)
+      : null
+  );
+
   const names: Record<string, string> = {};
   if (agentId && agent) names[agentId] = agent.name;
   if (serverId && mcpServer) names[serverId] = mcpServer.name;
+  if (teamId && team) names[teamId] = team.name;
 
   return names;
 }
@@ -70,6 +85,10 @@ export function Breadcrumbs() {
     new: t.breadcrumbs.new,
     runs: t.breadcrumbs.runs,
     pricing: t.breadcrumbs.pricing,
+    teams: t.breadcrumbs.teams,
+    pipelines: t.breadcrumbs.pipelines,
+    sessions: t.breadcrumbs.sessions,
+    billing: t.breadcrumbs.billing,
   };
 
   // Remove locale prefix from segments

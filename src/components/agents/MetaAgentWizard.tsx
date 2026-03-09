@@ -14,12 +14,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Sparkles, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
-import { createAgent } from "@/actions/agents";
+import { createAgent, updateAgent } from "@/actions/agents";
 import { createSkill } from "@/actions/skills";
 import { createTool } from "@/actions/tools";
+import { createExtension } from "@/actions/extensions";
 import { createGradingSuite } from "@/actions/grading-suites";
 import { createGradingCase } from "@/actions/grading-cases";
 import { toast } from "sonner";
+import type { AgentSpec } from "@/lib/meta-agent/types";
 
 interface MetaAgentWizardProps {
   userId: string;
@@ -27,17 +29,6 @@ interface MetaAgentWizardProps {
 }
 
 type WizardStep = "input" | "generating" | "review" | "error";
-
-interface AgentSpec {
-  name: string;
-  domain: string;
-  systemPrompt: string;
-  skills: { name: string; content: string }[];
-  tools: { name: string; description: string; parametersSchema: string; executeCode: string }[];
-  gradingCases: { name: string; input: string; expected: string; criterionType: string }[];
-  settings: { model?: string; thinking?: string; purposeGate?: string; tillDone?: string };
-  rawSpec: string;
-}
 
 export function MetaAgentWizard({ userId, onCreated }: MetaAgentWizardProps) {
   const t = useDictionary();
@@ -152,18 +143,33 @@ export function MetaAgentWizard({ userId, onCreated }: MetaAgentWizardProps) {
       const agentDomain = spec?.domain || "other";
       const agentPrompt = spec?.systemPrompt || streamText;
 
+      // Use parsed model/thinking or sensible defaults
+      const modelProvider = spec?.modelProvider || "anthropic";
+      const modelId = spec?.modelId || "claude-sonnet-4-6";
+      const thinkingLevel = (spec?.thinkingLevel || "off") as "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
+      const builtinTools = spec?.builtinTools?.length ? spec.builtinTools : [];
+
       const agentId = await createAgent(userId, {
         name: agentName,
         description: description.trim(),
         domain: agentDomain,
         systemPrompt: agentPrompt,
-        modelProvider: "anthropic",
-        modelId: "claude-sonnet-4-6",
-        thinkingLevel: "off",
-        builtinTools: ["read", "bash"],
+        modelProvider,
+        modelId,
+        thinkingLevel,
+        builtinTools,
       });
 
-      // Create skills in sub-collection
+      // Apply purpose gate, tillDone, branding if parsed
+      const updates: Record<string, unknown> = {};
+      if (spec?.purposeGate) updates.purposeGate = spec.purposeGate;
+      if (spec?.tillDone) updates.tillDone = spec.tillDone;
+      if (spec?.branding) updates.branding = spec.branding;
+      if (Object.keys(updates).length > 0) {
+        await updateAgent(userId, agentId, updates as Parameters<typeof updateAgent>[2]);
+      }
+
+      // Create skills
       if (spec?.skills?.length) {
         await Promise.all(
           spec.skills.map((s) =>
@@ -172,7 +178,7 @@ export function MetaAgentWizard({ userId, onCreated }: MetaAgentWizardProps) {
         );
       }
 
-      // Create tools in sub-collection
+      // Create tools
       if (spec?.tools?.length) {
         await Promise.all(
           spec.tools.map((t) =>
@@ -182,6 +188,19 @@ export function MetaAgentWizard({ userId, onCreated }: MetaAgentWizardProps) {
               description: t.description,
               parametersSchema: t.parametersSchema,
               executeCode: t.executeCode,
+            })
+          )
+        );
+      }
+
+      // Create extensions
+      if (spec?.extensions?.length) {
+        await Promise.all(
+          spec.extensions.map((ext) =>
+            createExtension(userId, agentId, {
+              name: ext.name,
+              description: ext.description,
+              code: ext.code,
             })
           )
         );
@@ -322,12 +341,42 @@ export function MetaAgentWizard({ userId, onCreated }: MetaAgentWizardProps) {
                   <span className="font-medium">{t.metaAgent.domain}:</span>{" "}
                   {spec.domain}
                 </p>
-                {spec.skills.length > 0 && (
-                  <p className="text-sm">
-                    <span className="font-medium">{t.metaAgent.skillsCount}:</span>{" "}
-                    {spec.skills.length}
-                  </p>
-                )}
+                <p className="text-sm">
+                  <span className="font-medium">Model:</span>{" "}
+                  {spec.modelProvider}/{spec.modelId}
+                </p>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {spec.skills.length > 0 && (
+                    <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-xs text-blue-400">
+                      {spec.skills.length} skill{spec.skills.length > 1 ? "s" : ""}
+                    </span>
+                  )}
+                  {spec.tools.length > 0 && (
+                    <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-400">
+                      {spec.tools.length} tool{spec.tools.length > 1 ? "s" : ""}
+                    </span>
+                  )}
+                  {spec.extensions.length > 0 && (
+                    <span className="inline-flex items-center rounded-full bg-purple-500/10 px-2 py-0.5 text-xs text-purple-400">
+                      {spec.extensions.length} extension{spec.extensions.length > 1 ? "s" : ""}
+                    </span>
+                  )}
+                  {spec.gradingCases.length > 0 && (
+                    <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-400">
+                      {spec.gradingCases.length} test{spec.gradingCases.length > 1 ? "s" : ""}
+                    </span>
+                  )}
+                  {spec.purposeGate && (
+                    <span className="inline-flex items-center rounded-full bg-pink-500/10 px-2 py-0.5 text-xs text-pink-400">
+                      Purpose Gate
+                    </span>
+                  )}
+                  {spec.tillDone && (
+                    <span className="inline-flex items-center rounded-full bg-orange-500/10 px-2 py-0.5 text-xs text-orange-400">
+                      TillDone
+                    </span>
+                  )}
+                </div>
               </div>
             )}
 

@@ -3,9 +3,9 @@
 import { LocalizedLink } from "@/components/LocalizedLink";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bot } from "lucide-react";
 import { type AgentDoc } from "@/lib/firebase/firestore";
 import { AnimatedCounter } from "@/components/motion/AnimatedCounter";
+import { AgentAvatar } from "@/components/agents/AgentAvatar";
 
 interface AgentCardProps {
   agent: AgentDoc & { id: string };
@@ -27,9 +27,7 @@ export function AgentCard({ agent }: AgentCardProps) {
     <LocalizedLink href={`/agents/${agent.id}`}>
       <Card className="cursor-pointer transition-shadow hover:shadow-md">
         <CardHeader className="flex flex-row items-center gap-3 pb-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <Bot className="h-5 w-5 text-primary" />
-          </div>
+          <AgentAvatar branding={agent.branding} size="md" />
           <div className="flex-1 space-y-1">
             <CardTitle className="text-base">{agent.name}</CardTitle>
             <Badge variant="secondary" className={colorClass}>

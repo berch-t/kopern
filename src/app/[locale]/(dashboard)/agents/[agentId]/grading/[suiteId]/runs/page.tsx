@@ -55,7 +55,8 @@ export default function RunsPage({
   );
   const { data: cases } = useCollection<GradingCaseDoc>(
     user ? gradingCasesCollection(user.uid, agentId, suiteId) : null,
-    "orderIndex"
+    "orderIndex",
+    "asc"
   );
 
   const [isRunning, setIsRunning] = useState(false);

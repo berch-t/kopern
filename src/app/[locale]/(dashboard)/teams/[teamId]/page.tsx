@@ -36,8 +36,8 @@ import {
   CheckCircle,
   Loader2,
   Clock,
-  Bot,
 } from "lucide-react";
+import { AgentAvatar } from "@/components/agents/AgentAvatar";
 
 const modeColors: Record<string, string> = {
   parallel: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
@@ -81,9 +81,12 @@ export default function TeamDetailPage({
     return <div className="text-destructive">{t.common.noResults}</div>;
   }
 
+  function getAgent(agentId: string) {
+    return agents.find((a) => a.id === agentId);
+  }
+
   function getAgentName(agentId: string) {
-    const agent = agents.find((a) => a.id === agentId);
-    return agent?.name ?? agentId;
+    return getAgent(agentId)?.name ?? agentId;
   }
 
   async function handleDelete() {
@@ -228,9 +231,7 @@ export default function TeamDetailPage({
                       variants={staggerItem}
                       className="flex items-center gap-3 rounded-lg border p-3"
                     >
-                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
-                        <Bot className="h-4 w-4 text-primary" />
-                      </div>
+                      <AgentAvatar branding={getAgent(result.agentId)?.branding} size="sm" />
                       <div className="flex-1">
                         <p className="text-sm font-medium">
                           {getAgentName(result.agentId)}

@@ -38,7 +38,8 @@ export default function SuiteDetailPage({
   );
   const { data: cases, loading } = useCollection<GradingCaseDoc>(
     user ? gradingCasesCollection(user.uid, agentId, suiteId) : null,
-    "orderIndex"
+    "orderIndex",
+    "asc"
   );
   const [showNew, setShowNew] = useState(false);
   const [saving, setSaving] = useState(false);

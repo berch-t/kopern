@@ -10,12 +10,14 @@ import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { createAgent } from "@/actions/agents";
+import { createAgent, updateAgent } from "@/actions/agents";
 import { createSkill } from "@/actions/skills";
 import { createTool } from "@/actions/tools";
+import { createExtension } from "@/actions/extensions";
 import { createGradingSuite } from "@/actions/grading-suites";
 import { createGradingCase } from "@/actions/grading-cases";
 import { toast } from "sonner";
+import type { AgentSpec } from "@/lib/meta-agent/types";
 import {
   ArrowRight,
   Bot,
@@ -42,19 +44,41 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const PixelBlast = lazy(() => import("@/components/ui/PixelBlast"));
 
+const THINKING_PHRASES = [
+  "Reading between the lines of your idea...",
+  "Giving your agent its personality...",
+  "Teaching it a few tricks...",
+  "Forging the right tools for the job...",
+  "Writing the exam questions...",
+  "Polishing the final touches...",
+  "Calibrating the neural pathways...",
+  "Translating intent into instructions...",
+  "Picking the perfect words...",
+  "Assembling the knowledge base...",
+  "Fine-tuning the decision engine...",
+  "Mapping out the conversation flow...",
+  "Building guardrails and safety nets...",
+  "Crafting edge case handlers...",
+  "Wiring up the tool connections...",
+  "Stress-testing the logic...",
+  "Optimizing for clarity and precision...",
+  "Adding a dash of personality...",
+  "Encoding domain expertise...",
+  "Designing the evaluation criteria...",
+  "Almost there, tightening the bolts...",
+  "Double-checking the specifications...",
+  "Running a quick mental simulation...",
+  "Shaping the response patterns...",
+  "Infusing best practices...",
+  "Weaving skills into the fabric...",
+  "Setting the stage for deployment...",
+  "Imagining your agent in action...",
+  "Balancing creativity and precision...",
+  "One more pass for perfection...",
+];
+
 // --- Hero Agent Creator types ---
 type HeroStep = "input" | "generating" | "review" | "error";
-
-interface AgentSpec {
-  name: string;
-  domain: string;
-  systemPrompt: string;
-  skills: { name: string; content: string }[];
-  tools: { name: string; description: string; parametersSchema: string; executeCode: string }[];
-  gradingCases: { name: string; input: string; expected: string; criterionType: string }[];
-  settings: { model?: string; thinking?: string; purposeGate?: string; tillDone?: string };
-  rawSpec: string;
-}
 
 export default function LandingPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -78,6 +102,18 @@ export default function LandingPage() {
     });
     return unsubscribe;
   }, []);
+
+  // Timer-based phrase cycling during generation
+  useEffect(() => {
+    if (heroStep !== "generating") return;
+    setHeroPhase(0);
+    let idx = 0;
+    const interval = setInterval(() => {
+      idx++;
+      setHeroPhase(idx);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [heroStep]);
 
   const heroReset = useCallback(() => {
     setHeroStep("input");
@@ -147,19 +183,6 @@ export default function LandingPage() {
               if (evt === "token") {
                 accumulated += data.text;
                 setHeroStreamText(accumulated);
-                // Detect phase from section headings in the stream
-                const lower = accumulated.toLowerCase();
-                if (lower.includes("### recommended") || lower.includes("### settings") || lower.includes("### config")) {
-                  setHeroPhase(5);
-                } else if (lower.includes("### grading") || lower.includes("### test") || lower.includes("### evaluation")) {
-                  setHeroPhase(4);
-                } else if (lower.includes("### tool")) {
-                  setHeroPhase(3);
-                } else if (lower.includes("### skill")) {
-                  setHeroPhase(2);
-                } else if (lower.includes("### system prompt") || lower.includes("### prompt")) {
-                  setHeroPhase(1);
-                }
               } else if (evt === "spec") {
                 setHeroSpec(data as AgentSpec);
               } else if (evt === "done") {
@@ -206,18 +229,33 @@ export default function LandingPage() {
       const agentDomain = heroSpec?.domain || "other";
       const agentPrompt = heroSpec?.systemPrompt || heroStreamText;
 
+      // Use parsed model/thinking or sensible defaults
+      const modelProvider = heroSpec?.modelProvider || "anthropic";
+      const modelId = heroSpec?.modelId || "claude-sonnet-4-6";
+      const thinkingLevel = (heroSpec?.thinkingLevel || "off") as "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
+      const builtinTools = heroSpec?.builtinTools?.length ? heroSpec.builtinTools : [];
+
       const agentId = await createAgent(user.uid, {
         name: agentName,
         description: heroDescription.trim(),
         domain: agentDomain,
         systemPrompt: agentPrompt,
-        modelProvider: "anthropic",
-        modelId: "claude-sonnet-4-6",
-        thinkingLevel: "off",
-        builtinTools: ["read", "bash"],
+        modelProvider,
+        modelId,
+        thinkingLevel,
+        builtinTools,
       });
 
-      // Create skills in sub-collection
+      // Apply purpose gate, tillDone, branding if parsed
+      const updates: Record<string, unknown> = {};
+      if (heroSpec?.purposeGate) updates.purposeGate = heroSpec.purposeGate;
+      if (heroSpec?.tillDone) updates.tillDone = heroSpec.tillDone;
+      if (heroSpec?.branding) updates.branding = heroSpec.branding;
+      if (Object.keys(updates).length > 0) {
+        await updateAgent(user.uid, agentId, updates as Parameters<typeof updateAgent>[2]);
+      }
+
+      // Create skills
       if (heroSpec?.skills?.length) {
         await Promise.all(
           heroSpec.skills.map((s) =>
@@ -226,7 +264,7 @@ export default function LandingPage() {
         );
       }
 
-      // Create tools in sub-collection
+      // Create tools
       if (heroSpec?.tools?.length) {
         await Promise.all(
           heroSpec.tools.map((t) =>
@@ -236,6 +274,19 @@ export default function LandingPage() {
               description: t.description,
               parametersSchema: t.parametersSchema,
               executeCode: t.executeCode,
+            })
+          )
+        );
+      }
+
+      // Create extensions
+      if (heroSpec?.extensions?.length) {
+        await Promise.all(
+          heroSpec.extensions.map((ext) =>
+            createExtension(user.uid, agentId, {
+              name: ext.name,
+              description: ext.description,
+              code: ext.code,
             })
           )
         );
@@ -423,66 +474,63 @@ export default function LandingPage() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.25 }}
-                  className="space-y-5"
+                  className="space-y-6"
                 >
-                  <div className="flex flex-col items-center gap-4">
-                    {/* Animated thinking phases */}
-                    <div className="flex flex-col items-center gap-2 min-h-[80px] justify-center">
+                  <div className="flex flex-col items-center gap-5">
+                    {/* Animated thinking phrases with shimmer */}
+                    <div className="flex flex-col items-center gap-3 min-h-[90px] justify-center">
                       <AnimatePresence mode="wait">
                         <motion.p
                           key={heroPhase}
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -8 }}
-                          transition={{ duration: 0.4 }}
-                          className="text-sm font-medium text-transparent bg-clip-text animate-shimmer"
-                          style={{
-                            backgroundImage: "linear-gradient(90deg, hsl(var(--primary)), hsl(280 80% 70%), hsl(var(--primary)))",
-                            backgroundSize: "200% 100%",
-                          }}
+                          initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
+                          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                          exit={{ opacity: 0, y: -12, filter: "blur(4px)" }}
+                          transition={{ duration: 0.5, ease: "easeOut" }}
+                          className="shimmer-text text-base font-semibold tracking-wide"
                         >
-                          {[
-                            "Analyzing your requirements...",
-                            "Crafting the system prompt...",
-                            "Designing skills & knowledge...",
-                            "Building custom tools...",
-                            "Creating test suite...",
-                            "Finalizing configuration...",
-                          ][heroPhase]}
+                          {THINKING_PHRASES[heroPhase % THINKING_PHRASES.length]}
                         </motion.p>
                       </AnimatePresence>
 
-                      {/* Phase progress dots */}
-                      <div className="flex gap-1.5">
-                        {Array.from({ length: 6 }).map((_, i) => (
+                      {/* Pulsing dot indicator */}
+                      <div className="flex gap-1">
+                        {Array.from({ length: 3 }).map((_, i) => (
                           <motion.div
                             key={i}
-                            className="h-1.5 rounded-full"
-                            initial={{ width: 6, backgroundColor: "hsl(var(--muted))" }}
-                            animate={{
-                              width: i === heroPhase ? 20 : 6,
-                              backgroundColor: i <= heroPhase ? "hsl(var(--primary))" : "hsl(var(--muted))",
+                            className="h-1.5 w-1.5 rounded-full"
+                            style={{ backgroundColor: "oklch(0.75 0.18 280)" }}
+                            animate={{ opacity: [0.3, 1, 0.3] }}
+                            transition={{
+                              duration: 1.2,
+                              repeat: Infinity,
+                              delay: i * 0.2,
+                              ease: "easeInOut",
                             }}
-                            transition={{ duration: 0.3 }}
                           />
                         ))}
                       </div>
                     </div>
 
-                    {/* Subtle pulsing indicator */}
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    {/* Token counter (~4 chars per token) */}
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 1 }}
+                      className="flex items-center gap-2 text-xs text-muted-foreground/60"
+                    >
                       <Loader2 className="h-3 w-3 animate-spin" />
-                      <span>{Math.min(heroStreamText.length, 9999).toLocaleString()} characters generated</span>
-                    </div>
+                      <span>~{Math.ceil(heroStreamText.length / 4).toLocaleString()} tokens</span>
+                    </motion.div>
                   </div>
 
                   <Button
-                    variant="outline"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       abortRef.current?.abort();
                       heroReset();
                     }}
-                    className="w-full rounded-xl"
+                    className="w-full rounded-xl text-muted-foreground"
                   >
                     {t.common.cancel}
                   </Button>
@@ -534,8 +582,13 @@ export default function LandingPage() {
                           </span>
                         )}
                         {heroSpec.tools?.length > 0 && (
-                          <span className="text-xs bg-blue-500/10 text-blue-400 rounded-full px-2.5 py-0.5 font-medium">
+                          <span className="text-xs bg-amber-500/10 text-amber-400 rounded-full px-2.5 py-0.5 font-medium">
                             {heroSpec.tools.length} tool{heroSpec.tools.length > 1 ? "s" : ""}
+                          </span>
+                        )}
+                        {heroSpec.extensions?.length > 0 && (
+                          <span className="text-xs bg-purple-500/10 text-purple-400 rounded-full px-2.5 py-0.5 font-medium">
+                            {heroSpec.extensions.length} extension{heroSpec.extensions.length > 1 ? "s" : ""}
                           </span>
                         )}
                         {heroSpec.gradingCases?.length > 0 && (
@@ -543,7 +596,22 @@ export default function LandingPage() {
                             {heroSpec.gradingCases.length} test{heroSpec.gradingCases.length > 1 ? "s" : ""}
                           </span>
                         )}
+                        {heroSpec.purposeGate && (
+                          <span className="text-xs bg-pink-500/10 text-pink-400 rounded-full px-2.5 py-0.5 font-medium">
+                            Purpose Gate
+                          </span>
+                        )}
+                        {heroSpec.tillDone && (
+                          <span className="text-xs bg-orange-500/10 text-orange-400 rounded-full px-2.5 py-0.5 font-medium">
+                            TillDone
+                          </span>
+                        )}
                       </div>
+
+                      {/* Model info */}
+                      <p className="text-xs text-muted-foreground">
+                        {heroSpec.modelProvider}/{heroSpec.modelId} — thinking: {heroSpec.thinkingLevel}
+                      </p>
 
                       {/* Skill & tool names */}
                       {(heroSpec.skills.length > 0 || (heroSpec.tools?.length ?? 0) > 0) && (

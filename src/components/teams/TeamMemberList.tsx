@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDictionary } from "@/providers/LocaleProvider";
 import { type AgentTeamMember, type AgentDoc } from "@/lib/firebase/firestore";
+import { AgentAvatar } from "@/components/agents/AgentAvatar";
 import { GripVertical, X, Bot } from "lucide-react";
 
 interface TeamMemberListProps {
@@ -22,9 +23,12 @@ export function TeamMemberList({ members, agents, onUpdate, readonly }: TeamMemb
   const t = useDictionary();
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
+  function getAgent(agentId: string) {
+    return agents.find((a) => a.id === agentId);
+  }
+
   function getAgentName(agentId: string) {
-    const agent = agents.find((a) => a.id === agentId);
-    return agent?.name ?? agentId;
+    return getAgent(agentId)?.name ?? agentId;
   }
 
   function handleRoleChange(index: number, role: string) {
@@ -85,9 +89,7 @@ export function TeamMemberList({ members, agents, onUpdate, readonly }: TeamMemb
           {!readonly && (
             <GripVertical className="h-4 w-4 cursor-grab text-muted-foreground" />
           )}
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
-            <Bot className="h-4 w-4 text-primary" />
-          </div>
+          <AgentAvatar branding={getAgent(member.agentId)?.branding} size="sm" />
           <div className="flex-1 space-y-1">
             <p className="text-sm font-medium">{getAgentName(member.agentId)}</p>
             {readonly ? (

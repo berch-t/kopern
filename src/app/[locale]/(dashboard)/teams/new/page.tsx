@@ -29,7 +29,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Bot } from "lucide-react";
+import { Plus } from "lucide-react";
+import { AgentAvatar } from "@/components/agents/AgentAvatar";
 
 export default function NewTeamPage() {
   const { user } = useAuth();
@@ -153,9 +154,7 @@ export default function NewTeamPage() {
                           onClick={() => handleAddAgent(agent.id)}
                           className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-accent"
                         >
-                          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
-                            <Bot className="h-4 w-4 text-primary" />
-                          </div>
+                          <AgentAvatar branding={agent.branding} size="sm" />
                           <div>
                             <p className="text-sm font-medium">{agent.name}</p>
                             <p className="line-clamp-1 text-xs text-muted-foreground">

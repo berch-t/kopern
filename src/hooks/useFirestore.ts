@@ -15,7 +15,8 @@ import {
 
 export function useCollection<T = DocumentData>(
   ref: CollectionReference<T> | null,
-  orderField?: string
+  orderField?: string,
+  direction: "asc" | "desc" = "desc"
 ) {
   const [data, setData] = useState<(T & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +35,7 @@ export function useCollection<T = DocumentData>(
     setLoading(true);
 
     const q = orderField
-      ? query(ref, orderBy(orderField, "desc"))
+      ? query(ref, orderBy(orderField, direction))
       : ref;
 
     const unsubscribe = onSnapshot(
@@ -55,7 +56,7 @@ export function useCollection<T = DocumentData>(
 
     return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refPath, orderField]);
+  }, [refPath, orderField, direction]);
 
   return { data, loading, error };
 }
