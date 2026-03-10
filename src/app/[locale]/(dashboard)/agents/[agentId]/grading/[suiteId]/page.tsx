@@ -45,7 +45,7 @@ export default function SuiteDetailPage({
   );
   const router = useLocalizedRouter();
   const [showNew, setShowNew] = useState(false);
-  const [editingCase, setEditingCase] = useState<GradingCaseDoc | null>(null);
+  const [editingCase, setEditingCase] = useState<(GradingCaseDoc & { id: string }) | null>(null);
   const [saving, setSaving] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
 
