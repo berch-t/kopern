@@ -668,5 +668,10 @@
     "pipelines": "Pipelines",
     "sessions": "Sessions",
     "billing": "Billing"
+  },
+  "planLimit": {
+    "title": "Plan limit reached",
+    "description": "Upgrade your plan or switch to usage-based billing to continue.",
+    "viewPlans": "View Plans"
   }
 }

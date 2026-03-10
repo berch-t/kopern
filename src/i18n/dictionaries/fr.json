@@ -668,5 +668,10 @@
     "pipelines": "Pipelines",
     "sessions": "Sessions",
     "billing": "Facturation"
+  },
+  "planLimit": {
+    "title": "Limite du plan atteinte",
+    "description": "Passez à un plan supérieur ou au paiement à l'usage pour continuer.",
+    "viewPlans": "Voir les Plans"
   }
 }

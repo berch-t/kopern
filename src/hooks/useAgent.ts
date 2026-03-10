@@ -63,10 +63,15 @@ export function useAgent(agentId: string, agentConfig: AgentPlaygroundConfig | n
 
   const { isStreaming, start, stop } = useSSE({
     onError: (error) => {
+      const msg = error.message;
+      const isPlanLimit = msg.includes("limit reached") || msg.includes("not available") || msg.includes("Subscription inactive");
+      const content = isPlanLimit
+        ? `⚠️ ${msg}`
+        : `Error: ${msg}`;
       const errorMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: `Error: ${error.message}`,
+        content,
         timestamp: Date.now(),
       };
       messagesRef.current = [...messagesRef.current, errorMsg];

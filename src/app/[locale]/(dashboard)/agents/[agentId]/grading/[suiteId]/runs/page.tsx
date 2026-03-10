@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Play } from "lucide-react";
+import { Play, AlertTriangle } from "lucide-react";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { RunProgress } from "@/components/grading/RunProgress";
 import { ResultsTable } from "@/components/grading/ResultsTable";
@@ -20,6 +20,8 @@ import { ScoreBadge } from "@/components/grading/ScoreBadge";
 import { TrendChart } from "@/components/grading/TrendChart";
 import { useSSE } from "@/hooks/useSSE";
 import { LocalizedLink } from "@/components/LocalizedLink";
+import { toast } from "sonner";
+import { useDictionary } from "@/providers/LocaleProvider";
 
 interface CaseProgress {
   caseName: string;
@@ -49,6 +51,7 @@ export default function RunsPage({
 }) {
   const { agentId, suiteId } = use(params);
   const { user } = useAuth();
+  const t = useDictionary();
   const { data: runs } = useCollection<GradingRunDoc>(
     user ? gradingRunsCollection(user.uid, agentId, suiteId) : null,
     "createdAt"
@@ -63,6 +66,7 @@ export default function RunsPage({
   const [caseProgress, setCaseProgress] = useState<CaseProgress[]>([]);
   const [results, setResults] = useState<CaseResultData[]>([]);
   const [overallScore, setOverallScore] = useState<number | null>(null);
+  const [planError, setPlanError] = useState<string | null>(null);
 
   const { start } = useSSE({
     onMessage: (msg) => {
@@ -113,7 +117,15 @@ export default function RunsPage({
       }
     },
     onComplete: () => setIsRunning(false),
-    onError: () => setIsRunning(false),
+    onError: (error) => {
+      setIsRunning(false);
+      const msg = error.message;
+      if (msg.includes("limit reached") || msg.includes("not available")) {
+        setPlanError(msg);
+      } else {
+        toast.error(msg || "Grading run failed");
+      }
+    },
   });
 
   function handleRunGrading() {
@@ -121,6 +133,7 @@ export default function RunsPage({
     setIsRunning(true);
     setResults([]);
     setOverallScore(null);
+    setPlanError(null);
     setCaseProgress(
       cases.map((c) => ({ caseName: c.name, status: "pending" as const }))
     );
@@ -162,6 +175,24 @@ export default function RunsPage({
           </Button>
         </div>
       </SlideUp>
+
+      {/* Plan limit banner */}
+      {planError && (
+        <Card className="border-amber-500/50 bg-amber-500/10">
+          <CardContent className="flex items-center gap-3 p-4">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
+            <div className="flex-1">
+              <p className="text-sm font-medium">{t.planLimit.title}</p>
+              <p className="text-xs text-muted-foreground">
+                {t.planLimit.description}
+              </p>
+            </div>
+            <LocalizedLink href="/pricing">
+              <Button size="sm">{t.planLimit.viewPlans}</Button>
+            </LocalizedLink>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Trend Chart */}
       {trendData.length > 0 && (
