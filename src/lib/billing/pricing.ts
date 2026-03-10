@@ -79,3 +79,11 @@ export const PLAN_LIMITS = {
 } as const;
 
 export type PlanTier = keyof typeof PLAN_LIMITS;
+
+/** Kopern platform pricing (provider cost + 20% commission) */
+export const KOPERN_PRICING = {
+  inputTokensPer1M: 4.0,
+  outputTokensPer1M: 20.0,
+  gradingRunPrice: 0.15,
+  commissionRate: 0.2, // 20%
+} as const;

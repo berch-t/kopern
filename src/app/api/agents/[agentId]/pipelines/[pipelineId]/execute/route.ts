@@ -1,6 +1,7 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createSSEStream, sseResponse } from "@/lib/utils/sse";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
+import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 
 interface PipelineStepConfig {
   agentId: string;
@@ -30,6 +31,24 @@ export async function POST(
   const { pipelineId } = await params;
   const body = (await request.json()) as PipelineExecuteBody;
   const { prompt, userId, pipelineName, steps } = body;
+
+  // Enforce plan: pipelines require Pro+
+  if (userId) {
+    const planCheck = await checkPlanLimits(userId, "pipelines");
+    if (!planCheck.allowed) {
+      return NextResponse.json(
+        { error: planCheck.reason, plan: planCheck.plan },
+        { status: 403 }
+      );
+    }
+    const tokenCheck = await checkPlanLimits(userId, "tokens");
+    if (!tokenCheck.allowed) {
+      return NextResponse.json(
+        { error: tokenCheck.reason, plan: tokenCheck.plan },
+        { status: 403 }
+      );
+    }
+  }
 
   const { stream, send, close } = createSSEStream();
 

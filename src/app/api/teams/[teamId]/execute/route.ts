@@ -1,6 +1,7 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createSSEStream, sseResponse } from "@/lib/utils/sse";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
+import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 
 interface TeamExecuteBody {
   prompt: string;
@@ -28,6 +29,24 @@ export async function POST(
   const { teamId } = await params;
   const body = (await request.json()) as TeamExecuteBody;
   const { prompt, userId, team } = body;
+
+  // Enforce plan: teams require Pro+
+  if (userId) {
+    const planCheck = await checkPlanLimits(userId, "teams");
+    if (!planCheck.allowed) {
+      return NextResponse.json(
+        { error: planCheck.reason, plan: planCheck.plan },
+        { status: 403 }
+      );
+    }
+    const tokenCheck = await checkPlanLimits(userId, "tokens");
+    if (!tokenCheck.allowed) {
+      return NextResponse.json(
+        { error: tokenCheck.reason, plan: tokenCheck.plan },
+        { status: 403 }
+      );
+    }
+  }
 
   const { stream, send, close } = createSSEStream();
 

@@ -4,6 +4,7 @@
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { calculateTokenCost } from "./pricing";
+import { reportUsageToStripe } from "@/lib/stripe/server";
 
 function getCurrentYearMonth(): string {
   const now = new Date();
@@ -20,7 +21,8 @@ export async function trackUsageServer(
   agentId: string,
   provider: string,
   inputTokens: number,
-  outputTokens: number
+  outputTokens: number,
+  gradingRuns: number = 0
 ): Promise<void> {
   if (!userId || !agentId) return;
 
@@ -29,15 +31,16 @@ export async function trackUsageServer(
   const ref = adminDb.doc(`users/${userId}/usage/${yearMonth}`);
 
   // First ensure the doc exists with top-level counters
-  await ref.set(
-    {
-      inputTokens: FieldValue.increment(inputTokens),
-      outputTokens: FieldValue.increment(outputTokens),
-      totalCost: FieldValue.increment(cost),
-      requestCount: FieldValue.increment(1),
-    },
-    { merge: true }
-  );
+  const topLevelData: Record<string, unknown> = {
+    inputTokens: FieldValue.increment(inputTokens),
+    outputTokens: FieldValue.increment(outputTokens),
+    totalCost: FieldValue.increment(cost),
+    requestCount: FieldValue.increment(1),
+  };
+  if (gradingRuns > 0) {
+    topLevelData.gradingRuns = FieldValue.increment(gradingRuns);
+  }
+  await ref.set(topLevelData, { merge: true });
 
   // Then use update() with dot-notation for nested agentBreakdown
   // update() correctly interprets dots as nested field paths
@@ -45,6 +48,11 @@ export async function trackUsageServer(
     [`agentBreakdown.${agentId}.inputTokens`]: FieldValue.increment(inputTokens),
     [`agentBreakdown.${agentId}.outputTokens`]: FieldValue.increment(outputTokens),
     [`agentBreakdown.${agentId}.cost`]: FieldValue.increment(cost),
+  });
+
+  // Report to Stripe for metered billing (fire-and-forget, non-blocking)
+  reportUsageToStripe(userId, inputTokens, outputTokens, gradingRuns).catch((err) => {
+    console.warn("Stripe usage report failed (non-blocking):", err);
   });
 }
 

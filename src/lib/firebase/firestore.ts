@@ -9,6 +9,15 @@ import { db } from "./config";
 
 // --- Type definitions ---
 
+export interface UserSubscription {
+  stripeCustomerId: string;
+  stripeSubscriptionId: string | null;
+  plan: "starter" | "pro" | "usage" | "enterprise";
+  status: "active" | "trialing" | "past_due" | "canceled" | "unpaid" | "incomplete";
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+}
+
 export interface UserDoc {
   displayName: string;
   email: string;
@@ -16,6 +25,7 @@ export interface UserDoc {
   defaultProvider: string;
   defaultModel: string;
   githubAccessToken?: string;
+  subscription?: UserSubscription;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

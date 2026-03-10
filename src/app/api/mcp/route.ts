@@ -3,6 +3,7 @@ import { adminDb } from "@/lib/firebase/admin";
 import { resolveApiKey } from "@/lib/mcp/auth";
 import { countTokens, trackUsage } from "@/lib/mcp/token-counter";
 import { streamLLM, type LLMMessage } from "@/lib/llm/client";
+import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 
 interface JsonRpcRequest {
   jsonrpc: "2.0";
@@ -59,7 +60,13 @@ export async function POST(request: NextRequest) {
     return jsonRpcError(body.id ?? null, -32600, "Invalid JSON-RPC request");
   }
 
-  // 4. Load agent doc
+  // 4. Enforce plan limits
+  const tokenCheck = await checkPlanLimits(resolved.userId, "tokens");
+  if (!tokenCheck.allowed) {
+    return jsonRpcError(body?.id ?? null, -32000, tokenCheck.reason || "Plan limit reached");
+  }
+
+  // 5. Load agent doc
   const agentSnap = await adminDb
     .collection("users")
     .doc(resolved.userId)

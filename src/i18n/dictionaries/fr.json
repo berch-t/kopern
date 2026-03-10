@@ -363,7 +363,23 @@
     "noUsageDesc": "Commencez à discuter avec vos agents pour suivre l'utilisation",
     "costEstimate": "Estimation du Coût",
     "perMillionInput": "par 1M tokens entrants",
-    "perMillionOutput": "par 1M tokens sortants"
+    "perMillionOutput": "par 1M tokens sortants",
+    "currentPlan": "Plan Actuel",
+    "planStarter": "Starter (Gratuit)",
+    "planPro": "Pro",
+    "planUsage": "À l'Usage",
+    "planEnterprise": "Enterprise",
+    "managePlan": "Gérer l'Abonnement",
+    "upgradePlan": "Passer au Supérieur",
+    "renewsOn": "Renouvellement le",
+    "cancelsOn": "Annulation le",
+    "planActive": "Actif",
+    "planPastDue": "Paiement en retard — veuillez mettre à jour",
+    "planCanceled": "Annulé",
+    "usageCommission": "Inclut 20% de frais de plateforme Kopern",
+    "viewInvoices": "Voir les Factures",
+    "changePlan": "Changer de Plan",
+    "cancelPlan": "Annuler l'Abonnement"
   },
   "orchestration": {
     "title": "Orchestration",
@@ -534,7 +550,16 @@
       }
     },
     "comparisonTitle": "Comparer les Plans",
-    "comparisonSubtitle": "Tout ce dont vous avez besoin pour construire, tester et déployer des agents IA"
+    "comparisonSubtitle": "Tout ce dont vous avez besoin pour construire, tester et déployer des agents IA",
+    "usageNote": "Tarification à l'usage",
+    "usageNoteDesc": "Payez uniquement ce que vous consommez. Les prix incluent 20% de frais de plateforme Kopern sur les coûts des fournisseurs LLM.",
+    "inputPrice": "4,00$ / 1M tokens entrants",
+    "outputPrice": "20,00$ / 1M tokens sortants",
+    "gradingPrice2": "0,15$ / exécution de grading",
+    "commissionLabel": "Frais de plateforme : 20%",
+    "commissionDesc": "Couvre l'infrastructure, l'exécution des outils, le sandboxing, la facturation et le support.",
+    "subscribe": "S'abonner",
+    "subscribing": "Redirection..."
   },
   "docs": {
     "title": "Documentation",

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { type User } from "firebase/auth";
 import { onAuthChanged } from "@/lib/firebase/auth";
 import { useDictionary } from "@/providers/LocaleProvider";
+import { useLocale } from "@/providers/LocaleProvider";
 import { LocalizedLink } from "@/components/LocalizedLink";
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
 import { Button } from "@/components/ui/button";
@@ -20,8 +21,14 @@ import {
   Github,
   LayoutDashboard,
   Zap,
+  Loader2,
+  Info,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  ClipboardCheck,
 } from "lucide-react";
 import { BugReportDialog } from "@/components/feedback/BugReportDialog";
+import { toast } from "sonner";
 import { motion } from "framer-motion";
 
 type BillingPeriod = "monthly" | "annual";
@@ -30,7 +37,9 @@ export default function PricingPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [billing, setBilling] = useState<BillingPeriod>("monthly");
+  const [checkingOut, setCheckingOut] = useState<string | null>(null);
   const t = useDictionary();
+  const locale = useLocale();
 
   useEffect(() => {
     const unsubscribe = onAuthChanged((u) => {
@@ -40,6 +49,37 @@ export default function PricingPage() {
     return unsubscribe;
   }, []);
 
+  async function handleCheckout(plan: string) {
+    if (!user) {
+      // Redirect to login, then back
+      window.location.href = `/${locale}/login`;
+      return;
+    }
+
+    setCheckingOut(plan);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ plan, period: billing, locale }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast.error(data.error || "Checkout failed");
+        setCheckingOut(null);
+      }
+    } catch {
+      toast.error("Checkout failed");
+      setCheckingOut(null);
+    }
+  }
+
   const tiers = [
     {
       key: "starter" as const,
@@ -47,41 +87,38 @@ export default function PricingPage() {
       cta: t.pricing.startFree,
       href: user ? "/dashboard" : "/login",
       popular: false,
+      isCheckout: false,
     },
     {
       key: "pro" as const,
       price: billing === "monthly" ? t.pricing.tiers.pro.price : t.pricing.tiers.pro.priceAnnual,
-      cta: t.pricing.getStarted,
-      href: user ? "/dashboard" : "/login",
+      cta: t.pricing.subscribe,
+      href: null,
       popular: true,
+      isCheckout: true,
     },
     {
       key: "usage" as const,
       price: billing === "monthly" ? t.pricing.tiers.usage.price : t.pricing.tiers.usage.priceAnnual,
       cta: t.pricing.startUsage,
-      href: user ? "/dashboard" : "/login",
+      href: null,
       popular: false,
       payPerUse: true,
+      isCheckout: true,
     },
     {
       key: "enterprise" as const,
       price: billing === "monthly" ? t.pricing.tiers.enterprise.price : t.pricing.tiers.enterprise.priceAnnual,
-      cta: t.pricing.contactSales,
-      href: user ? "/dashboard" : "/login",
+      cta: t.pricing.subscribe,
+      href: null,
       popular: false,
+      isCheckout: true,
     },
   ];
 
   const featureKeys = [
-    "agents",
-    "tokensPerMonth",
-    "mcpEndpoints",
-    "gradingRunsPerMonth",
-    "models",
-    "support",
-    "teams",
-    "pipelines",
-    "observability",
+    "agents", "tokensPerMonth", "mcpEndpoints", "gradingRunsPerMonth",
+    "models", "support", "teams", "pipelines", "observability",
   ] as const;
 
   const booleanFeatures = [
@@ -97,12 +134,9 @@ export default function PricingPage() {
     <div className="min-h-screen bg-background">
       {/* Nav */}
       <nav className="flex items-center px-6 py-4 max-w-6xl mx-auto">
-        {/* Logo — links to landing */}
         <LocalizedLink href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
           <img src="/logo_small.png" alt="Kopern" className="h-7" />
         </LocalizedLink>
-
-        {/* Center nav buttons */}
         <div className="flex-1 flex items-center justify-center gap-1">
           <LocalizedLink href="/examples">
             <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
@@ -117,15 +151,9 @@ export default function PricingPage() {
             </Button>
           </LocalizedLink>
         </div>
-
-        {/* Right actions */}
         <div className="flex items-center gap-2 shrink-0">
           <BugReportDialog />
-          <a
-            href="https://github.com/berch-t/kopern"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <a href="https://github.com/berch-t/kopern" target="_blank" rel="noopener noreferrer">
             <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
               <Github className="h-4 w-4" />
             </Button>
@@ -152,52 +180,32 @@ export default function PricingPage() {
         {/* Hero */}
         <SlideUp>
           <section className="flex flex-col items-center text-center pt-16 pb-12">
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-              {t.pricing.title}
-            </h1>
-            <p className="mt-4 max-w-2xl text-lg text-muted-foreground">
-              {t.pricing.subtitle}
-            </p>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">{t.pricing.title}</h1>
+            <p className="mt-4 max-w-2xl text-lg text-muted-foreground">{t.pricing.subtitle}</p>
 
             {/* Billing toggle */}
             <div className="mt-8 flex items-center gap-2">
-              <Button
-                variant={billing === "monthly" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setBilling("monthly")}
-              >
+              <Button variant={billing === "monthly" ? "default" : "outline"} size="sm" onClick={() => setBilling("monthly")}>
                 {t.pricing.monthly}
               </Button>
-              <Button
-                variant={billing === "annual" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setBilling("annual")}
-                className="gap-2"
-              >
+              <Button variant={billing === "annual" ? "default" : "outline"} size="sm" onClick={() => setBilling("annual")} className="gap-2">
                 {t.pricing.annual}
-                <Badge variant="secondary" className="text-xs">
-                  {t.pricing.savePercent}
-                </Badge>
+                <Badge variant="secondary" className="text-xs">{t.pricing.savePercent}</Badge>
               </Button>
             </div>
           </section>
         </SlideUp>
 
         {/* Pricing cards */}
-        <StaggerChildren className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 pb-16">
+        <StaggerChildren className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 pb-12">
           {tiers.map((tier) => {
             const tierData = t.pricing.tiers[tier.key];
+            const isLoading = checkingOut === tier.key;
             return (
               <motion.div key={tier.key} variants={staggerItem}>
-                <Card
-                  className={`relative flex flex-col ${
-                    tier.popular ? "ring-2 ring-primary shadow-lg" : ""
-                  }`}
-                >
+                <Card className={`relative flex flex-col ${tier.popular ? "ring-2 ring-primary shadow-lg" : ""}`}>
                   {tier.popular && (
-                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      {t.pricing.popular}
-                    </Badge>
+                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">{t.pricing.popular}</Badge>
                   )}
                   {"payPerUse" in tier && tier.payPerUse && (
                     <Badge variant="secondary" className="absolute -top-3 left-1/2 -translate-x-1/2 gap-1">
@@ -207,25 +215,17 @@ export default function PricingPage() {
                   )}
                   <CardHeader className="text-center pb-2">
                     <CardTitle className="text-xl">{tierData.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      {tierData.description}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{tierData.description}</p>
                   </CardHeader>
                   <CardContent className="flex flex-col flex-1">
                     <div className="text-center mb-6">
                       {"payPerUse" in tier && tier.payPerUse ? (
-                        <span className="text-2xl font-bold text-primary">
-                          {t.pricing.payAsYouGo}
-                        </span>
+                        <span className="text-2xl font-bold text-primary">{t.pricing.payAsYouGo}</span>
                       ) : (
                         <>
-                          <span className="text-4xl font-bold">
-                            ${tier.price}
-                          </span>
+                          <span className="text-4xl font-bold">${tier.price}</span>
                           {tier.price !== "0" && (
-                            <span className="text-muted-foreground">
-                              {billing === "monthly" ? t.pricing.mo : t.pricing.yr}
-                            </span>
+                            <span className="text-muted-foreground">{billing === "monthly" ? t.pricing.mo : t.pricing.yr}</span>
                           )}
                         </>
                       )}
@@ -236,9 +236,7 @@ export default function PricingPage() {
                         <li key={fk} className="flex items-center gap-2 text-sm">
                           <Check className="h-4 w-4 text-primary shrink-0" />
                           <span>
-                            <span className="font-medium">
-                              {t.pricing.featureValues[tier.key][fk]}
-                            </span>{" "}
+                            <span className="font-medium">{t.pricing.featureValues[tier.key][fk]}</span>{" "}
                             {t.pricing.features[fk]}
                           </span>
                         </li>
@@ -250,27 +248,84 @@ export default function PricingPage() {
                           ) : (
                             <Minus className="h-4 w-4 text-muted-foreground/40 shrink-0" />
                           )}
-                          <span className={!bf[tier.key] ? "text-muted-foreground" : ""}>
-                            {t.pricing.features[bf.key]}
-                          </span>
+                          <span className={!bf[tier.key] ? "text-muted-foreground" : ""}>{t.pricing.features[bf.key]}</span>
                         </li>
                       ))}
                     </ul>
 
-                    <LocalizedLink href={tier.href} className="w-full">
+                    {tier.isCheckout ? (
                       <Button
                         className="w-full"
                         variant={tier.popular ? "default" : "outline"}
+                        disabled={isLoading}
+                        onClick={() => handleCheckout(tier.key)}
                       >
-                        {tier.cta}
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            {t.pricing.subscribing}
+                          </>
+                        ) : (
+                          tier.cta
+                        )}
                       </Button>
-                    </LocalizedLink>
+                    ) : (
+                      <LocalizedLink href={tier.href || "/login"} className="w-full">
+                        <Button className="w-full" variant="outline">{tier.cta}</Button>
+                      </LocalizedLink>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
             );
           })}
         </StaggerChildren>
+
+        {/* Usage-based pricing details + commission */}
+        <SlideUp delay={0.2}>
+          <Card className="mb-12 border-primary/20 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Zap className="h-5 w-5 text-primary" />
+                {t.pricing.usageNote}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">{t.pricing.usageNoteDesc}</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="flex items-center gap-3 rounded-lg border bg-background p-4">
+                  <ArrowDownToLine className="h-5 w-5 text-blue-500 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-sm">{t.pricing.inputPrice}</p>
+                    <p className="text-xs text-muted-foreground">{t.pricing.features.inputTokenPrice}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border bg-background p-4">
+                  <ArrowUpFromLine className="h-5 w-5 text-emerald-500 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-sm">{t.pricing.outputPrice}</p>
+                    <p className="text-xs text-muted-foreground">{t.pricing.features.outputTokenPrice}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border bg-background p-4">
+                  <ClipboardCheck className="h-5 w-5 text-amber-500 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-sm">{t.pricing.gradingPrice2}</p>
+                    <p className="text-xs text-muted-foreground">{t.pricing.features.gradingPrice}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-start gap-2 rounded-lg bg-primary/10 p-3 text-sm">
+                <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-primary">{t.pricing.commissionLabel}</p>
+                  <p className="text-muted-foreground text-xs mt-0.5">{t.pricing.commissionDesc}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </SlideUp>
 
         {/* Feature comparison table */}
         <section className="pb-24">
@@ -294,9 +349,7 @@ export default function PricingPage() {
               <tbody>
                 {featureKeys.map((fk) => (
                   <tr key={fk} className="border-b">
-                    <td className="py-3 px-4 text-muted-foreground">
-                      {t.pricing.features[fk]}
-                    </td>
+                    <td className="py-3 px-4 text-muted-foreground">{t.pricing.features[fk]}</td>
                     {tiers.map((tier) => (
                       <td key={tier.key} className="text-center py-3 px-4">
                         {t.pricing.featureValues[tier.key][fk]}
@@ -306,9 +359,7 @@ export default function PricingPage() {
                 ))}
                 {booleanFeatures.map((bf) => (
                   <tr key={bf.key} className="border-b">
-                    <td className="py-3 px-4 text-muted-foreground">
-                      {t.pricing.features[bf.key]}
-                    </td>
+                    <td className="py-3 px-4 text-muted-foreground">{t.pricing.features[bf.key]}</td>
                     {tiers.map((tier) => (
                       <td key={tier.key} className="text-center py-3 px-4">
                         {bf[tier.key] ? (
@@ -326,7 +377,6 @@ export default function PricingPage() {
         </section>
       </main>
 
-      {/* Footer */}
       <footer className="border-t py-6 text-center text-sm text-muted-foreground">
         {t.landing.footer}
       </footer>

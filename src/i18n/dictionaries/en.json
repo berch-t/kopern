@@ -363,7 +363,23 @@
     "noUsageDesc": "Start chatting with your agents to track usage",
     "costEstimate": "Cost Estimate",
     "perMillionInput": "per 1M input tokens",
-    "perMillionOutput": "per 1M output tokens"
+    "perMillionOutput": "per 1M output tokens",
+    "currentPlan": "Current Plan",
+    "planStarter": "Starter (Free)",
+    "planPro": "Pro",
+    "planUsage": "Usage-Based",
+    "planEnterprise": "Enterprise",
+    "managePlan": "Manage Subscription",
+    "upgradePlan": "Upgrade Plan",
+    "renewsOn": "Renews on",
+    "cancelsOn": "Cancels on",
+    "planActive": "Active",
+    "planPastDue": "Past Due — please update payment",
+    "planCanceled": "Canceled",
+    "usageCommission": "Includes 20% Kopern platform fee",
+    "viewInvoices": "View Invoices",
+    "changePlan": "Change Plan",
+    "cancelPlan": "Cancel Subscription"
   },
   "orchestration": {
     "title": "Orchestration",
@@ -534,7 +550,16 @@
       }
     },
     "comparisonTitle": "Compare Plans",
-    "comparisonSubtitle": "Everything you need to build, test, and deploy AI agents"
+    "comparisonSubtitle": "Everything you need to build, test, and deploy AI agents",
+    "usageNote": "Usage-based pricing",
+    "usageNoteDesc": "Pay only for what you use. Prices include a 20% Kopern platform fee on top of LLM provider costs.",
+    "inputPrice": "$4.00 / 1M input tokens",
+    "outputPrice": "$20.00 / 1M output tokens",
+    "gradingPrice2": "$0.15 / grading run",
+    "commissionLabel": "Platform fee: 20%",
+    "commissionDesc": "Covers infrastructure, tool execution, sandboxing, billing, and support.",
+    "subscribe": "Subscribe",
+    "subscribing": "Redirecting..."
   },
   "docs": {
     "title": "Documentation",

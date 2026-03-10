@@ -2,23 +2,36 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSSEStream, sseResponse } from "@/lib/utils/sse";
 import { streamLLM, type LLMMessage } from "@/lib/llm/client";
 import { META_AGENT_SYSTEM_PROMPT } from "@/data/meta-agent-template";
+import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import type { AgentSpec } from "@/lib/meta-agent/types";
 
 interface MetaCreateBody {
   description: string;
   modelProvider: string;
   modelId: string;
+  userId?: string;
 }
 
 export async function POST(request: NextRequest) {
   const body = (await request.json()) as MetaCreateBody;
-  const { description, modelProvider, modelId } = body;
+  const { description, modelProvider, modelId, userId } = body;
 
   if (!description || description.trim().length < 10) {
     return NextResponse.json(
       { error: "Description must be at least 10 characters" },
       { status: 400 }
     );
+  }
+
+  // Enforce plan: meta-agent requires Pro+ (skip for unauthenticated hero usage)
+  if (userId) {
+    const planCheck = await checkPlanLimits(userId, "meta_agent");
+    if (!planCheck.allowed) {
+      return NextResponse.json(
+        { error: planCheck.reason, plan: planCheck.plan },
+        { status: 403 }
+      );
+    }
   }
 
   const { stream, send, close } = createSSEStream();

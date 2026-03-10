@@ -2,18 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
 import { useDictionary } from "@/providers/LocaleProvider";
+import { useLocale } from "@/providers/LocaleProvider";
 import { useCollection } from "@/hooks/useFirestore";
 import { agentsCollection, type AgentDoc } from "@/lib/firebase/firestore";
 import { getUsage, getUsageHistory, TOKEN_PRICING } from "@/actions/billing";
 import type { UsageDoc } from "@/lib/firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { AnimatedCounter } from "@/components/motion/AnimatedCounter";
 import { UsageBarChart } from "@/components/observability/UsageBarChart";
+import { LocalizedLink } from "@/components/LocalizedLink";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -21,6 +25,11 @@ import {
   Activity,
   CreditCard,
   Info,
+  ExternalLink,
+  Crown,
+  Zap,
+  Shield,
+  AlertTriangle,
 } from "lucide-react";
 
 function formatTokens(n: number): string {
@@ -32,6 +41,8 @@ function formatTokens(n: number): string {
 export default function BillingPage() {
   const { user } = useAuth();
   const t = useDictionary();
+  const locale = useLocale();
+  const { subscription, loading: subLoading, isPaid, openPortal } = useSubscription();
   const { data: agents } = useCollection<AgentDoc>(
     user ? agentsCollection(user.uid) : null,
     "updatedAt"
@@ -50,13 +61,12 @@ export default function BillingPage() {
     async function loadUsage() {
       try {
         const [currentUsage, usageHistory] = await Promise.all([
-          getUsage(user!.uid).catch((e) => { console.warn("getUsage error:", e); return null; }),
-          getUsageHistory(user!.uid, 6).catch((e) => { console.warn("getUsageHistory error:", e); return []; }),
+          getUsage(user!.uid).catch(() => null),
+          getUsageHistory(user!.uid, 6).catch(() => []),
         ]);
         setUsage(currentUsage);
         setHistory(usageHistory);
       } catch {
-        // No usage data yet — show empty state
         setUsage(null);
         setHistory([]);
       } finally {
@@ -67,17 +77,16 @@ export default function BillingPage() {
     loadUsage();
   }, [user]);
 
-  // Build agent name lookup
+  // Agent name lookup
   const agentNameMap: Record<string, string> = {};
   for (const agent of agents) {
     agentNameMap[agent.id] = agent.name;
   }
 
-  // Build breakdown rows — handle both nested and legacy flat dot-notation keys
+  // Breakdown rows
   const breakdownRows: { agentId: string; agentName: string; inputTokens: number; outputTokens: number; cost: number }[] = [];
   if (usage) {
     if (usage.agentBreakdown && typeof usage.agentBreakdown === "object") {
-      // New format: nested object
       for (const [id, data] of Object.entries(usage.agentBreakdown)) {
         breakdownRows.push({
           agentId: id,
@@ -85,47 +94,19 @@ export default function BillingPage() {
           ...(data as { inputTokens: number; outputTokens: number; cost: number }),
         });
       }
-    } else {
-      // Legacy format: flat dot-notation keys like "agentBreakdown.xxx.cost"
-      const raw = usage as unknown as Record<string, unknown>;
-      const agentMap: Record<string, { inputTokens: number; outputTokens: number; cost: number }> = {};
-      for (const key of Object.keys(raw)) {
-        const match = key.match(/^agentBreakdown\.(.+)\.(inputTokens|outputTokens|cost)$/);
-        if (match) {
-          const [, id, field] = match;
-          if (!agentMap[id]) agentMap[id] = { inputTokens: 0, outputTokens: 0, cost: 0 };
-          agentMap[id][field as "inputTokens" | "outputTokens" | "cost"] = raw[key] as number;
-        }
-      }
-      for (const [id, data] of Object.entries(agentMap)) {
-        breakdownRows.push({
-          agentId: id,
-          agentName: agentNameMap[id] ?? id.slice(0, 8) + "...",
-          ...data,
-        });
-      }
     }
   }
 
-  // Chart data — ensure current month is always included
+  // Chart data
   const historyData = history.map((h) => ({
     yearMonth: h.yearMonth,
     totalCost: h.totalCost ?? 0,
     inputTokens: h.inputTokens ?? 0,
     outputTokens: h.outputTokens ?? 0,
   }));
-
-  // If history is empty but we have current usage, add it
   const chartData =
     historyData.length === 0 && usage
-      ? [
-          {
-            yearMonth: usage.yearMonth,
-            totalCost: usage.totalCost ?? 0,
-            inputTokens: usage.inputTokens ?? 0,
-            outputTokens: usage.outputTokens ?? 0,
-          },
-        ]
+      ? [{ yearMonth: usage.yearMonth, totalCost: usage.totalCost ?? 0, inputTokens: usage.inputTokens ?? 0, outputTokens: usage.outputTokens ?? 0 }]
       : historyData;
 
   const providerPricing = [
@@ -135,7 +116,22 @@ export default function BillingPage() {
     { name: "Ollama", input: TOKEN_PRICING.ollama.input, output: TOKEN_PRICING.ollama.output, color: "text-gray-500" },
   ];
 
-  if (loading) {
+  // Plan display
+  const planLabel: Record<string, string> = {
+    starter: t.billing.planStarter,
+    pro: t.billing.planPro,
+    usage: t.billing.planUsage,
+    enterprise: t.billing.planEnterprise,
+  };
+
+  const planIcon: Record<string, typeof Crown> = {
+    starter: Zap,
+    pro: Crown,
+    usage: Activity,
+    enterprise: Shield,
+  };
+
+  if (loading || subLoading) {
     return (
       <div className="space-y-6">
         <div className="h-10 w-64 animate-pulse rounded-lg bg-muted" />
@@ -147,6 +143,8 @@ export default function BillingPage() {
       </div>
     );
   }
+
+  const PlanIcon = planIcon[subscription.plan] || Zap;
 
   return (
     <div className="space-y-8">
@@ -161,8 +159,66 @@ export default function BillingPage() {
         </div>
       </SlideUp>
 
+      {/* Subscription Card */}
+      <FadeIn delay={0.05}>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                  <PlanIcon className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-semibold">{t.billing.currentPlan}</h2>
+                    <Badge
+                      variant={subscription.status === "active" || subscription.status === "trialing" ? "default" : "destructive"}
+                    >
+                      {subscription.status === "active" || subscription.status === "trialing"
+                        ? t.billing.planActive
+                        : subscription.status === "past_due"
+                          ? t.billing.planPastDue
+                          : t.billing.planCanceled}
+                    </Badge>
+                  </div>
+                  <p className="text-xl font-bold mt-0.5">{planLabel[subscription.plan]}</p>
+                  {subscription.currentPeriodEnd && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {subscription.cancelAtPeriodEnd ? t.billing.cancelsOn : t.billing.renewsOn}{" "}
+                      {new Date(subscription.currentPeriodEnd).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US")}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {isPaid ? (
+                  <Button variant="outline" onClick={() => openPortal(locale)} className="gap-2">
+                    <ExternalLink className="h-4 w-4" />
+                    {t.billing.managePlan}
+                  </Button>
+                ) : (
+                  <LocalizedLink href="/pricing">
+                    <Button className="gap-2">
+                      <Crown className="h-4 w-4" />
+                      {t.billing.upgradePlan}
+                    </Button>
+                  </LocalizedLink>
+                )}
+              </div>
+            </div>
+
+            {subscription.status === "past_due" && (
+              <div className="flex items-center gap-2 mt-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                {t.billing.planPastDue}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </FadeIn>
+
       {!usage ? (
-        /* Empty state */
         <SlideUp delay={0.1}>
           <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
             <DollarSign className="h-10 w-10 mb-3 opacity-40" />
@@ -255,15 +311,9 @@ export default function BillingPage() {
                         {breakdownRows.map((row) => (
                           <tr key={row.agentId} className="border-b last:border-0">
                             <td className="py-2.5 font-medium">{row.agentName}</td>
-                            <td className="py-2.5 text-right tabular-nums">
-                              {formatTokens(row.inputTokens)}
-                            </td>
-                            <td className="py-2.5 text-right tabular-nums">
-                              {formatTokens(row.outputTokens)}
-                            </td>
-                            <td className="py-2.5 text-right tabular-nums">
-                              ${row.cost.toFixed(4)}
-                            </td>
+                            <td className="py-2.5 text-right tabular-nums">{formatTokens(row.inputTokens)}</td>
+                            <td className="py-2.5 text-right tabular-nums">{formatTokens(row.outputTokens)}</td>
+                            <td className="py-2.5 text-right tabular-nums">${row.cost.toFixed(4)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -300,16 +350,12 @@ export default function BillingPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">{t.billing.usageCommission}</p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {providerPricing.map((provider) => (
-                <div
-                  key={provider.name}
-                  className="rounded-lg border p-3 space-y-2"
-                >
+                <div key={provider.name} className="rounded-lg border p-3 space-y-2">
                   <div className="flex items-center gap-2">
-                    <span className={`text-sm font-semibold ${provider.color}`}>
-                      {provider.name}
-                    </span>
+                    <span className={`text-sm font-semibold ${provider.color}`}>{provider.name}</span>
                     {provider.input === 0 && provider.output === 0 && (
                       <Badge variant="secondary" className="text-xs">Free</Badge>
                     )}
@@ -317,22 +363,16 @@ export default function BillingPage() {
                   {provider.input > 0 || provider.output > 0 ? (
                     <div className="space-y-1 text-xs text-muted-foreground">
                       <p>
-                        <span className="font-mono font-medium text-foreground">
-                          ${provider.input.toFixed(2)}
-                        </span>{" "}
+                        <span className="font-mono font-medium text-foreground">${provider.input.toFixed(2)}</span>{" "}
                         {t.billing.perMillionInput}
                       </p>
                       <p>
-                        <span className="font-mono font-medium text-foreground">
-                          ${provider.output.toFixed(2)}
-                        </span>{" "}
+                        <span className="font-mono font-medium text-foreground">${provider.output.toFixed(2)}</span>{" "}
                         {t.billing.perMillionOutput}
                       </p>
                     </div>
                   ) : (
-                    <p className="text-xs text-muted-foreground">
-                      Local inference — no token costs
-                    </p>
+                    <p className="text-xs text-muted-foreground">Local inference — no token costs</p>
                   )}
                 </div>
               ))}

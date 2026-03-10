@@ -1,8 +1,11 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createSSEStream, sseResponse } from "@/lib/utils/sse";
 import { createEventCollector } from "@/lib/pi-mono/event-collector";
 import { adminDb } from "@/lib/firebase/admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { runAgentWithTools, type AgentRunMetrics } from "@/lib/tools/run-agent";
+import { checkPlanLimits } from "@/lib/stripe/plan-guard";
+import { reportUsageToStripe } from "@/lib/stripe/server";
 
 export async function POST(
   request: NextRequest,
@@ -10,6 +13,25 @@ export async function POST(
 ) {
   const { agentId, suiteId } = await params;
   const { cases, userId } = await request.json();
+
+  // Enforce plan grading limits
+  if (userId) {
+    const planCheck = await checkPlanLimits(userId, "grading");
+    if (!planCheck.allowed) {
+      return NextResponse.json(
+        { error: planCheck.reason, plan: planCheck.plan },
+        { status: 403 }
+      );
+    }
+    // Also check token limits
+    const tokenCheck = await checkPlanLimits(userId, "tokens");
+    if (!tokenCheck.allowed) {
+      return NextResponse.json(
+        { error: tokenCheck.reason, plan: tokenCheck.plan },
+        { status: 403 }
+      );
+    }
+  }
 
   const { stream, send, close } = createSSEStream();
 
@@ -133,6 +155,18 @@ export async function POST(
           toolCalls: collector.toolCalls,
           metrics: caseMetrics,
         });
+      }
+
+      // Track grading run count in usage doc (fire-and-forget)
+      if (userId) {
+        const yearMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+        adminDb.doc(`users/${userId}/usage/${yearMonth}`).set(
+          { gradingRuns: FieldValue.increment(1) },
+          { merge: true }
+        ).catch(() => {});
+
+        // Report to Stripe meter for usage-based plans
+        reportUsageToStripe(userId, 0, 0, 1).catch(() => {});
       }
 
       send("done", { suiteId, agentId, metrics: totalMetrics });

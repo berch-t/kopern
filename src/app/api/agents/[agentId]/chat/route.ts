@@ -1,9 +1,10 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createSSEStream, sseResponse } from "@/lib/utils/sse";
 import { calculateTokenCost } from "@/lib/billing/pricing";
 import { createSessionServer, endSessionServer, updateSessionMetrics, appendSessionEvents } from "@/lib/billing/track-usage-server";
 import { adminDb } from "@/lib/firebase/admin";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
+import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 
 interface ChatRequestBody {
   message: string;
@@ -28,6 +29,17 @@ export async function POST(
   const { agentId } = await params;
   const body = (await request.json()) as ChatRequestBody;
   const { message, history, agentConfig, userId, connectedRepos } = body;
+
+  // Enforce plan token limits
+  if (userId) {
+    const planCheck = await checkPlanLimits(userId, "tokens");
+    if (!planCheck.allowed) {
+      return NextResponse.json(
+        { error: planCheck.reason, plan: planCheck.plan },
+        { status: 403 }
+      );
+    }
+  }
 
   const { stream, send, close } = createSSEStream();
 
