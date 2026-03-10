@@ -5,10 +5,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDocument } from "@/hooks/useFirestore";
 import { userDoc, type UserDoc } from "@/lib/firebase/firestore";
 import { setDoc, serverTimestamp } from "firebase/firestore";
+import { linkGithubToCurrentUser } from "@/lib/firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -19,7 +21,7 @@ import {
 import { providers } from "@/lib/pi-mono/providers";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { toast } from "sonner";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Github, Check } from "lucide-react";
 import { useDictionary } from "@/providers/LocaleProvider";
 
 export default function SettingsPage() {
@@ -68,11 +70,67 @@ export default function SettingsPage() {
     }
   }
 
+  const hasGithub = user?.providerData.some((p) => p.providerId === "github.com") ?? false;
+  const hasGithubToken = !!userData?.githubAccessToken;
+  const [linkingGithub, setLinkingGithub] = useState(false);
+
+  async function handleLinkGithub() {
+    if (!user) return;
+    setLinkingGithub(true);
+    try {
+      const { githubAccessToken } = await linkGithubToCurrentUser();
+      if (githubAccessToken) {
+        await setDoc(userDoc(user.uid), {
+          githubAccessToken,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+      toast.success(t.settings.githubLinked);
+    } catch (err) {
+      const authErr = err as { code?: string; message?: string };
+      if (authErr.message === "github_already_linked") {
+        toast.info(t.settings.githubAlreadyLinked);
+      } else if (authErr.code === "auth/popup-closed-by-user") {
+        // User cancelled — do nothing
+      } else {
+        console.error("GitHub link error:", err);
+        toast.error(t.settings.githubLinkFailed);
+      }
+    } finally {
+      setLinkingGithub(false);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <SlideUp>
         <h1 className="text-3xl font-bold">{t.settings.title}</h1>
       </SlideUp>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Github className="h-5 w-5" />
+            GitHub
+          </CardTitle>
+          <CardDescription>{t.settings.githubDesc}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {hasGithub || hasGithubToken ? (
+            <div className="flex items-center gap-2">
+              <Badge variant="default" className="gap-1 bg-emerald-600">
+                <Check className="h-3 w-3" />
+                {t.settings.githubConnected}
+              </Badge>
+            </div>
+          ) : (
+            <Button variant="outline" onClick={handleLinkGithub} disabled={linkingGithub}>
+              <Github className="mr-2 h-4 w-4" />
+              {linkingGithub ? t.common.loading : t.settings.connectGithub}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

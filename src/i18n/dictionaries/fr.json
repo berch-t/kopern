@@ -219,6 +219,11 @@
     "estimatedCost": "Coût Est.",
     "toolsCalled": "Outils Appelés",
     "contextUsed": "Contexte Utilisé",
+    "subtitle": "Testez votre agent en temps réel avec des réponses en streaming",
+    "emptyChat": "Envoyez un message pour commencer à discuter avec votre agent",
+    "loadingConfig": "Chargement de la configuration de l'agent...",
+    "toolCalls": "appels d'outils",
+    "viewSession": "Voir la session",
     "delegatedTo": "Délégué à",
     "subAgentResult": "Résultat du sous-agent",
     "tillDone": {
@@ -580,7 +585,13 @@
     "saved": "Paramètres enregistrés",
     "saveFailed": "Échec de l'enregistrement des paramètres",
     "language": "Langue",
-    "theme": "Thème"
+    "theme": "Thème",
+    "githubDesc": "Connectez votre compte GitHub pour donner aux agents l'accès à vos dépôts.",
+    "connectGithub": "Connecter GitHub",
+    "githubConnected": "Connecté",
+    "githubLinked": "Compte GitHub lié avec succès",
+    "githubAlreadyLinked": "GitHub est déjà lié à votre compte",
+    "githubLinkFailed": "Échec de la liaison du compte GitHub"
   },
   "apiKeys": {
     "title": "Endpoints API",

@@ -95,38 +95,92 @@ export default function TeamDetailPage({
     router.push("/teams");
   }
 
-  function handleRunTeam() {
-    if (!team) return;
+  async function handleRunTeam() {
+    if (!team || !user || !prompt.trim()) return;
     setExecuting(true);
     setRunDialogOpen(false);
 
-    // Initialize results for each member
     const initialResults = team.agents.map((m) => ({
       agentId: m.agentId,
       status: "pending" as const,
     }));
     setResults(initialResults);
 
-    // Placeholder simulation: mark each as running then completed
-    team.agents.forEach((member, index) => {
-      const startDelay = team.executionMode === "parallel" ? 500 : index * 2000 + 500;
-      const endDelay = startDelay + 1500;
+    try {
+      const teamPayload = {
+        name: team.name,
+        executionMode: team.executionMode,
+        agents: team.agents.map((m) => {
+          const agentData = getAgent(m.agentId);
+          return {
+            agentId: m.agentId,
+            agentName: agentData?.name || m.agentId,
+            role: m.role,
+            order: m.order,
+            systemPrompt: agentData?.systemPrompt || "",
+            modelProvider: agentData?.modelProvider || "anthropic",
+            modelId: agentData?.modelId || "claude-sonnet-4-6",
+          };
+        }),
+      };
 
-      setTimeout(() => {
-        setResults((prev) =>
-          prev.map((r, i) => (i === index ? { ...r, status: "running" } : r))
-        );
-      }, startDelay);
+      const res = await fetch(`/api/teams/${teamId}/execute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: prompt.trim(), userId: user.uid, team: teamPayload }),
+      });
 
-      setTimeout(() => {
-        setResults((prev) =>
-          prev.map((r, i) => (i === index ? { ...r, status: "completed" } : r))
-        );
-        if (index === team.agents.length - 1) {
-          setExecuting(false);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Execution failed" }));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response body");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let currentEvent: string | undefined;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            currentEvent = line.slice(7).trim();
+          } else if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (currentEvent === "member_start") {
+                setResults((prev) =>
+                  prev.map((r) =>
+                    r.agentId === data.agentId ? { ...r, status: "running" } : r
+                  )
+                );
+              } else if (currentEvent === "member_done") {
+                setResults((prev) =>
+                  prev.map((r) =>
+                    r.agentId === data.agentId ? { ...r, status: "completed" } : r
+                  )
+                );
+              }
+              currentEvent = undefined;
+            } catch {
+              // Skip malformed
+            }
+          }
         }
-      }, endDelay);
-    });
+      }
+    } catch (err) {
+      console.error("Team execution error:", err);
+    } finally {
+      setExecuting(false);
+    }
   }
 
   const colorClass = modeColors[team.executionMode] || modeColors.sequential;

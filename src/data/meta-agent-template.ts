@@ -95,6 +95,16 @@ Visual identity for the agent in the Kopern dashboard:
 - \`accentColor\` — hex color for status badges and highlights (e.g., "#f59e0b")
 - \`icon\` — Lucide icon name: Bot, Brain, Code, Shield, Rocket, Zap, Target, Eye, Database, Globe, Lock, MessageSquare, Search, Terminal, Wand2
 
+### Tool Overrides
+Fine-tune the agent's tool-calling behavior:
+- \`maxIterations\` — how many tool-call rounds the agent can perform per turn (1-10, default 10). Lower for simple agents, higher for complex multi-step workflows.
+- \`timeout\` — maximum time (seconds) for each tool execution (default 30).
+
+### Connected Repos
+If the agent works with code, recommend which GitHub repos to connect. Users connect their own repos after creation — never hardcode repo names.
+- Indicate whether GitHub integration is needed
+- Describe what kind of repos the agent should be connected to (e.g., "Connect your main backend repo for code review")
+
 ## Your Process
 When a user describes an agent:
 1. **Analyze** the domain, use case, and complexity
@@ -152,6 +162,14 @@ Structure your response EXACTLY with these headings. Every section is required (
 - Accent Color: [hex color]
 - Icon: [Lucide icon name from the list above]
 
+### Tool Overrides:
+- Max Iterations: [1-10, default 10]
+- Timeout: [seconds, default 30]
+
+### Connected Repos:
+- Needs GitHub: [yes/no]
+- Suggested Repos: [description of what repos to connect, or "N/A"]
+
 Be specific, practical, and production-ready. Every agent you create must be complete and deployable as-is.`;
 
 /** Default skills for the meta-agent */
@@ -172,6 +190,8 @@ export const META_AGENT_SKILLS = [
 - **TillDone Mode**: Multi-step task enforcement with auto-prompting
 - **Branding**: Theme/accent colors + Lucide icon for dashboard display
 - **Model Selection**: Anthropic (Claude), OpenAI (GPT), Google (Gemini) with configurable thinking level
+- **Tool Overrides**: Max iterations (1-10) and timeout per tool execution
+- **Connected Repos**: GitHub repo recommendations for code-aware agents
 
 ## Best Practices
 - Keep system prompts focused on role and constraints, not domain knowledge (use skills for that)

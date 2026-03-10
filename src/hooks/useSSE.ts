@@ -36,7 +36,14 @@ export function useSSE(options: UseSSEOptions = {}) {
         });
 
         if (!response.ok) {
-          throw new Error(`SSE request failed: ${response.status}`);
+          let errorMsg = `Request failed: ${response.status}`;
+          try {
+            const errBody = await response.json();
+            if (errBody.error) errorMsg = errBody.error;
+          } catch {
+            // Could not parse error body
+          }
+          throw new Error(errorMsg);
         }
 
         const reader = response.body?.getReader();

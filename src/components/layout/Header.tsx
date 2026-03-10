@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Github, LogOut, User } from "lucide-react";
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
+import { MobileSidebar } from "@/components/layout/Sidebar";
 import { BugReportDialog } from "@/components/feedback/BugReportDialog";
 import { useDictionary } from "@/providers/LocaleProvider";
 
@@ -19,8 +20,10 @@ export function Header() {
   const t = useDictionary();
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-border/60 px-6">
-      <div />
+    <header className="flex h-14 items-center justify-between border-b border-border/60 px-4 md:px-6">
+      <div>
+        <MobileSidebar />
+      </div>
       <div className="flex items-center gap-2">
         <BugReportDialog />
         <a

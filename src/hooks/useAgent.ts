@@ -62,6 +62,20 @@ export function useAgent(agentId: string, agentConfig: AgentPlaygroundConfig | n
   });
 
   const { isStreaming, start, stop } = useSSE({
+    onError: (error) => {
+      const errorMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: `Error: ${error.message}`,
+        timestamp: Date.now(),
+      };
+      messagesRef.current = [...messagesRef.current, errorMsg];
+      setMessages([...messagesRef.current]);
+      contentRef.current = "";
+      toolCallsRef.current = [];
+      setCurrentAssistantContent("");
+      setCurrentToolCalls([]);
+    },
     onMessage: (msg) => {
       const { event, data } = msg;
       switch (event) {

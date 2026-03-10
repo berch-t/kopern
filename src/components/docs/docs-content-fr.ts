@@ -506,6 +506,168 @@ Cela rend Kopern infiniment extensible sans construire d'integrations personnali
 
 ---
 
+## Tutoriel d'integration MCP
+
+Ce tutoriel montre comment connecter vos agents Kopern aux services tiers via trois approches : **outils personnalises** (le plus simple), **deploiement MCP Server** (pour les consommateurs externes), et **equipes d'agents** (pour l'orchestration multi-services).
+
+### Approche 1 : Outils personnalises (recommande)
+
+Le moyen le plus rapide de connecter un agent a un service externe est via les outils personnalises. L'agent appelle l'outil pendant la conversation, et le code JavaScript communique avec le service.
+
+#### Exemple : Outil de notification Slack
+
+**Schema des parametres :**
+\`\`\`json
+{
+  "type": "object",
+  "properties": {
+    "channel": { "type": "string", "description": "Nom du canal Slack (ex: #general)" },
+    "message": { "type": "string", "description": "Message a envoyer" }
+  },
+  "required": ["channel", "message"]
+}
+\`\`\`
+
+**Code d'execution :**
+\`\`\`javascript
+const response = await fetch("https://slack.com/api/chat.postMessage", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer xoxb-VOTRE-TOKEN-SLACK",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    channel: params.channel,
+    text: params.message,
+  }),
+});
+const data = await response.json();
+return data.ok ? "Message envoye avec succes" : \\\`Erreur: \\\${data.error}\\\`;
+\`\`\`
+
+#### Exemple : Outil de requete base de donnees (Supabase)
+
+**Schema des parametres :**
+\`\`\`json
+{
+  "type": "object",
+  "properties": {
+    "table": { "type": "string", "description": "Nom de la table" },
+    "query": { "type": "string", "description": "Expression de filtre (ex: status=eq.active)" },
+    "limit": { "type": "number", "description": "Lignes max", "default": 10 }
+  },
+  "required": ["table"]
+}
+\`\`\`
+
+**Code d'execution :**
+\`\`\`javascript
+const url = new URL(\\\`https://VOTRE-PROJET.supabase.co/rest/v1/\\\${params.table}\\\`);
+if (params.query) url.searchParams.set("select", "*");
+if (params.limit) url.searchParams.set("limit", String(params.limit));
+const response = await fetch(url.toString(), {
+  headers: {
+    "apikey": "VOTRE-CLE-SUPABASE",
+    "Authorization": "Bearer VOTRE-CLE-SUPABASE",
+  },
+});
+const data = await response.json();
+return JSON.stringify(data, null, 2);
+\`\`\`
+
+#### Exemple : Createur de tickets Jira
+
+**Schema des parametres :**
+\`\`\`json
+{
+  "type": "object",
+  "properties": {
+    "project": { "type": "string", "description": "Cle du projet Jira (ex: PROJ)" },
+    "summary": { "type": "string", "description": "Titre du ticket" },
+    "description": { "type": "string", "description": "Description du ticket" },
+    "issueType": { "type": "string", "enum": ["Bug", "Task", "Story"], "default": "Task" }
+  },
+  "required": ["project", "summary"]
+}
+\`\`\`
+
+**Code d'execution :**
+\`\`\`javascript
+const response = await fetch("https://VOTRE-DOMAINE.atlassian.net/rest/api/3/issue", {
+  method: "POST",
+  headers: {
+    "Authorization": "Basic " + btoa("email@example.com:VOTRE-TOKEN-API"),
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    fields: {
+      project: { key: params.project },
+      summary: params.summary,
+      description: { type: "doc", version: 1, content: [{ type: "paragraph", content: [{ type: "text", text: params.description || "" }] }] },
+      issuetype: { name: params.issueType || "Task" },
+    },
+  }),
+});
+const data = await response.json();
+return data.key ? \\\`Cree: \\\${data.key}\\\` : JSON.stringify(data.errors);
+\`\`\`
+
+### Approche 2 : Serveur MCP (pour les consommateurs externes)
+
+Quand vous voulez que **d'autres applications** appellent votre agent Kopern, deployez-le comme Serveur MCP. Utile pour :
+- Pipelines CI/CD appelant un agent de revue de code
+- Chatbots transferant des questions complexes a un agent specialise
+- Outils internes interrogeant un agent de connaissances
+- Webhooks declenchant une analyse par agent
+
+Voir la section **Serveurs MCP (Deploiement API)** ci-dessus pour la configuration.
+
+**Pattern webhook** — declenchez votre agent depuis tout service supportant les webhooks :
+
+\`\`\`javascript
+// Exemple : handler webhook GitHub appelant votre agent Kopern
+app.post("/webhook/github", async (req, res) => {
+  const event = req.body;
+  if (event.action === "opened" && event.pull_request) {
+    const response = await fetch("https://votre-kopern.com/api/mcp", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer kpn_votre_cle_api",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "completion/create",
+        params: { message: \\\`Revue de cette PR: \\\${event.pull_request.title}\\n\\n\\\${event.pull_request.body}\\\` },
+        id: 1,
+      }),
+    });
+    const { result } = await response.json();
+    // Poster la revue comme commentaire de PR
+  }
+});
+\`\`\`
+
+### Approche 3 : Equipes d'agents (orchestration multi-services)
+
+Pour les workflows impliquant plusieurs services, creez des agents specialises et orchestrez-les en **equipe** :
+
+1. **Agent Slack** — outil : lire les messages Slack
+2. **Agent Jira** — outil : creer/mettre a jour les tickets Jira
+3. **Agent Resume** — synthetise les resultats
+
+Creez une equipe avec ces trois agents en mode sequentiel. A l'execution, chaque agent traite la tache et transmet sa sortie au suivant.
+
+### Bonnes pratiques de securite
+
+- **Ne codez jamais les secrets en dur** dans le code des outils — utilisez des variables d'environnement
+- **Utilisez des tokens en lecture seule** quand l'agent n'a besoin que de lire
+- **Ajoutez des extensions de securite** pour bloquer les appels d'outils dangereux
+- **Testez les outils dans le Playground** avant de connecter aux services de production
+- **Surveillez l'utilisation** via la page Facturation pour detecter les appels API inattendus
+
+---
+
 ## Bonnes pratiques
 
 ### Conception d'agent

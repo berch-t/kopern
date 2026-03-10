@@ -4,6 +4,7 @@ import { use, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useDocument, useCollection } from "@/hooks/useFirestore";
 import { agentDoc, skillsCollection, type AgentDoc, type SkillDoc } from "@/lib/firebase/firestore";
+import { useDictionary } from "@/providers/LocaleProvider";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { ChatContainer } from "@/components/playground/ChatContainer";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,7 @@ export default function PlaygroundPage({
 }) {
   const { agentId } = use(params);
   const { user } = useAuth();
+  const t = useDictionary();
   const { data: agent } = useDocument<AgentDoc>(
     user ? agentDoc(user.uid, agentId) : null
   );
@@ -40,9 +42,9 @@ export default function PlaygroundPage({
       <SlideUp>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Playground</h1>
+            <h1 className="text-3xl font-bold">{t.playground.title}</h1>
             <p className="text-muted-foreground">
-              Test your agent in real-time with streaming responses
+              {t.playground.subtitle}
             </p>
           </div>
           {agent && (

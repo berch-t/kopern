@@ -219,6 +219,11 @@
     "estimatedCost": "Est. Cost",
     "toolsCalled": "Tools Called",
     "contextUsed": "Context Used",
+    "subtitle": "Test your agent in real-time with streaming responses",
+    "emptyChat": "Send a message to start chatting with your agent",
+    "loadingConfig": "Loading agent configuration...",
+    "toolCalls": "tool calls",
+    "viewSession": "View session",
     "delegatedTo": "Delegated to",
     "subAgentResult": "Sub-agent result",
     "tillDone": {
@@ -580,7 +585,13 @@
     "saved": "Settings saved",
     "saveFailed": "Failed to save settings",
     "language": "Language",
-    "theme": "Theme"
+    "theme": "Theme",
+    "githubDesc": "Connect your GitHub account to give agents access to your repositories.",
+    "connectGithub": "Connect GitHub",
+    "githubConnected": "Connected",
+    "githubLinked": "GitHub account linked successfully",
+    "githubAlreadyLinked": "GitHub is already linked to your account",
+    "githubLinkFailed": "Failed to link GitHub account"
   },
   "apiKeys": {
     "title": "API Endpoints",

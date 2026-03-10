@@ -38,7 +38,12 @@ export default function LoginPage() {
       }
       router.push("/dashboard");
     } catch (err) {
+      const authErr = err as { code?: string };
       console.error("OAuth error:", err);
+      // User cancelled the popup — don't show error toast
+      if (authErr.code === "auth/popup-closed-by-user" || authErr.code === "auth/cancelled-popup-request") {
+        return;
+      }
       toast.error(t.auth.failedOAuth.replace("{provider}", provider));
     }
   }

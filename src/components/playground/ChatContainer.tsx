@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useAgent, type AgentPlaygroundConfig } from "@/hooks/useAgent";
+import { useDictionary } from "@/providers/LocaleProvider";
 import { MessageBubble } from "./MessageBubble";
 import { ToolCallDisplay } from "./ToolCallDisplay";
 import { StreamIndicator } from "./StreamIndicator";
@@ -23,6 +24,7 @@ function formatTokens(n: number): string {
 }
 
 export function ChatContainer({ agentId, agentConfig }: ChatContainerProps) {
+  const t = useDictionary();
   const {
     messages,
     currentAssistantContent,
@@ -83,7 +85,7 @@ export function ChatContainer({ agentId, agentConfig }: ChatContainerProps) {
           {cumulativeMetrics.toolCallCount > 0 && (
             <span className="flex items-center gap-1">
               <Wrench className="h-3 w-3" />
-              {cumulativeMetrics.toolCallCount} tool calls
+              {cumulativeMetrics.toolCallCount} {t.playground.toolCalls}
             </span>
           )}
           {sessionId && (
@@ -92,7 +94,7 @@ export function ChatContainer({ agentId, agentConfig }: ChatContainerProps) {
               className="ml-auto flex items-center gap-1 text-primary hover:underline"
             >
               <ExternalLink className="h-3 w-3" />
-              View session
+              {t.playground.viewSession}
             </LocalizedLink>
           )}
         </div>
@@ -103,8 +105,8 @@ export function ChatContainer({ agentId, agentConfig }: ChatContainerProps) {
         {messages.length === 0 && !isStreaming && (
           <div className="flex h-full items-center justify-center text-muted-foreground">
             {agentConfig
-              ? "Send a message to start chatting with your agent"
-              : "Loading agent configuration..."}
+              ? t.playground.emptyChat
+              : t.playground.loadingConfig}
           </div>
         )}
 
@@ -142,7 +144,7 @@ export function ChatContainer({ agentId, agentConfig }: ChatContainerProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message..."
+            placeholder={t.playground.sendMessage}
             className="min-h-[40px] max-h-[120px] resize-none"
             rows={1}
             disabled={!agentConfig}

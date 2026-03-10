@@ -10,6 +10,8 @@ import {
   executeTool,
   type ToolExecutionContext,
 } from "@/lib/tools/agent-tools";
+import { runExtensions } from "@/lib/extensions/extension-runner";
+import type { ExtensionEventType } from "@/lib/firebase/firestore";
 
 const MAX_TOOL_ITERATIONS = 10;
 
@@ -104,6 +106,36 @@ export async function runAgentWithTools(
     customTools: customToolDocs,
   };
 
+  // Load extensions from Firestore
+  const loadedExtensions: { id: string; name: string; events: ExtensionEventType[]; code: string; enabled: boolean }[] = [];
+  if (config.userId && config.agentId) {
+    try {
+      const extSnap = await adminDb
+        .collection(`users/${config.userId}/agents/${config.agentId}/extensions`)
+        .where("enabled", "==", true)
+        .get();
+      for (const doc of extSnap.docs) {
+        const ext = doc.data();
+        if (ext.code) {
+          loadedExtensions.push({
+            id: doc.id,
+            name: ext.name || "Extension",
+            events: ext.events || [],
+            code: ext.code,
+            enabled: true,
+          });
+        }
+      }
+    } catch {
+      // Skip — extensions are optional
+    }
+  }
+
+  const fireExtension = async (eventType: ExtensionEventType, data: Record<string, unknown>) => {
+    if (loadedExtensions.length === 0) return { blocked: false, logs: [] as string[] };
+    return runExtensions(loadedExtensions, { eventType, data, sessionState: {} });
+  };
+
   const messages = [...config.messages];
   let iteration = 0;
   let totalToolCalls = 0;
@@ -136,6 +168,7 @@ export async function runAgentWithTools(
             pendingToolCalls.push(toolCall);
             totalToolCalls++;
             callbacks.onToolStart?.({ name: toolCall.name, args: toolCall.input });
+            fireExtension("tool_call_start", { toolName: toolCall.name, args: toolCall.input }).catch(() => {});
           },
           onDone: async (stopReason) => {
             try {
@@ -160,6 +193,11 @@ export async function runAgentWithTools(
                     result: result.result.slice(0, 500),
                     isError: result.isError,
                   });
+                  fireExtension(result.isError ? "tool_call_error" : "tool_call_end", {
+                    toolName: tc.name,
+                    result: result.result.slice(0, 1000),
+                    isError: result.isError,
+                  }).catch(() => {});
                   toolResults.push({
                     type: "tool_result",
                     tool_use_id: tc.id,

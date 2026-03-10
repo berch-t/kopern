@@ -506,6 +506,168 @@ This makes Kopern infinitely extensible without building custom integrations for
 
 ---
 
+## MCP Integration Tutorial
+
+This tutorial shows how to connect your Kopern agents to third-party services using three approaches: **custom tools** (simplest), **MCP Server deployment** (for external consumers), and **agent teams** (for multi-service orchestration).
+
+### Approach 1: Custom Tools (Recommended for Most Cases)
+
+The fastest way to connect an agent to an external service is via custom tools. The agent calls the tool during conversation, and the tool's JavaScript code communicates with the service.
+
+#### Example: Slack Notification Tool
+
+**Parameters Schema:**
+\`\`\`json
+{
+  "type": "object",
+  "properties": {
+    "channel": { "type": "string", "description": "Slack channel name (e.g. #general)" },
+    "message": { "type": "string", "description": "Message to send" }
+  },
+  "required": ["channel", "message"]
+}
+\`\`\`
+
+**Execute Code:**
+\`\`\`javascript
+const response = await fetch("https://slack.com/api/chat.postMessage", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer xoxb-YOUR-SLACK-BOT-TOKEN",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    channel: params.channel,
+    text: params.message,
+  }),
+});
+const data = await response.json();
+return data.ok ? "Message sent successfully" : \\\`Error: \\\${data.error}\\\`;
+\`\`\`
+
+#### Example: Database Query Tool (Supabase)
+
+**Parameters Schema:**
+\`\`\`json
+{
+  "type": "object",
+  "properties": {
+    "table": { "type": "string", "description": "Table name" },
+    "query": { "type": "string", "description": "Filter expression (e.g. status=eq.active)" },
+    "limit": { "type": "number", "description": "Max rows", "default": 10 }
+  },
+  "required": ["table"]
+}
+\`\`\`
+
+**Execute Code:**
+\`\`\`javascript
+const url = new URL(\\\`https://YOUR-PROJECT.supabase.co/rest/v1/\\\${params.table}\\\`);
+if (params.query) url.searchParams.set("select", "*");
+if (params.limit) url.searchParams.set("limit", String(params.limit));
+const response = await fetch(url.toString(), {
+  headers: {
+    "apikey": "YOUR-SUPABASE-ANON-KEY",
+    "Authorization": "Bearer YOUR-SUPABASE-ANON-KEY",
+  },
+});
+const data = await response.json();
+return JSON.stringify(data, null, 2);
+\`\`\`
+
+#### Example: Jira Issue Creator
+
+**Parameters Schema:**
+\`\`\`json
+{
+  "type": "object",
+  "properties": {
+    "project": { "type": "string", "description": "Jira project key (e.g. PROJ)" },
+    "summary": { "type": "string", "description": "Issue title" },
+    "description": { "type": "string", "description": "Issue description" },
+    "issueType": { "type": "string", "enum": ["Bug", "Task", "Story"], "default": "Task" }
+  },
+  "required": ["project", "summary"]
+}
+\`\`\`
+
+**Execute Code:**
+\`\`\`javascript
+const response = await fetch("https://YOUR-DOMAIN.atlassian.net/rest/api/3/issue", {
+  method: "POST",
+  headers: {
+    "Authorization": "Basic " + btoa("email@example.com:YOUR-API-TOKEN"),
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    fields: {
+      project: { key: params.project },
+      summary: params.summary,
+      description: { type: "doc", version: 1, content: [{ type: "paragraph", content: [{ type: "text", text: params.description || "" }] }] },
+      issuetype: { name: params.issueType || "Task" },
+    },
+  }),
+});
+const data = await response.json();
+return data.key ? \\\`Created: \\\${data.key}\\\` : JSON.stringify(data.errors);
+\`\`\`
+
+### Approach 2: MCP Server (For External Consumers)
+
+When you want **other applications** to call your Kopern agent, deploy it as an MCP Server. This is useful for:
+- CI/CD pipelines calling a code review agent
+- Chatbots forwarding complex questions to a specialized agent
+- Internal tools querying a knowledge agent
+- Webhooks triggering agent analysis
+
+See the **MCP Servers (API Deployment)** section above for setup instructions.
+
+**Webhook pattern** — trigger your agent from any service that supports webhooks:
+
+\`\`\`javascript
+// Example: GitHub webhook handler calls your Kopern agent
+app.post("/webhook/github", async (req, res) => {
+  const event = req.body;
+  if (event.action === "opened" && event.pull_request) {
+    const response = await fetch("https://your-kopern.com/api/mcp", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer kpn_your_api_key",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "completion/create",
+        params: { message: \\\`Review this PR: \\\${event.pull_request.title}\\n\\n\\\${event.pull_request.body}\\\` },
+        id: 1,
+      }),
+    });
+    const { result } = await response.json();
+    // Post the review as a PR comment
+  }
+});
+\`\`\`
+
+### Approach 3: Agent Teams (Multi-Service Orchestration)
+
+For workflows that span multiple services, create specialized agents and orchestrate them as a **team**:
+
+1. **Slack Monitor Agent** — tool: read Slack messages
+2. **Jira Agent** — tool: create/update Jira issues
+3. **Summary Agent** — synthesizes results
+
+Create a team with these three agents in sequential mode. When executed, each agent processes the task and passes its output to the next.
+
+### Security Best Practices
+
+- **Never hardcode secrets** in tool code — use environment variables or a secrets manager
+- **Use read-only tokens** when the agent only needs to read data
+- **Add safety extensions** to block agents from calling tools with dangerous parameters
+- **Test tools in the Playground** before connecting to production services
+- **Monitor usage** via the Billing page to catch unexpected API calls
+
+---
+
 ## Best Practices
 
 ### Agent Design

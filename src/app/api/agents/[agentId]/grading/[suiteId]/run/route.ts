@@ -23,7 +23,6 @@ export async function POST(
         { status: 403 }
       );
     }
-    // Also check token limits
     const tokenCheck = await checkPlanLimits(userId, "tokens");
     if (!tokenCheck.allowed) {
       return NextResponse.json(
@@ -36,12 +35,15 @@ export async function POST(
   const { stream, send, close } = createSSEStream();
 
   (async () => {
+    let runId = "";
+
     try {
       // Fetch agent config from Firestore
       let systemPrompt = "You are a helpful AI agent.";
       let modelProvider = "anthropic";
       let modelId = "claude-sonnet-4-6";
       let connectedRepos: string[] = [];
+      let agentVersion = 1;
 
       if (userId) {
         const agentSnap = await adminDb
@@ -53,6 +55,7 @@ export async function POST(
           modelProvider = agentData.modelProvider || modelProvider;
           modelId = agentData.modelId || modelId;
           connectedRepos = agentData.connectedRepos || [];
+          agentVersion = agentData.version || 1;
         }
 
         // Fetch skills and inject into system prompt
@@ -77,14 +80,33 @@ export async function POST(
             systemPrompt += `\n\n${repoCtx}`;
           }
         }
+
+        // Create grading run record in Firestore
+        const runRef = await adminDb
+          .collection(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs`)
+          .add({
+            agentVersion,
+            status: "running",
+            score: null,
+            totalCases: cases.length,
+            passedCases: 0,
+            startedAt: FieldValue.serverTimestamp(),
+            completedAt: null,
+            createdAt: FieldValue.serverTimestamp(),
+          });
+        runId = runRef.id;
       }
 
-      send("status", { status: "running", totalCases: cases.length });
+      send("status", { status: "running", totalCases: cases.length, runId });
 
       let totalMetrics: AgentRunMetrics = { inputTokens: 0, outputTokens: 0, toolCallCount: 0, toolIterations: 0 };
+      let totalScore = 0;
+      let passedCases = 0;
+      const pendingToolArgs: Record<string, Record<string, unknown>> = {};
 
       for (let i = 0; i < cases.length; i++) {
         const testCase = cases[i];
+        const caseStartTime = Date.now();
 
         send("case_start", {
           caseIndex: i,
@@ -110,15 +132,16 @@ export async function POST(
               collector.addToken(text);
             },
             onToolStart: (tc) => {
-              // Tool calls tracked in collector
+              pendingToolArgs[tc.name] = tc.args;
             },
             onToolEnd: (result) => {
               collector.addToolCall({
                 name: result.name,
-                args: {},
+                args: pendingToolArgs[result.name] || {},
                 result: result.result,
                 isError: result.isError,
               });
+              delete pendingToolArgs[result.name];
             },
             onDone: (metrics) => {
               caseMetrics = metrics;
@@ -145,6 +168,28 @@ export async function POST(
           passed,
         } = await evaluateAllCriteria(testCase.criteria || [], collector);
 
+        totalScore += score;
+        if (passed) passedCases++;
+
+        const durationMs = Date.now() - caseStartTime;
+
+        // Persist result to Firestore
+        if (userId && runId) {
+          adminDb
+            .collection(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs/${runId}/results`)
+            .add({
+              caseId: testCase.id || `case-${i}`,
+              passed,
+              score,
+              agentOutput: collector.assistantOutput.slice(0, 50000),
+              toolCalls: collector.toolCalls,
+              criteriaResults,
+              durationMs,
+              createdAt: FieldValue.serverTimestamp(),
+            })
+            .catch(() => {});
+        }
+
         send("case_end", {
           caseIndex: i,
           caseName: testCase.name,
@@ -157,6 +202,27 @@ export async function POST(
         });
       }
 
+      const finalScore = cases.length > 0 ? totalScore / cases.length : 0;
+
+      // Update grading run with final results + update agent's latestGradingScore
+      if (userId && runId) {
+        adminDb
+          .doc(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs/${runId}`)
+          .update({
+            status: "completed",
+            score: finalScore,
+            passedCases,
+            completedAt: FieldValue.serverTimestamp(),
+          })
+          .catch(() => {});
+
+        // Update agent's latestGradingScore
+        adminDb
+          .doc(`users/${userId}/agents/${agentId}`)
+          .update({ latestGradingScore: finalScore })
+          .catch(() => {});
+      }
+
       // Track grading run count in usage doc (fire-and-forget)
       if (userId) {
         const yearMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
@@ -165,12 +231,18 @@ export async function POST(
           { merge: true }
         ).catch(() => {});
 
-        // Report to Stripe meter for usage-based plans
         reportUsageToStripe(userId, 0, 0, 1).catch(() => {});
       }
 
-      send("done", { suiteId, agentId, metrics: totalMetrics });
+      send("done", { suiteId, agentId, runId, metrics: totalMetrics, score: finalScore, passedCases });
     } catch (err) {
+      // Mark run as failed if it was created
+      if (userId && runId) {
+        adminDb
+          .doc(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs/${runId}`)
+          .update({ status: "failed", completedAt: FieldValue.serverTimestamp() })
+          .catch(() => {});
+      }
       send("error", { message: (err as Error).message });
     } finally {
       close();
