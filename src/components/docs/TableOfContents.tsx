@@ -13,9 +13,16 @@ interface TableOfContentsProps {
   contentRef: React.RefObject<HTMLElement | null>;
   /** Optional static items — if not provided, items are extracted from the DOM */
   items?: TocItem[];
+  /** Override the sidebar title (default: "On this page") */
+  title?: string;
+  /**
+   * Change this value to re-trigger DOM extraction.
+   * Useful when content is loaded asynchronously.
+   */
+  contentKey?: string | number;
 }
 
-export function TableOfContents({ contentRef, items: staticItems }: TableOfContentsProps) {
+export function TableOfContents({ contentRef, items: staticItems, title, contentKey }: TableOfContentsProps) {
   const [items, setItems] = useState<TocItem[]>(staticItems ?? []);
   const [activeId, setActiveId] = useState<string>("");
 
@@ -38,10 +45,10 @@ export function TableOfContents({ contentRef, items: staticItems }: TableOfConte
         });
       });
       setItems(extracted);
-    }, 100);
+    }, 150);
 
     return () => clearTimeout(timer);
-  }, [contentRef, staticItems]);
+  }, [contentRef, staticItems, contentKey]);
 
   // Track active heading with scroll listener
   useEffect(() => {
@@ -85,7 +92,7 @@ export function TableOfContents({ contentRef, items: staticItems }: TableOfConte
   return (
     <nav className="space-y-1">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-        On this page
+        {title || "On this page"}
       </p>
       {items.map((item, i) => (
         <button

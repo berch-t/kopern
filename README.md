@@ -361,6 +361,58 @@ firebase deploy --only firestore:rules,firestore:indexes
 
 ---
 
+## Contributing
+
+Kopern is open source and we welcome contributions from the community! Whether it's a bug fix, a new feature, better docs, or just a typo — every PR counts.
+
+### How to contribute
+
+1. **Fork** the repo and clone your fork
+2. Create a feature branch: `git checkout -b feat/your-feature`
+3. Install dependencies: `npm install`
+4. Make your changes — run `npm run dev` to test locally
+5. Ensure quality:
+   ```bash
+   npm run lint       # ESLint
+   npx tsc --noEmit   # Type check
+   npm run build      # Production build passes
+   ```
+6. Commit with a clear message following [Conventional Commits](https://www.conventionalcommits.org/):
+   - `feat: add dark mode toggle to playground`
+   - `fix: prevent double billing on concurrent requests`
+   - `docs: add MCP integration examples`
+7. Push and open a **Pull Request** against `main`
+
+### What we're looking for
+
+- **New agent templates** for the Examples gallery
+- **Grading criteria** — new criterion types or improvements to existing ones
+- **LLM providers** — add support for new providers in `lib/llm/client.ts`
+- **Tool integrations** — pre-built tools for popular services (Notion, Linear, Discord...)
+- **i18n** — translations beyond EN/FR
+- **Performance** — bundle size, Firestore query optimizations
+- **Tests** — unit tests, integration tests, E2E coverage
+- **Documentation** — in-app docs improvements, tutorials, examples
+
+### Guidelines
+
+- TypeScript strict mode — no `any` types
+- Use shadcn/ui primitives for all new UI
+- Icons from lucide-react only
+- Follow the existing patterns: `useAuth()`, `useDocument()`, `useCollection()` hooks, `LocalizedLink`, `useDictionary()`
+- All new pages must support both EN and FR (update `dictionaries/en.json` and `fr.json`)
+- Keep PRs focused — one feature or fix per PR
+
+### Reporting bugs
+
+Open an issue on [GitHub Issues](https://github.com/berch-t/kopern/issues) with:
+- Steps to reproduce
+- Expected vs actual behavior
+- Browser / OS / Node version
+- Screenshots if relevant
+
+---
+
 ## License
 
-Private project.
+[MIT](LICENSE) — use it, fork it, build on it.

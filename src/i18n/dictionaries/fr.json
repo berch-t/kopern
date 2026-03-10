@@ -76,7 +76,25 @@
       "tryAnother": "Essayer un autre",
       "viewSpec": "Voir la spécification complète"
     },
-    "footer": "Kopern — Constructeur & Évaluateur d'Agents IA"
+    "footer": "Kopern — Constructeur & Évaluateur d'Agents IA",
+    "howItWorks": {
+      "title": "Comment ça",
+      "titleAccent": "Fonctionne",
+      "subtitle": "Guide complet pour construire, tester et déployer des agents IA avec Kopern.",
+      "searchPlaceholder": "Rechercher dans la documentation... (ex. outils, notation, MCP)",
+      "tocTitle": "Sur cette page",
+      "startTemplate": "Partir d'un template",
+      "startTemplateDesc": "Parcourez 15+ agents pré-configurés et adaptez-les à vos besoins.",
+      "quickStart": "Guide de démarrage",
+      "quickStartDesc": "Guide étape par étape pour créer et déployer votre premier agent en minutes.",
+      "useWizard": "Utiliser le Wizard IA",
+      "useWizardDesc": "Décrivez votre agent en langage naturel et laissez l'IA générer la configuration complète.",
+      "noResults": "Aucun résultat trouvé",
+      "noResultsHint": "Essayez d'autres mots-clés ou parcourez la documentation complète.",
+      "clearSearch": "Effacer la recherche",
+      "resultSingular": "section trouvée",
+      "resultPlural": "sections trouvées"
+    }
   },
   "nav": {
     "dashboard": "Tableau de bord",

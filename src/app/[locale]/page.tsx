@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import type { AgentSpec } from "@/lib/meta-agent/types";
 import {
   ArrowRight,
+  BookOpen,
   Bot,
   Shield,
   Cable,
@@ -38,11 +39,14 @@ import {
   DollarSign as DollarSignIcon,
   GitBranch,
   Github,
+  Linkedin,
   Plug,
   Workflow,
+  Heart,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BugReportDialog } from "@/components/feedback/BugReportDialog";
+import { HowItWorks } from "@/components/docs/HowItWorks";
 
 const PixelBlast = lazy(() => import("@/components/ui/PixelBlast"));
 
@@ -341,6 +345,15 @@ export default function LandingPage() {
 
         {/* Center nav buttons */}
         <div className="flex-1 flex items-center justify-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-2 text-primary hover:text-primary/80"
+            onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}
+          >
+            <BookOpen className="h-4 w-4" />
+            {t.nav.docs}
+          </Button>
           <LocalizedLink href="/examples">
             <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
               <Lightbulb className="h-4 w-4" />
@@ -947,9 +960,39 @@ export default function LandingPage() {
         </motion.section>
       </div>
 
+      {/* How it Works — Full documentation */}
+      <div style={{ background: "var(--landing-section-alt)" }}>
+        <HowItWorks id="how-it-works" />
+      </div>
+
       {/* Footer */}
-      <footer className="border-t py-6 text-center text-sm text-muted-foreground">
-        {t.landing.footer}
+      <footer className="border-t py-8">
+        <div className="max-w-6xl mx-auto px-6 flex flex-col items-center gap-4">
+          <div className="flex items-center gap-4">
+            <a
+              href="https://github.com/berch-t/kopern"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Github className="h-5 w-5" />
+            </a>
+            <a
+              href="https://linkedin.com/in/thomas-berchet"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Linkedin className="h-5 w-5" />
+            </a>
+          </div>
+          <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+            Made with <Heart className="h-3.5 w-3.5 fill-red-500 text-red-500" /> by berch-t and Tonton Claude
+          </p>
+          <p className="text-xs text-muted-foreground/60">
+            &copy; {new Date().getFullYear()} Kopern
+          </p>
+        </div>
       </footer>
     </div>
   );

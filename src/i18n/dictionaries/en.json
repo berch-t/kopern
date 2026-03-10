@@ -76,7 +76,25 @@
       "tryAnother": "Try another",
       "viewSpec": "View full specification"
     },
-    "footer": "Kopern — AI Agent Builder & Grader"
+    "footer": "Kopern — AI Agent Builder & Grader",
+    "howItWorks": {
+      "title": "How it",
+      "titleAccent": "Works",
+      "subtitle": "Complete guide to building, testing, and deploying AI agents with Kopern.",
+      "searchPlaceholder": "Search documentation... (e.g. tools, grading, MCP)",
+      "tocTitle": "On this page",
+      "startTemplate": "Start from a Template",
+      "startTemplateDesc": "Browse 15+ pre-built agents and customize them for your needs.",
+      "quickStart": "Quick Start Guide",
+      "quickStartDesc": "Step-by-step guide to create and deploy your first agent in minutes.",
+      "useWizard": "Use the AI Wizard",
+      "useWizardDesc": "Describe your agent in plain text and let AI generate the full configuration.",
+      "noResults": "No results found",
+      "noResultsHint": "Try different keywords or browse the full documentation.",
+      "clearSearch": "Clear search",
+      "resultSingular": "section found",
+      "resultPlural": "sections found"
+    }
   },
   "nav": {
     "dashboard": "Dashboard",
