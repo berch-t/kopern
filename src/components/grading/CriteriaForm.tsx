@@ -37,7 +37,7 @@ export function CriteriaForm({ criteria, onChange }: CriteriaFormProps) {
   function addCriterion() {
     const id = crypto.randomUUID();
     const defaultConfigs: Record<string, Record<string, unknown>> = {
-      output_match: { mode: "contains", pattern: "", caseSensitive: false },
+      output_match: { mode: "contains", pattern: [], caseSensitive: false },
       schema_validation: { jsonSchema: { type: "object" } },
       tool_usage: { expectedTools: [], ordered: false, allowExtra: true },
       safety_check: { forbiddenPatterns: [], scanToolCalls: true },
@@ -163,12 +163,22 @@ function renderConfigFields(
             </Select>
           </div>
           <div className="sm:col-span-2">
-            <Label className="text-xs">Pattern</Label>
-            <Input
-              value={(c.pattern as string) || ""}
-              onChange={(e) => updateConfig(index, "pattern", e.target.value)}
-              className="h-8 text-xs"
-              placeholder="Expected text or regex..."
+            <Label className="text-xs">Patterns (comma or newline separated)</Label>
+            <Textarea
+              value={Array.isArray(c.pattern) ? (c.pattern as string[]).join(", ") : (c.pattern as string) || ""}
+              onChange={(e) =>
+                updateConfig(
+                  index,
+                  "pattern",
+                  e.target.value
+                    .split(/[\n,]/)
+                    .map((s: string) => s.trim())
+                    .filter(Boolean)
+                )
+              }
+              rows={2}
+              className="min-h-[40px] text-xs"
+              placeholder="Expected text or regex (comma or newline separated)..."
             />
           </div>
         </div>
@@ -235,18 +245,22 @@ function renderConfigFields(
       return (
         <div className="space-y-2">
           <div>
-            <Label className="text-xs">Forbidden Patterns (one per line)</Label>
+            <Label className="text-xs">Forbidden Patterns (one per line or comma-separated)</Label>
             <Textarea
               value={((c.forbiddenPatterns as string[]) || []).join("\n")}
               onChange={(e) =>
                 updateConfig(
                   index,
                   "forbiddenPatterns",
-                  e.target.value.split("\n").filter(Boolean)
+                  e.target.value
+                    .split(/[\n,]/)
+                    .map((s: string) => s.trim())
+                    .filter(Boolean)
                 )
               }
-              className="min-h-[60px] font-mono text-xs"
-              placeholder="<script.*?>&#10;(?:password|secret|api_key)\\s*=&#10;DROP\\s+TABLE"
+              rows={4}
+              className="min-h-[80px] font-mono text-xs"
+              placeholder="sk-ant-[a-zA-Z0-9]{10,}, AIzaSy[a-zA-Z0-9_-]{30,}, sk_live_[a-zA-Z0-9]+"
             />
           </div>
           <label className="flex items-center gap-1 text-xs">

@@ -105,7 +105,9 @@
     "signUp": "Sign up",
     "failedOAuth": "Failed to sign in with {provider}",
     "failedSignUp": "Failed to create account",
-    "failedSignIn": "Invalid credentials"
+    "failedSignIn": "Invalid credentials",
+    "githubNeedsGoogle": "This email is already linked to a Google account. Sign in with Google first, then connect GitHub from Settings.",
+    "popupBlocked": "Popup blocked by your browser. Please allow popups and try again."
   },
   "dashboard": {
     "title": "Dashboard",

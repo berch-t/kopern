@@ -4,13 +4,11 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   GithubAuthProvider,
-  linkWithCredential,
   linkWithPopup,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   type User,
   type AuthError,
-  type UserCredential,
 } from "firebase/auth";
 import { auth } from "./config";
 
@@ -30,42 +28,13 @@ export async function signInWithGithub() {
   } catch (error) {
     const authError = error as AuthError;
 
-    // Account exists with different credential — link them
+    // Account exists with different credential (e.g. same email on Google account).
+    // We can't open a second popup here — browsers block it (not a direct user click).
+    // Throw a specific error so the login page can show a helpful message.
     if (authError.code === "auth/account-exists-with-different-credential") {
-      const pendingCred = GithubAuthProvider.credentialFromError(authError);
-
-      if (!pendingCred) throw error;
-
-      // Try signing in with Google (primary OAuth provider), then link GitHub.
-      // We don't use fetchSignInMethodsForEmail — it returns [] when
-      // Email Enumeration Protection is enabled (Firebase default since 2023).
-      try {
-        const googleResult = await signInWithPopup(auth, googleProvider);
-        const linkResult = await linkWithCredential(googleResult.user, pendingCred);
-        const credential = GithubAuthProvider.credentialFromResult(linkResult);
-        return { result: linkResult, githubAccessToken: credential?.accessToken ?? null };
-      } catch (linkError) {
-        const linkAuthError = linkError as AuthError;
-        // If linking fails because provider is already linked, get token via linkWithPopup
-        if (linkAuthError.code === "auth/provider-already-linked") {
-          // GitHub is already linked — just sign in with Google and fetch GitHub token
-          const googleResult = await signInWithPopup(auth, googleProvider);
-          try {
-            const popupResult = await linkWithPopup(googleResult.user, githubProvider);
-            const credential = GithubAuthProvider.credentialFromResult(popupResult);
-            return { result: popupResult, githubAccessToken: credential?.accessToken ?? null };
-          } catch {
-            // Already linked, sign-in succeeded via Google
-            return { result: googleResult, githubAccessToken: null };
-          }
-        }
-        // If Google sign-in failed (user cancelled, wrong account), re-throw original
-        if (linkAuthError.code === "auth/popup-closed-by-user" ||
-            linkAuthError.code === "auth/cancelled-popup-request") {
-          throw error;
-        }
-        throw linkError;
-      }
+      const customError = new Error("github_needs_google_first") as Error & { code: string };
+      customError.code = "auth/account-exists-with-different-credential";
+      throw customError;
     }
 
     throw error;

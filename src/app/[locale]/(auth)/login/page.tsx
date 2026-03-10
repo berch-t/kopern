@@ -38,10 +38,20 @@ export default function LoginPage() {
       }
       router.push("/dashboard");
     } catch (err) {
-      const authErr = err as { code?: string };
+      const authErr = err as { code?: string; message?: string };
       console.error("OAuth error:", err);
       // User cancelled the popup — don't show error toast
       if (authErr.code === "auth/popup-closed-by-user" || authErr.code === "auth/cancelled-popup-request") {
+        return;
+      }
+      // Email already used with a different provider (e.g. Google)
+      if (authErr.message === "github_needs_google_first" || authErr.code === "auth/account-exists-with-different-credential") {
+        toast.error(t.auth.githubNeedsGoogle, { duration: 8000 });
+        return;
+      }
+      // Popup blocked by browser
+      if (authErr.code === "auth/popup-blocked") {
+        toast.error(t.auth.popupBlocked);
         return;
       }
       toast.error(t.auth.failedOAuth.replace("{provider}", provider));

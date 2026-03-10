@@ -3,7 +3,7 @@ import { type CollectedEvents } from "@/lib/pi-mono/event-collector";
 
 interface OutputMatchConfig {
   mode: "regex" | "contains" | "exact";
-  pattern: string;
+  pattern: string | string[];
   flags?: string;
   caseSensitive?: boolean;
 }
@@ -14,43 +14,50 @@ export const outputMatchEvaluator: CriterionEvaluator = {
   async evaluate(config: Record<string, unknown>, events: CollectedEvents): Promise<CriterionResult> {
     const c = config as unknown as OutputMatchConfig;
     const output = events.assistantOutput;
-    let passed = false;
-    let message = "";
 
-    switch (c.mode) {
-      case "exact": {
-        const a = c.caseSensitive ? output : output.toLowerCase();
-        const b = c.caseSensitive ? c.pattern : c.pattern.toLowerCase();
-        passed = a.trim() === b.trim();
-        message = passed ? "Exact match" : `Expected exact match with "${c.pattern}"`;
-        break;
-      }
-      case "contains": {
-        const a = c.caseSensitive ? output : output.toLowerCase();
-        const b = c.caseSensitive ? c.pattern : c.pattern.toLowerCase();
-        passed = a.includes(b);
-        message = passed ? "Pattern found in output" : `Pattern "${c.pattern}" not found in output`;
-        break;
-      }
-      case "regex": {
-        try {
-          const regex = new RegExp(c.pattern, c.flags || (c.caseSensitive ? "" : "i"));
-          passed = regex.test(output);
-          message = passed ? "Regex matched" : `Regex /${c.pattern}/ did not match`;
-        } catch (err) {
-          passed = false;
-          message = `Invalid regex: ${(err as Error).message}`;
+    // Normalize pattern to array
+    const patterns = Array.isArray(c.pattern)
+      ? c.pattern.filter(Boolean)
+      : [c.pattern].filter(Boolean);
+
+    if (patterns.length === 0) {
+      return { criterionId: "", criterionType: "output_match", passed: false, score: 0, message: "No pattern specified" };
+    }
+
+    const failed: string[] = [];
+
+    for (const pattern of patterns) {
+      switch (c.mode) {
+        case "exact": {
+          const a = c.caseSensitive ? output : output.toLowerCase();
+          const b = c.caseSensitive ? pattern : pattern.toLowerCase();
+          if (a.trim() !== b.trim()) failed.push(pattern);
+          break;
         }
-        break;
+        case "contains": {
+          const a = c.caseSensitive ? output : output.toLowerCase();
+          const b = c.caseSensitive ? pattern : pattern.toLowerCase();
+          if (!a.includes(b)) failed.push(pattern);
+          break;
+        }
+        case "regex": {
+          try {
+            const regex = new RegExp(pattern, c.flags || (c.caseSensitive ? "" : "i"));
+            if (!regex.test(output)) failed.push(pattern);
+          } catch (err) {
+            failed.push(`${pattern} (invalid: ${(err as Error).message})`);
+          }
+          break;
+        }
       }
     }
 
-    return {
-      criterionId: "",
-      criterionType: "output_match",
-      passed,
-      score: passed ? 1 : 0,
-      message,
-    };
+    const passed = failed.length === 0;
+    const score = 1 - failed.length / patterns.length;
+    const message = passed
+      ? patterns.length === 1 ? "Pattern matched" : `All ${patterns.length} patterns matched`
+      : `Failed patterns: ${failed.join(", ")}`;
+
+    return { criterionId: "", criterionType: "output_match", passed, score, message };
   },
 };

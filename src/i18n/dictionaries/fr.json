@@ -105,7 +105,9 @@
     "signUp": "S'inscrire",
     "failedOAuth": "Échec de connexion avec {provider}",
     "failedSignUp": "Échec de création du compte",
-    "failedSignIn": "Identifiants invalides"
+    "failedSignIn": "Identifiants invalides",
+    "githubNeedsGoogle": "Cet email est déjà lié à un compte Google. Connectez-vous d'abord avec Google, puis liez GitHub depuis les Paramètres.",
+    "popupBlocked": "Popup bloquée par votre navigateur. Autorisez les popups et réessayez."
   },
   "dashboard": {
     "title": "Tableau de bord",
