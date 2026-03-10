@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { FadeIn } from "@/components/motion/FadeIn";
+import { LocalizedLink } from "@/components/LocalizedLink";
 
 export default function LoginPage() {
   const router = useLocalizedRouter();
@@ -63,9 +64,9 @@ export default function LoginPage() {
     <FadeIn>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-2">
+          <LocalizedLink href="/" className="mx-auto mb-2 block hover:opacity-80 transition-opacity">
             <img src="/logo_pix.png" alt="Kopern" className="h-12" />
-          </div>
+          </LocalizedLink>
           <CardTitle className="text-2xl">{t.auth.title}</CardTitle>
           <CardDescription>
             {t.auth.subtitle}

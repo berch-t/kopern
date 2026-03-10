@@ -592,6 +592,22 @@
       "description": "Chaînez les intégrations : un agent lit une PR GitHub, vérifie Jira pour le contexte, poste une revue et met à jour Slack — entièrement automatisé."
     }
   },
+  "bugReport": {
+    "button": "Signaler un Bug",
+    "title": "Signaler un Bug",
+    "description": "Aidez-nous à améliorer Kopern en signalant les problèmes que vous rencontrez.",
+    "severity": "Sévérité",
+    "low": "Faible — problème cosmétique ou mineur",
+    "medium": "Moyen — fonctionnalité cassée mais contournement possible",
+    "high": "Élevé — bloqueur critique, perte de données ou problème de sécurité",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Décrivez le bug en détail : ce qui s'est passé, ce que vous attendiez, étapes pour reproduire...",
+    "send": "Envoyer le Rapport",
+    "sending": "Envoi en cours...",
+    "sent": "Rapport envoyé !",
+    "contribute": "Envie de contribuer ?",
+    "githubCta": "Voir sur GitHub"
+  },
   "breadcrumbs": {
     "home": "Accueil",
     "dashboard": "Tableau de bord",

@@ -592,6 +592,22 @@
       "description": "Chain integrations: an agent reads a GitHub PR, checks Jira for context, posts a review, and updates Slack — fully automated."
     }
   },
+  "bugReport": {
+    "button": "Report a Bug",
+    "title": "Report a Bug",
+    "description": "Help us improve Kopern by reporting issues you encounter.",
+    "severity": "Severity",
+    "low": "Low — cosmetic or minor issue",
+    "medium": "Medium — feature broken but workaround exists",
+    "high": "High — critical blocker, data loss, or security issue",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Describe the bug in detail: what happened, what you expected, steps to reproduce...",
+    "send": "Send Report",
+    "sending": "Sending...",
+    "sent": "Report Sent!",
+    "contribute": "Want to contribute?",
+    "githubCta": "View on GitHub"
+  },
   "breadcrumbs": {
     "home": "Home",
     "dashboard": "Dashboard",

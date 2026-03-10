@@ -17,9 +17,11 @@ import {
   Minus,
   Lightbulb,
   DollarSign,
+  Github,
   LayoutDashboard,
   Zap,
 } from "lucide-react";
+import { BugReportDialog } from "@/components/feedback/BugReportDialog";
 import { motion } from "framer-motion";
 
 type BillingPeriod = "monthly" | "annual";
@@ -94,11 +96,14 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
-        <div className="flex items-center gap-2">
+      <nav className="flex items-center px-6 py-4 max-w-6xl mx-auto">
+        {/* Logo — links to landing */}
+        <LocalizedLink href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
           <img src="/logo_small.png" alt="Kopern" className="h-7" />
-        </div>
-        <div className="flex items-center gap-3">
+        </LocalizedLink>
+
+        {/* Center nav buttons */}
+        <div className="flex-1 flex items-center justify-center gap-1">
           <LocalizedLink href="/examples">
             <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
               <Lightbulb className="h-4 w-4" />
@@ -111,6 +116,20 @@ export default function PricingPage() {
               {t.nav.pricing}
             </Button>
           </LocalizedLink>
+        </div>
+
+        {/* Right actions */}
+        <div className="flex items-center gap-2 shrink-0">
+          <BugReportDialog />
+          <a
+            href="https://github.com/berch-t/kopern"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
+              <Github className="h-4 w-4" />
+            </Button>
+          </a>
           <LocaleSwitcher />
           {loading ? (
             <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />

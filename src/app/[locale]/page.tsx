@@ -37,10 +37,12 @@ import {
   RotateCcw,
   DollarSign as DollarSignIcon,
   GitBranch,
+  Github,
   Plug,
   Workflow,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { BugReportDialog } from "@/components/feedback/BugReportDialog";
 
 const PixelBlast = lazy(() => import("@/components/ui/PixelBlast"));
 
@@ -334,10 +336,11 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
-        <div className="w-7" />
-        {/* Logo hidden — already in hero */}
-        <div className="flex items-center gap-3">
+      <nav className="flex items-center px-6 py-4 max-w-6xl mx-auto">
+        <div className="w-7 shrink-0" />
+
+        {/* Center nav buttons */}
+        <div className="flex-1 flex items-center justify-center gap-1">
           <LocalizedLink href="/examples">
             <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
               <Lightbulb className="h-4 w-4" />
@@ -350,6 +353,20 @@ export default function LandingPage() {
               {t.nav.pricing}
             </Button>
           </LocalizedLink>
+        </div>
+
+        {/* Right actions */}
+        <div className="flex items-center gap-2 shrink-0">
+          <BugReportDialog />
+          <a
+            href="https://github.com/berch-t/kopern"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
+              <Github className="h-4 w-4" />
+            </Button>
+          </a>
           <LocaleSwitcher />
           {loading ? (
             <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />

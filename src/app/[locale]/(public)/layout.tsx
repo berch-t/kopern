@@ -15,7 +15,9 @@ import {
   Lightbulb,
   DollarSign,
   LayoutDashboard,
+  Github,
 } from "lucide-react";
+import { BugReportDialog } from "@/components/feedback/BugReportDialog";
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -50,11 +52,14 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
-        <LocalizedLink href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+      <nav className="flex items-center px-6 py-4 max-w-6xl mx-auto">
+        {/* Logo — left */}
+        <LocalizedLink href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
           <img src="/logo_small.png" alt="Kopern" className="h-7" />
         </LocalizedLink>
-        <div className="flex items-center gap-3">
+
+        {/* Center nav buttons */}
+        <div className="flex-1 flex items-center justify-center gap-1">
           <LocalizedLink href="/examples">
             <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
               <Lightbulb className="h-4 w-4" />
@@ -67,6 +72,20 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
               {t.nav.pricing}
             </Button>
           </LocalizedLink>
+        </div>
+
+        {/* Right actions */}
+        <div className="flex items-center gap-2 shrink-0">
+          <BugReportDialog />
+          <a
+            href="https://github.com/berch-t/kopern"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
+              <Github className="h-4 w-4" />
+            </Button>
+          </a>
           <LocaleSwitcher />
           {loading ? (
             <div className="h-9 w-20 animate-pulse rounded-md bg-muted" />
