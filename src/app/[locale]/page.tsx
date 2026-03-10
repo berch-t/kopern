@@ -46,7 +46,16 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BugReportDialog } from "@/components/feedback/BugReportDialog";
-import { HowItWorks } from "@/components/docs/HowItWorks";
+import { Component, type ErrorInfo, type ReactNode } from "react";
+
+const HowItWorks = lazy(() => import("@/components/docs/HowItWorks").then((m) => ({ default: m.HowItWorks })));
+
+class DocsBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error: Error, info: ErrorInfo) { console.error("HowItWorks error:", error, info); }
+  render() { return this.state.hasError ? null : this.props.children; }
+}
 
 const PixelBlast = lazy(() => import("@/components/ui/PixelBlast"));
 
@@ -962,7 +971,11 @@ export default function LandingPage() {
 
       {/* How it Works — Full documentation */}
       <div style={{ background: "var(--landing-section-alt)" }}>
-        <HowItWorks id="how-it-works" />
+        <DocsBoundary>
+          <Suspense fallback={null}>
+            <HowItWorks id="how-it-works" />
+          </Suspense>
+        </DocsBoundary>
       </div>
 
       {/* Footer */}
