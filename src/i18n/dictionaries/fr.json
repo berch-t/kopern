@@ -30,8 +30,8 @@
     "ctaDashboard": "Aller au Tableau de bord",
     "examples": "Exemples de Workflows",
     "features": {
-      "agentBuilder": { "title": "Constructeur d'Agents", "description": "Configurez des agents avec des prompts système, des compétences, des outils et des extensions. Support multi-modèle." },
-      "grading": { "title": "Notation Déterministe", "description": "6 types de critères : correspondance de sortie, validation de schéma, utilisation d'outils, vérification de sécurité, juge LLM et plus." },
+      "agentBuilder": { "title": "Constructeur d'Agents", "description": "Configurez des agents avec des prompts système, des skills, des tools et des extensions. Support multi-modèle." },
+      "grading": { "title": "Notation Déterministe", "description": "6 types de critères : correspondance de sortie, validation de schéma, utilisation de tools, vérification de sécurité, juge LLM et plus." },
       "api": { "title": "Endpoints API", "description": "Exposez vos agents comme endpoints JSON-RPC avec authentification par clé API, limitation de débit et suivi d'utilisation." },
       "security": { "title": "Sécurisé par Conception", "description": "Règles Firestore propriétaire uniquement, clés API hashées, gestion des clés côté serveur, exécution sandboxée." }
     },
@@ -49,7 +49,7 @@
       },
       "metaAgent": {
         "title": "Méta-Agent",
-        "description": "Décrivez ce dont vous avez besoin en langage naturel. Le méta-agent crée un agent entièrement configuré — prompt système, skills, outils et suite de grading."
+        "description": "Décrivez ce dont vous avez besoin en langage naturel. Le méta-agent crée un agent entièrement configuré — prompt système, skills, tools et suite de grading."
       }
     },
     "autoResearch": {
@@ -87,7 +87,7 @@
       "subtitle": "Suivez chaque token, chaque appel, chaque coût — avec traçage complet des sessions et facturation à l'usage.",
       "sessions": {
         "title": "Traçage de Sessions",
-        "description": "Observabilité complète avec chronologie des événements, comptage de tokens, suivi des coûts et traces d'exécution des outils pour chaque session."
+        "description": "Observabilité complète avec chronologie des événements, comptage de tokens, suivi des coûts et traces d'exécution des tools pour chaque session."
       },
       "billing": {
         "title": "Paiement par Token",
@@ -110,7 +110,7 @@
       "title": "Comment ça",
       "titleAccent": "Fonctionne",
       "subtitle": "Guide complet pour construire, tester et déployer des agents IA avec Kopern.",
-      "searchPlaceholder": "Rechercher dans la documentation... (ex. outils, notation, MCP)",
+      "searchPlaceholder": "Rechercher dans la documentation... (ex. tools, notation, MCP)",
       "tocTitle": "Sur cette page",
       "startTemplate": "Partir d'un template",
       "startTemplateDesc": "Parcourez 15+ agents pré-configurés et adaptez-les à vos besoins.",
@@ -185,8 +185,8 @@
     "createSubtitle": "Configurez un nouvel agent IA avec un prompt système, un modèle et un domaine",
     "detail": {
       "editConfig": "Modifier la Config",
-      "skills": "Compétences",
-      "tools": "Outils",
+      "skills": "Skills",
+      "tools": "Tools",
       "extensions": "Extensions",
       "playground": "Playground",
       "grading": "Notation",
@@ -197,7 +197,7 @@
       "provider": "Fournisseur",
       "model": "Modèle",
       "thinking": "Réflexion",
-      "builtinTools": "Outils Intégrés",
+      "builtinTools": "Built-in Tools",
       "gradingScore": "Score de Notation",
       "optimize": "Optimiser",
       "notFound": "Agent introuvable",
@@ -216,7 +216,7 @@
       "modelProvider": "Fournisseur de Modèle",
       "modelId": "ID du Modèle",
       "thinkingLevel": "Niveau de Réflexion",
-      "builtinTools": "Outils Intégrés",
+      "builtinTools": "Built-in Tools",
       "save": "Enregistrer l'Agent",
       "create": "Créer l'Agent",
       "saving": "Enregistrement...",
@@ -224,10 +224,10 @@
     }
   },
   "skills": {
-    "title": "Compétences",
-    "addSkill": "Ajouter une Compétence",
-    "noSkills": "Aucune compétence pour le moment",
-    "noSkillsDesc": "Les compétences sont des templates markdown injectés dans le prompt système",
+    "title": "Skills",
+    "addSkill": "Ajouter un Skill",
+    "noSkills": "Aucun skill pour le moment",
+    "noSkillsDesc": "Les skills sont des templates markdown injectés dans le prompt système",
     "form": {
       "name": "Nom",
       "description": "Description",
@@ -235,10 +235,10 @@
     }
   },
   "tools": {
-    "title": "Outils",
-    "addTool": "Ajouter un Outil",
-    "noTools": "Aucun outil pour le moment",
-    "noToolsDesc": "Les outils permettent à votre agent d'effectuer des actions avec des paramètres JSON Schema",
+    "title": "Tools",
+    "addTool": "Ajouter un Tool",
+    "noTools": "Aucun tool pour le moment",
+    "noToolsDesc": "Les tools permettent à votre agent d'effectuer des actions avec des paramètres JSON Schema",
     "form": {
       "name": "Nom",
       "label": "Libellé",
@@ -267,12 +267,12 @@
     "tokensIn": "Tokens Entrants",
     "tokensOut": "Tokens Sortants",
     "estimatedCost": "Coût Est.",
-    "toolsCalled": "Outils Appelés",
+    "toolsCalled": "Tools Appelés",
     "contextUsed": "Contexte Utilisé",
     "subtitle": "Testez votre agent en temps réel avec des réponses en streaming",
     "emptyChat": "Envoyez un message pour commencer à discuter avec votre agent",
     "loadingConfig": "Chargement de la configuration de l'agent...",
-    "toolCalls": "appels d'outils",
+    "toolCalls": "appels de tools",
     "viewSession": "Voir la session",
     "delegatedTo": "Délégué à",
     "subAgentResult": "Résultat du sous-agent",
@@ -294,7 +294,7 @@
     "criteria": {
       "outputMatch": "Correspondance de Sortie",
       "schemaValidation": "Validation de Schéma",
-      "toolUsage": "Utilisation d'Outils",
+      "toolUsage": "Utilisation de Tools",
       "safetyCheck": "Vérification de Sécurité",
       "customScript": "Script Personnalisé",
       "llmJudge": "Juge LLM"
@@ -324,7 +324,7 @@
   },
   "examples": {
     "title": "Exemples de Workflows",
-    "subtitle": "15 configurations d'agents prêtes pour la production pour des workflows métier réels. Chaque exemple inclut un prompt système, des compétences, des outils, une intégration MCP et une suite de notation — prêt à déployer sur Kopern.",
+    "subtitle": "15 configurations d'agents prêtes pour la production pour des workflows métier réels. Chaque exemple inclut un prompt système, des skills, des tools, une intégration MCP et une suite de notation — prêt à déployer sur Kopern.",
     "useThisAgent": "Utiliser cet Agent",
     "creating": "Création...",
     "allExamples": "Tous les exemples",
@@ -399,7 +399,7 @@
     "duration": "Durée",
     "tokens": "Tokens",
     "cost": "Coût",
-    "tools": "Appels d'Outils",
+    "tools": "Appels de Tools",
     "messages": "Messages",
     "timeline": "Chronologie des Événements",
     "exportTrace": "Exporter la Trace"
@@ -473,18 +473,18 @@
     "icon": "Icône"
   },
   "toolOverrides": {
-    "title": "Surcharges d'Outils",
-    "description": "Surcharger le comportement par défaut des outils avec du code wrapper personnalisé",
+    "title": "Surcharges de Tools",
+    "description": "Surcharger le comportement par défaut des tools avec du code wrapper personnalisé",
     "addOverride": "Ajouter une Surcharge",
-    "toolName": "Nom de l'Outil",
+    "toolName": "Nom du Tool",
     "wrapperCode": "Code Wrapper",
     "enabled": "Activé",
-    "noOverrides": "Aucune surcharge d'outil",
-    "noOverridesDesc": "Surchargez les outils read, write, edit ou bash avec un comportement personnalisé"
+    "noOverrides": "Aucune surcharge de tool",
+    "noOverridesDesc": "Surchargez les tools read, write, edit ou bash avec un comportement personnalisé"
   },
   "metaAgent": {
     "title": "Créer avec l'IA",
-    "description": "Décrivez ce dont vous avez besoin en langage naturel. L'IA concevra une spécification complète d'agent — prompt système, skills, outils et critères de grading.",
+    "description": "Décrivez ce dont vous avez besoin en langage naturel. L'IA concevra une spécification complète d'agent — prompt système, skills, tools et critères de grading.",
     "prompt": "Décrivez l'agent que vous souhaitez créer...",
     "promptPlaceholder": "ex. J'ai besoin d'un agent qui revoit les pull requests pour les vulnérabilités de sécurité, vérifie l'OWASP Top 10 et bloque le merge si le score est inférieur à 7/10...",
     "generating": "Conception de votre agent...",
@@ -617,7 +617,7 @@
     "outputPrice": "20,00$ / 1M tokens sortants",
     "gradingPrice2": "0,15$ / exécution de grading",
     "commissionLabel": "Frais de plateforme : 20%",
-    "commissionDesc": "Couvre l'infrastructure, l'exécution des outils, le sandboxing, la facturation et le support.",
+    "commissionDesc": "Couvre l'infrastructure, l'exécution des tools, le sandboxing, la facturation et le support.",
     "subscribe": "S'abonner",
     "subscribing": "Redirection..."
   },
@@ -667,7 +667,7 @@
     "connectedRepos": "Dépôts Connectés"
   },
   "integrations": {
-    "title": "Connectez Vos Outils,",
+    "title": "Connectez Vos Tools,",
     "titleAccent": "Livrez Plus Vite",
     "subtitle": "Liez vos dépôts GitHub pour des agents qui comprennent votre code, ou connectez n'importe quel service via MCP — Slack, Jira, AWS, Notion, et bien plus.",
     "github": {
@@ -704,8 +704,8 @@
     "dashboard": "Tableau de bord",
     "agents": "Agents",
     "edit": "Modifier",
-    "skills": "Compétences",
-    "tools": "Outils",
+    "skills": "Skills",
+    "tools": "Tools",
     "extensions": "Extensions",
     "playground": "Playground",
     "grading": "Notation",

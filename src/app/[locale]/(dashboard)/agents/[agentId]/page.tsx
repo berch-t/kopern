@@ -48,16 +48,16 @@ export default function AgentDetailPage({
   }
 
   const links = [
-    { href: `/agents/${agentId}/edit`, label: t.agents.detail.editConfig, icon: Pencil },
-    { href: `/agents/${agentId}/skills`, label: t.agents.detail.skills, icon: BookOpen },
-    { href: `/agents/${agentId}/tools`, label: t.agents.detail.tools, icon: Wrench },
-    { href: `/agents/${agentId}/extensions`, label: t.agents.detail.extensions, icon: Puzzle },
-    { href: `/agents/${agentId}/playground`, label: t.agents.detail.playground, icon: MessageSquare },
-    { href: `/agents/${agentId}/grading`, label: t.agents.detail.grading, icon: ClipboardCheck },
-    { href: `/agents/${agentId}/optimize`, label: t.agents.detail.optimize, icon: FlaskConical },
-    { href: `/agents/${agentId}/mcp-servers`, label: t.agents.detail.mcpServers, icon: Server },
-    { href: `/agents/${agentId}/pipelines`, label: t.pipelines.title, icon: Workflow },
-    { href: `/agents/${agentId}/sessions`, label: t.sessions.title, icon: Activity },
+    { href: `/agents/${agentId}/edit`, label: t.agents.detail.editConfig, icon: Pencil, accent: "text-slate-500", bg: "bg-slate-500/10" },
+    { href: `/agents/${agentId}/skills`, label: t.agents.detail.skills, icon: BookOpen, accent: "text-blue-500", bg: "bg-blue-500/10" },
+    { href: `/agents/${agentId}/tools`, label: t.agents.detail.tools, icon: Wrench, accent: "text-amber-500", bg: "bg-amber-500/10" },
+    { href: `/agents/${agentId}/extensions`, label: t.agents.detail.extensions, icon: Puzzle, accent: "text-purple-500", bg: "bg-purple-500/10" },
+    { href: `/agents/${agentId}/playground`, label: t.agents.detail.playground, icon: MessageSquare, accent: "text-emerald-500", bg: "bg-emerald-500/10" },
+    { href: `/agents/${agentId}/grading`, label: t.agents.detail.grading, icon: ClipboardCheck, accent: "text-cyan-500", bg: "bg-cyan-500/10" },
+    { href: `/agents/${agentId}/optimize`, label: t.agents.detail.optimize, icon: FlaskConical, accent: "text-pink-500", bg: "bg-pink-500/10" },
+    { href: `/agents/${agentId}/mcp-servers`, label: t.agents.detail.mcpServers, icon: Server, accent: "text-indigo-500", bg: "bg-indigo-500/10" },
+    { href: `/agents/${agentId}/pipelines`, label: t.pipelines.title, icon: Workflow, accent: "text-orange-500", bg: "bg-orange-500/10" },
+    { href: `/agents/${agentId}/sessions`, label: t.sessions.title, icon: Activity, accent: "text-teal-500", bg: "bg-teal-500/10" },
   ];
 
   return (
@@ -123,7 +123,9 @@ export default function AgentDetailPage({
                 <LocalizedLink key={link.href} href={link.href}>
                   <Card className="cursor-pointer transition-shadow hover:shadow-md">
                     <CardContent className="flex items-center gap-3 p-4">
-                      <link.icon className="h-5 w-5 text-muted-foreground" />
+                      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${link.bg}`}>
+                        <link.icon className={`h-4 w-4 ${link.accent}`} />
+                      </div>
                       <span className="font-medium">{link.label}</span>
                     </CardContent>
                   </Card>

@@ -41,7 +41,9 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           <div className="flex flex-1 flex-col overflow-hidden">
             <Header />
             <Breadcrumbs />
-            <main className="flex-1 overflow-y-auto p-6">{children}</main>
+            <main className="flex-1 overflow-y-auto p-6">
+              <div className="mx-auto max-w-5xl">{children}</div>
+            </main>
           </div>
         </div>
       </AuthProvider>
