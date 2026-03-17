@@ -26,6 +26,7 @@ export const STRIPE_PRICES = {
   usage_input_tokens: process.env.STRIPE_PRICE_USAGE_INPUT!,
   usage_output_tokens: process.env.STRIPE_PRICE_USAGE_OUTPUT!,
   usage_grading_runs: process.env.STRIPE_PRICE_USAGE_GRADING!,
+  usage_autoresearch: process.env.STRIPE_PRICE_USAGE_AUTORESEARCH!,
 } as const;
 
 // ---------------------------------------------------------------------------

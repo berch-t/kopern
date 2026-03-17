@@ -24,6 +24,7 @@ import {
   Server,
   Workflow,
   Activity,
+  FlaskConical,
 } from "lucide-react";
 
 export default function AgentDetailPage({
@@ -53,6 +54,7 @@ export default function AgentDetailPage({
     { href: `/agents/${agentId}/extensions`, label: t.agents.detail.extensions, icon: Puzzle },
     { href: `/agents/${agentId}/playground`, label: t.agents.detail.playground, icon: MessageSquare },
     { href: `/agents/${agentId}/grading`, label: t.agents.detail.grading, icon: ClipboardCheck },
+    { href: `/agents/${agentId}/optimize`, label: t.agents.detail.optimize, icon: FlaskConical },
     { href: `/agents/${agentId}/mcp-servers`, label: t.agents.detail.mcpServers, icon: Server },
     { href: `/agents/${agentId}/pipelines`, label: t.pipelines.title, icon: Workflow },
     { href: `/agents/${agentId}/sessions`, label: t.sessions.title, icon: Activity },

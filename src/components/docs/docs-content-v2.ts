@@ -3,7 +3,7 @@ export const docsMarkdownV2 = `
 
 ### What is Kopern?
 
-Kopern is a full-stack **AI Agent Builder, Grader, and Orchestrator**. It lets you create custom AI agents powered by leading LLM providers (Anthropic, OpenAI, Google, Ollama), equip them with skills and tools, validate their quality with deterministic grading suites, orchestrate them as teams or pipelines, and deploy them as API endpoints -- all from a single web dashboard.
+Kopern is a full-stack **AI Agent Builder, Grader, and Orchestrator**. It lets you create custom AI agents powered by leading LLM providers (Anthropic, OpenAI, Google, Mistral AI, Ollama), equip them with skills and tools, validate their quality with deterministic grading suites, orchestrate them as teams or pipelines, and deploy them as API endpoints -- all from a single web dashboard.
 
 Key capabilities at a glance:
 
@@ -47,8 +47,8 @@ The wizard typically generates a production-ready agent in under 30 seconds.
 | **Name** | Human-readable identifier | "Billing Support Agent" |
 | **Description** | What the agent does | "Handles billing inquiries and account lookups" |
 | **Domain** | Category for organization | DevOps, Legal, Support, Sales, Finance, HR, etc. |
-| **Provider** | LLM provider | Anthropic, OpenAI, Google, Ollama |
-| **Model** | Specific model | claude-sonnet-4-6, gpt-4o, gemini-2.5-pro |
+| **Provider** | LLM provider | Anthropic, OpenAI, Google, Mistral AI, Ollama |
+| **Model** | Specific model | claude-sonnet-4-6, gpt-4o, gemini-2.5-pro, mistral-large-latest |
 | **Thinking Level** | Reasoning depth | off, minimal, low, medium, high, xhigh |
 | **System Prompt** | Core behavior instructions | See the System Prompt section below |
 

@@ -47,8 +47,8 @@ Pour un contrôle total sur chaque paramètre :
    - **Nom** — identifiant lisible de votre agent
    - **Description** — ce que fait l'agent en une phrase
    - **Domaine** — catégorie (DevOps, Juridique, Support, Ventes, Finance, RH, etc.)
-   - **Fournisseur de modèle** — Anthropic, OpenAI, Google ou Ollama
-   - **Modèle** — le modèle spécifique (ex : claude-sonnet-4-6, gpt-4o, gemini-2.5-pro)
+   - **Fournisseur de modèle** — Anthropic, OpenAI, Google, Mistral AI ou Ollama
+   - **Modèle** — le modèle spécifique (ex : claude-sonnet-4-6, gpt-4o, gemini-2.5-pro, mistral-large-latest)
    - **Niveau de réflexion** — contrôle la profondeur de raisonnement du modèle
    - **Prompt système** — les instructions principales qui définissent le comportement de l'agent
 3. Enregistrez — votre agent est prêt à être enrichi de compétences et d'outils

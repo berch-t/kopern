@@ -42,6 +42,18 @@ export const providers: ProviderInfo[] = [
     ],
   },
   {
+    id: "mistral",
+    name: "Mistral AI",
+    models: [
+      { id: "mistral-large-latest", name: "Mistral Large", contextWindow: 128000, supportsThinking: false },
+      { id: "mistral-medium-latest", name: "Mistral Medium 3", contextWindow: 131000, supportsThinking: false },
+      { id: "mistral-small-latest", name: "Mistral Small 3.1", contextWindow: 128000, supportsThinking: false },
+      { id: "codestral-latest", name: "Codestral", contextWindow: 256000, supportsThinking: false },
+      { id: "mistral-nemo-latest", name: "Mistral Nemo", contextWindow: 128000, supportsThinking: false },
+      { id: "devstral-small-latest", name: "Devstral Small", contextWindow: 128000, supportsThinking: false },
+    ],
+  },
+  {
     id: "ollama",
     name: "Ollama (Local)",
     models: [

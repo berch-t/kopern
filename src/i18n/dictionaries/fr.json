@@ -52,6 +52,35 @@
         "description": "Décrivez ce dont vous avez besoin en langage naturel. Le méta-agent crée un agent entièrement configuré — prompt système, skills, outils et suite de grading."
       }
     },
+    "autoResearch": {
+      "title": "Agents",
+      "titleAccent": "Auto-Améliorants",
+      "subtitle": "Inspiré de l'autoresearch de Karpathy — vos agents lancent des expériences, mesurent les résultats et s'optimisent dans une boucle de feedback serrée.",
+      "autotune": {
+        "title": "AutoTune",
+        "description": "Mute itérativement les prompts système via des stratégies guidées par LLM. Chaque itération est évaluée, seules les améliorations sont conservées — hill-climbing vers la meilleure config."
+      },
+      "autofix": {
+        "title": "AutoFix",
+        "description": "Analyse les cas d'évaluation échoués, diagnostique les causes profondes et patche automatiquement le prompt système pour corriger les faiblesses spécifiques."
+      },
+      "stressLab": {
+        "title": "Stress Lab",
+        "description": "Génère des cas de test adversariaux — injections de prompts, cas limites, entrées ambiguës — et renforce le prompt de votre agent contre les vulnérabilités."
+      },
+      "tournament": {
+        "title": "Arène Tournoi",
+        "description": "Oppose plusieurs combinaisons de modèles et configs. Un tournoi multi-rounds révèle le meilleur compromis qualité/coût/latence."
+      },
+      "evolution": {
+        "title": "Moteur d'Évolution",
+        "description": "Optimisation génétique multi-dimensionnelle sur le prompt, le modèle et le niveau de réflexion. Recherche par population avec croisement, mutation et sélection naturelle."
+      },
+      "distillation": {
+        "title": "Distillation",
+        "description": "Transfère les connaissances de modèles professeurs coûteux vers des étudiants moins chers. Maintenez la qualité tout en réduisant drastiquement les coûts d'inférence."
+      }
+    },
     "observability": {
       "title": "Observabilité &",
       "titleAccent": "Facturation",
@@ -170,6 +199,7 @@
       "thinking": "Réflexion",
       "builtinTools": "Outils Intégrés",
       "gradingScore": "Score de Notation",
+      "optimize": "Optimiser",
       "notFound": "Agent introuvable",
       "loadingAgent": "Chargement de l'agent...",
       "noPrompt": "Aucun prompt système défini"
@@ -402,6 +432,11 @@
     "planPastDue": "Paiement en retard — veuillez mettre à jour",
     "planCanceled": "Annulé",
     "usageCommission": "Inclut 20% de frais de plateforme Kopern",
+    "autoresearchUsage": "Utilisation AutoResearch",
+    "autoresearchIterations": "Itérations d'Optimisation",
+    "autoresearchCost": "Coût d'Optimisation",
+    "autoresearchTokens": "Tokens Utilisés",
+    "includedInTotal": "(inclus dans le total ci-dessus)",
     "viewInvoices": "Voir les Factures",
     "changePlan": "Changer de Plan",
     "cancelPlan": "Annuler l'Abonnement"
@@ -686,6 +721,67 @@
     "pipelines": "Pipelines",
     "sessions": "Sessions",
     "billing": "Facturation"
+  },
+  "optimize": {
+    "title": "Laboratoire d'Optimisation",
+    "subtitle": "Optimisation auto-améliorante d'agents par boucle d'expérimentation avec métriques objectives comme signal de feedback.",
+    "currentScore": "Score Actuel",
+    "modes": {
+      "autotune": "AutoTune",
+      "autofix": "AutoFix",
+      "stress_lab": "Stress Lab",
+      "tournament": "Tournoi",
+      "distillation": "Distillation",
+      "evolution": "Évolution"
+    },
+    "modesShort": {
+      "autotune": "Tune",
+      "autofix": "Fix",
+      "stress_lab": "Stress",
+      "tournament": "Arène",
+      "distillation": "Distill",
+      "evolution": "Évoluer"
+    },
+    "descriptions": {
+      "autotune": "Boucle d'optimisation hill-climbing : affine itérativement le prompt système de votre agent en analysant les résultats de notation et proposant des améliorations ciblées. Garde les améliorations, rejette les régressions.",
+      "autofix": "Correction en un clic : analyse les cas de notation échoués, diagnostique les causes racines et patch votre prompt système. Vérifie le correctif avec un re-run complet.",
+      "stress_lab": "Test adversarial red-team : génère des cas d'attaque (injection de prompt, cas limites, pièges à hallucination, tentatives de jailbreak) et renforce automatiquement votre agent.",
+      "tournament": "Tournoi A/B : oppose différentes combinaisons modèle/config à votre suite de notation et les classe par score, coût et latence. Trouvez la meilleure config pour VOTRE cas d'usage.",
+      "distillation": "Optimiseur de coût : évalue votre agent sur des modèles moins chers et trouve le meilleur ratio qualité/coût. Même qualité pour une fraction du prix.",
+      "evolution": "Évolution multi-dimensionnelle : optimise simultanément le prompt, le modèle, le niveau de réflexion et plus via une recherche basée sur la population. Le mode d'optimisation le plus complet."
+    },
+    "gradingSuite": "Suite de Notation",
+    "selectSuite": "Sélectionner une suite de notation",
+    "maxIterations": "Itérations Max",
+    "targetScore": "Score Cible (0-1)",
+    "startRun": "Lancer l'Optimisation",
+    "running": "En cours...",
+    "stop": "Arrêter",
+    "runComplete": "Optimisation terminée !",
+    "progressChart": "Progression du Score",
+    "kept": "Gardé (amélioré)",
+    "discarded": "Rejeté",
+    "iterationLog": "Journal des Itérations",
+    "bestResult": "Meilleur Résultat",
+    "applyPrompt": "Appliquer le Prompt Optimisé",
+    "promptApplied": "Prompt optimisé appliqué à l'agent !",
+    "securityReport": "Rapport de Sécurité",
+    "totalTests": "Tests Totaux",
+    "passed": "Réussis",
+    "robustness": "Robustesse",
+    "vulnerabilities": "Vulnérabilités Trouvées",
+    "applyHardenedPrompt": "Appliquer le Prompt Renforcé",
+    "leaderboard": "Classement du Tournoi",
+    "config": "Configuration",
+    "score": "Score",
+    "cost": "Coût/req",
+    "latency": "Latence",
+    "evolutionProgress": "Progression de l'Évolution",
+    "generationCount": "Générations",
+    "populationSize": "Population",
+    "runHistory": "Historique des Runs",
+    "noSuites": "Aucune Suite de Notation",
+    "noSuitesDesc": "Créez d'abord une suite de notation pour utiliser le Laboratoire d'Optimisation."
   },
   "planLimit": {
     "title": "Limite du plan atteinte",

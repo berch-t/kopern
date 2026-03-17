@@ -38,6 +38,10 @@ export const EXTENSION_EVENT_CATEGORIES: Record<string, { label: string; events:
     label: "System",
     events: ["error", "context_limit_warning", "cost_limit_warning"],
   },
+  autoresearch: {
+    label: "AutoResearch",
+    events: ["autoresearch_run_start", "autoresearch_iteration_start", "autoresearch_iteration_end", "autoresearch_mutation", "autoresearch_run_end"],
+  },
 };
 
 /** Blocking events — extensions can prevent the action from proceeding */
@@ -84,4 +88,9 @@ export const EVENT_METADATA: Record<ExtensionEventType, { color: string; icon: s
   error: { color: "red", icon: "AlertOctagon", description: "Fired on any error" },
   context_limit_warning: { color: "amber", icon: "AlertTriangle", description: "Fired near context limit" },
   cost_limit_warning: { color: "amber", icon: "DollarSign", description: "Blocking: fired near cost limit" },
+  autoresearch_run_start: { color: "pink", icon: "FlaskConical", description: "Fired when an AutoResearch run begins" },
+  autoresearch_iteration_start: { color: "pink", icon: "RotateCcw", description: "Fired before each optimization iteration" },
+  autoresearch_iteration_end: { color: "pink", icon: "RotateCcw", description: "Fired after each optimization iteration" },
+  autoresearch_mutation: { color: "pink", icon: "Dna", description: "Fired when a mutation is applied" },
+  autoresearch_run_end: { color: "pink", icon: "FlaskConical", description: "Fired when an AutoResearch run completes" },
 };

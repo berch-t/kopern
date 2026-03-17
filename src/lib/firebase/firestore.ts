@@ -274,6 +274,40 @@ export interface UsageDoc {
   totalCost: number;
   requestCount: number;
   agentBreakdown: Record<string, { inputTokens: number; outputTokens: number; cost: number }>;
+  autoresearchIterations?: number;
+}
+
+// --- AutoResearch ---
+
+export interface AutoResearchRunDoc {
+  mode: "autofix" | "autotune" | "stress_lab" | "evolution" | "distillation" | "tournament";
+  suiteId: string;
+  status: "running" | "completed" | "stopped" | "error";
+  config: Record<string, unknown>;
+  baselineScore: number;
+  bestScore: number;
+  bestIterationIndex: number;
+  totalTokensInput: number;
+  totalTokensOutput: number;
+  totalCost: number;
+  iterationCount: number;
+  startedAt: Timestamp;
+  completedAt: Timestamp | null;
+  createdAt: Timestamp;
+}
+
+export interface AutoResearchIterationDoc {
+  index: number;
+  configSnapshot: Record<string, unknown>;
+  gradingScore: number;
+  criteriaBreakdown: Record<string, number>;
+  delta: number;
+  status: "keep" | "discard" | "crash" | "baseline";
+  description: string;
+  tokensInput: number;
+  tokensOutput: number;
+  durationMs: number;
+  createdAt: Timestamp;
 }
 
 // --- Extension Event Types ---
@@ -309,7 +343,12 @@ export type ExtensionEventType =
   | "user_deny"
   | "error"
   | "context_limit_warning"
-  | "cost_limit_warning";
+  | "cost_limit_warning"
+  | "autoresearch_run_start"
+  | "autoresearch_iteration_start"
+  | "autoresearch_iteration_end"
+  | "autoresearch_mutation"
+  | "autoresearch_run_end";
 
 // --- Typed collection refs ---
 
@@ -448,6 +487,22 @@ export function sessionsCollection(userId: string, agentId: string) {
 
 export function sessionDoc(userId: string, agentId: string, sessionId: string) {
   return doc(db, "users", userId, "agents", agentId, "sessions", sessionId);
+}
+
+// --- AutoResearch collections ---
+
+export function autoresearchRunsCollection(userId: string, agentId: string) {
+  return typedCollection<AutoResearchRunDoc>(`users/${userId}/agents/${agentId}/autoresearchRuns`);
+}
+
+export function autoresearchRunDoc(userId: string, agentId: string, runId: string) {
+  return doc(db, "users", userId, "agents", agentId, "autoresearchRuns", runId);
+}
+
+export function autoresearchIterationsCollection(userId: string, agentId: string, runId: string) {
+  return typedCollection<AutoResearchIterationDoc>(
+    `users/${userId}/agents/${agentId}/autoresearchRuns/${runId}/iterations`
+  );
 }
 
 // --- Usage / Billing collections ---

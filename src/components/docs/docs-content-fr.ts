@@ -63,7 +63,15 @@ Creez une **Suite de Notation** pour tester automatiquement la qualite de votre 
 3. Executez la suite — chaque cas est teste et note
 4. Iterez jusqu'a atteindre votre seuil de qualite
 
-### 6. Deployer en API
+### 6. Optimiser avec AutoResearch
+
+Une fois votre suite de notation configuree, laissez AutoResearch ameliorer automatiquement votre agent :
+1. Allez dans l'onglet **Optimiser**
+2. Selectionnez votre suite de notation et lancez **AutoTune** pour ameliorer iterativement le prompt systeme
+3. Utilisez **Stress Lab** pour trouver des vulnerabilites, **Tournoi** pour comparer les modeles, ou **Evolution** pour l'optimisation multi-dimensionnelle
+4. Appliquez le meilleur resultat en un clic
+
+### 7. Deployer en API
 
 Creez un **Serveur MCP** pour exposer votre agent comme API :
 1. Allez dans l'onglet **Serveurs MCP** de votre agent
@@ -81,8 +89,8 @@ Creez un **Serveur MCP** pour exposer votre agent comme API :
 | **Nom** | Identifiant lisible |
 | **Description** | Ce que fait l'agent |
 | **Domaine** | Categorie (DevOps, Juridique, Support, Ventes, Finance, RH, etc.) |
-| **Fournisseur** | Anthropic, OpenAI, Google ou Ollama |
-| **Modele** | Modele specifique (ex: claude-sonnet-4-6, gpt-4o, gemini-2.5-pro) |
+| **Fournisseur** | Anthropic, OpenAI, Google, Mistral AI ou Ollama |
+| **Modele** | Modele specifique (ex: claude-sonnet-4-6, gpt-4o, gemini-2.5-pro, mistral-large-latest) |
 | **Niveau de reflexion** | Controle la profondeur de raisonnement : off, minimal, low, medium, high, xhigh |
 | **Prompt systeme** | Les instructions principales qui definissent le comportement |
 | **Repos connectes** | Depots GitHub que l'agent peut lire et rechercher |
@@ -292,6 +300,88 @@ Un cas reussit si tous les criteres passent. Le score de la suite est la moyenne
 5. Examinez les resultats — scores par cas et sorties de l'agent
 6. Ameliorez votre agent (prompt, competences, outils) et relancez
 7. Suivez la progression entre les versions
+
+---
+
+## AutoResearch (Agents auto-ameliorants)
+
+AutoResearch est le systeme d'optimisation automatique de Kopern, inspire de l'autoresearch de Karpathy. Il utilise vos suites de notation comme fonction de fitness objective et ameliore iterativement la configuration de votre agent — prompt systeme, modele, niveau de reflexion — dans une boucle de feedback serree.
+
+### Prerequis
+
+Avant d'utiliser AutoResearch, vous avez besoin de :
+1. **Un agent configure** avec un prompt systeme
+2. **Au moins une suite de notation** avec des cas de test et des criteres
+3. **Un run de notation initial** (pour le mode AutoFix)
+
+### Modes
+
+#### AutoTune
+
+La boucle d'optimisation principale. AutoTune mute iterativement le prompt systeme de votre agent via des strategies guidees par LLM, evalue chaque variante contre votre suite de test, et ne conserve que les ameliorations.
+
+1. Allez dans l'onglet **Optimiser** de votre agent
+2. Selectionnez une suite de notation et definissez le nombre max d'iterations (defaut : 10)
+3. Optionnellement, definissez un score cible (ex : 0.9)
+4. Cliquez sur **Demarrer** — observez les iterations en temps reel
+5. Une fois termine, examinez le meilleur prompt et cliquez sur **Appliquer** pour mettre a jour votre agent
+
+**Fonctionnement :** A chaque iteration, l'optimiseur analyse les resultats precedents, genere un prompt mute, lance la notation et compare les scores. Seules les mutations qui ameliorent le score sont conservees (hill-climbing).
+
+#### AutoFix
+
+Reparation ciblee des cas de test echoues. AutoFix analyse vos derniers resultats de notation, diagnostique les causes profondes des echecs et patche le prompt systeme pour corriger les faiblesses specifiques.
+
+1. Selectionnez une suite de notation qui a au moins un run termine
+2. Passez a l'onglet **AutoFix**
+3. Cliquez sur **Demarrer** — l'analyseur identifie les cas echoues, diagnostique les problemes et applique les corrections
+4. Examinez le prompt patche et appliquez si satisfait
+
+#### Stress Lab
+
+Tests adversariaux qui sondent les vulnerabilites de votre agent. Stress Lab genere des cas limites — injections de prompts, entrees ambigues, conditions aux limites — et evalue la robustesse de votre agent.
+
+1. Passez a l'onglet **Stress Lab**
+2. Selectionnez votre suite de notation
+3. Cliquez sur **Demarrer** — le systeme genere des cas de test adversariaux et les execute
+4. Examinez le rapport de securite : nombre total de tests, taux de reussite, score de robustesse
+5. Si des vulnerabilites sont detectees, cliquez sur **Appliquer le prompt renforce** pour renforcer automatiquement les defenses
+
+#### Arene Tournoi
+
+Test A/B sur plusieurs combinaisons de modeles et configurations. Le tournoi execute votre suite de notation contre differentes configs et les classe par qualite, cout et latence.
+
+1. Passez a l'onglet **Tournoi**
+2. Selectionnez une suite de notation
+3. Cliquez sur **Demarrer** — les candidats s'affrontent en evaluation multi-rounds
+4. Examinez le classement : score, cout par run et latence moyenne
+5. Utilisez les resultats pour choisir le meilleur compromis qualite/cout en production
+
+#### Moteur d'Evolution
+
+Optimisation par algorithme genetique sur plusieurs dimensions simultanement — prompt, modele et niveau de reflexion. Une population de configurations evolue par mutation, croisement et selection au fil des generations.
+
+1. Passez a l'onglet **Evolution**
+2. Definissez le nombre max d'iterations (generations)
+3. Cliquez sur **Demarrer** — observez la fitness de la population s'ameliorer
+4. La meilleure configuration toutes dimensions confondues est rapportee a la fin
+
+#### Distillation
+
+Transfert de connaissances de modeles professeurs couteux vers des etudiants moins chers. La distillation execute votre suite de notation avec des modeles puissants, puis trouve le modele le moins cher qui maintient une qualite acceptable.
+
+1. Passez a l'onglet **Distillation**
+2. Selectionnez votre suite de notation
+3. Cliquez sur **Demarrer** — le systeme teste des modeles progressivement moins chers
+4. Examinez les pourcentages de retention de qualite et les economies de cout
+
+### Historique des runs
+
+Tous les runs AutoResearch sont persistes dans Firestore. Consultez les runs passes en bas de la page Optimiser — chacun affiche le mode, statut, score, nombre d'iterations et utilisation de tokens.
+
+### Facturation
+
+Les runs AutoResearch consomment des tokens (souvent plusieurs iterations × suite de notation complete). L'utilisation est suivie par agent dans la page Facturation sous **Utilisation AutoResearch**. Les limites de plan s'appliquent.
 
 ---
 

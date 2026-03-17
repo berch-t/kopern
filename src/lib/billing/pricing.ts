@@ -3,6 +3,7 @@ export const PROVIDER_PRICING: Record<string, { input: number; output: number; l
   anthropic: { input: 3.0, output: 15.0, label: "Anthropic" },
   openai: { input: 2.5, output: 10.0, label: "OpenAI" },
   google: { input: 1.25, output: 5.0, label: "Google" },
+  mistral: { input: 0.5, output: 1.5, label: "Mistral AI" },
   ollama: { input: 0, output: 0, label: "Ollama (Local)" },
 };
 
@@ -45,6 +46,8 @@ export const PLAN_LIMITS = {
     pipelines: 0,
     subAgents: false,
     metaAgent: false,
+    autoresearchRunsPerMonth: 0,
+    autoresearchMaxIterations: 0,
   },
   pro: {
     agents: 25,
@@ -55,6 +58,8 @@ export const PLAN_LIMITS = {
     pipelines: 10,
     subAgents: true,
     metaAgent: true,
+    autoresearchRunsPerMonth: 5,
+    autoresearchMaxIterations: 20,
   },
   usage: {
     agents: Infinity,
@@ -65,6 +70,8 @@ export const PLAN_LIMITS = {
     pipelines: Infinity,
     subAgents: true,
     metaAgent: true,
+    autoresearchRunsPerMonth: Infinity,
+    autoresearchMaxIterations: 100,
   },
   enterprise: {
     agents: Infinity,
@@ -75,6 +82,8 @@ export const PLAN_LIMITS = {
     pipelines: Infinity,
     subAgents: true,
     metaAgent: true,
+    autoresearchRunsPerMonth: Infinity,
+    autoresearchMaxIterations: 500,
   },
 } as const;
 
@@ -85,5 +94,6 @@ export const KOPERN_PRICING = {
   inputTokensPer1M: 4.0,
   outputTokensPer1M: 20.0,
   gradingRunPrice: 0.15,
+  autoresearchIterationPrice: 0.10,
   commissionRate: 0.2, // 20%
 } as const;

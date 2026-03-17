@@ -49,7 +49,7 @@ export function SoftwareApplicationJsonLd() {
     featureList: [
       "Custom AI agent creation with system prompts and skills",
       "Tool calling with JSON Schema and sandboxed JavaScript execution",
-      "Multi-provider LLM support: Anthropic Claude, OpenAI GPT, Google Gemini, Ollama",
+      "Multi-provider LLM support: Anthropic Claude, OpenAI GPT, Google Gemini, Mistral AI, Ollama",
       "Deterministic grading with 6 criterion types",
       "Multi-agent team orchestration (parallel, sequential, conditional)",
       "Pipeline chains with input/output mapping",
@@ -85,7 +85,7 @@ export function FAQJsonLd() {
     {
       question: "Which AI models does Kopern support?",
       answer:
-        "Kopern supports Anthropic Claude (Opus, Sonnet, Haiku), OpenAI GPT (GPT-4o, GPT-4o-mini), Google Gemini (2.5 Flash), and local models via Ollama. Each agent can be configured with a different model and thinking level.",
+        "Kopern supports Anthropic Claude (Opus, Sonnet, Haiku), OpenAI GPT (GPT-4o, GPT-4o-mini), Google Gemini (2.5 Flash), Mistral AI (Mistral Large, Codestral, Nemo), and local models via Ollama. Each agent can be configured with a different model and thinking level.",
     },
     {
       question: "What is agent grading?",

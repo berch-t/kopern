@@ -68,6 +68,8 @@ export async function streamLLM(config: LLMConfig, callbacks: LLMStreamCallbacks
       return streamOpenAI(config, callbacks);
     case "google":
       return streamGoogle(config, callbacks);
+    case "mistral":
+      return streamMistral(config, callbacks);
     case "ollama":
       return streamOllama(config, callbacks);
     default:
@@ -488,6 +490,150 @@ async function streamGoogle(config: LLMConfig, callbacks: LLMStreamCallbacks) {
     }
   } finally {
     reader.releaseLock();
+  }
+
+  callbacks.onDone(stopReason);
+}
+
+// --- Mistral AI (OpenAI-compatible format with tool calling) ---
+
+async function streamMistral(config: LLMConfig, callbacks: LLMStreamCallbacks) {
+  const apiKey = process.env.MISTRAL_API_KEY;
+  if (!apiKey) {
+    callbacks.onError(new Error("MISTRAL_API_KEY not configured in .env.local"));
+    return;
+  }
+
+  const messages: Record<string, unknown>[] = [];
+  if (config.systemPrompt) {
+    messages.push({ role: "system", content: config.systemPrompt });
+  }
+  for (const m of config.messages) {
+    if (m.role === "system") continue;
+
+    if (typeof m.content === "string") {
+      messages.push({ role: m.role, content: m.content });
+    } else {
+      // Convert tool results for Mistral (OpenAI-compatible format)
+      for (const block of m.content) {
+        if (block.type === "tool_result") {
+          messages.push({
+            role: "tool",
+            tool_call_id: block.tool_use_id,
+            content: block.content || "",
+          });
+        }
+      }
+    }
+  }
+
+  const body: Record<string, unknown> = {
+    model: config.model,
+    messages,
+    stream: true,
+  };
+
+  if (config.tools && config.tools.length > 0) {
+    body.tools = config.tools.map((t) => ({
+      type: "function",
+      function: {
+        name: t.name,
+        description: t.description,
+        parameters: t.input_schema,
+      },
+    }));
+  }
+
+  const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    callbacks.onError(new Error(`Mistral API error ${response.status}: ${errorBody}`));
+    return;
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    callbacks.onError(new Error("No response body from Mistral"));
+    return;
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let stopReason: "end_turn" | "tool_use" = "end_turn";
+
+  // Track tool calls being built incrementally (same as OpenAI)
+  const toolCalls: Map<number, { id: string; name: string; args: string }> = new Map();
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const data = line.slice(6).trim();
+        if (data === "[DONE]") continue;
+
+        try {
+          const event = JSON.parse(data);
+          const choice = event.choices?.[0];
+          if (!choice) continue;
+
+          // Text content
+          const delta = choice.delta?.content;
+          if (delta) {
+            callbacks.onToken(delta);
+          }
+
+          // Tool calls
+          if (choice.delta?.tool_calls) {
+            for (const tc of choice.delta.tool_calls) {
+              const idx = tc.index ?? 0;
+              if (!toolCalls.has(idx)) {
+                toolCalls.set(idx, { id: tc.id || "", name: "", args: "" });
+              }
+              const entry = toolCalls.get(idx)!;
+              if (tc.id) entry.id = tc.id;
+              if (tc.function?.name) entry.name = tc.function.name;
+              if (tc.function?.arguments) entry.args += tc.function.arguments;
+            }
+          }
+
+          // Stop reason
+          if (choice.finish_reason === "tool_calls") {
+            stopReason = "tool_use";
+          }
+        } catch {
+          // skip malformed JSON
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  // Emit accumulated tool calls
+  for (const [, tc] of toolCalls) {
+    let parsedArgs: Record<string, unknown> = {};
+    try {
+      parsedArgs = JSON.parse(tc.args || "{}");
+    } catch {
+      parsedArgs = {};
+    }
+    callbacks.onToolCall?.({ id: tc.id, name: tc.name, input: parsedArgs });
+    stopReason = "tool_use";
   }
 
   callbacks.onDone(stopReason);

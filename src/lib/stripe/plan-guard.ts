@@ -13,7 +13,7 @@ interface PlanCheck {
  */
 export async function checkPlanLimits(
   userId: string,
-  check: "agents" | "tokens" | "grading" | "teams" | "pipelines" | "mcp" | "meta_agent" | "sub_agents"
+  check: "agents" | "tokens" | "grading" | "teams" | "pipelines" | "mcp" | "meta_agent" | "sub_agents" | "autoresearch"
 ): Promise<PlanCheck> {
   const userSnap = await adminDb.doc(`users/${userId}`).get();
   const userData = userSnap.data();
@@ -103,6 +103,21 @@ export async function checkPlanLimits(
     case "sub_agents": {
       if (!limits.subAgents) {
         return { allowed: false, reason: "Sub-agent delegation not available on this plan", plan };
+      }
+      return { allowed: true, plan };
+    }
+
+    case "autoresearch": {
+      if (limits.autoresearchRunsPerMonth === 0) {
+        return { allowed: false, reason: "AutoResearch not available on this plan. Upgrade to Pro or higher.", plan };
+      }
+      if (limits.autoresearchRunsPerMonth === Infinity) return { allowed: true, plan };
+      const yearMonth = getCurrentYearMonth();
+      const usageSnap = await adminDb.doc(`users/${userId}/usage/${yearMonth}`).get();
+      const usage = usageSnap.data();
+      const arRuns = usage?.autoresearchIterations || 0;
+      if (arRuns >= limits.autoresearchRunsPerMonth) {
+        return { allowed: false, reason: `Monthly AutoResearch run limit reached (${limits.autoresearchRunsPerMonth})`, plan };
       }
       return { allowed: true, plan };
     }

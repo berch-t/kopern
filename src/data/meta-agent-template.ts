@@ -121,7 +121,7 @@ Structure your response EXACTLY with these headings. Every section is required (
 
 ### Agent Name: [name]
 ### Domain: [domain label]
-### Model Provider: [anthropic|openai|google]
+### Model Provider: [anthropic|openai|google|mistral]
 ### Model ID: [model identifier]
 ### Thinking Level: [off|low|medium|high]
 ### Built-in Tools: [comma-separated list or "none"]
@@ -189,7 +189,7 @@ export const META_AGENT_SKILLS = [
 - **Purpose Gate**: Session-scoped question → answer injected in system prompt
 - **TillDone Mode**: Multi-step task enforcement with auto-prompting
 - **Branding**: Theme/accent colors + Lucide icon for dashboard display
-- **Model Selection**: Anthropic (Claude), OpenAI (GPT), Google (Gemini) with configurable thinking level
+- **Model Selection**: Anthropic (Claude), OpenAI (GPT), Google (Gemini), Mistral AI (Mistral Large, Codestral) with configurable thinking level
 - **Tool Overrides**: Max iterations (1-10) and timeout per tool execution
 - **Connected Repos**: GitHub repo recommendations for code-aware agents
 

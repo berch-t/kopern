@@ -52,6 +52,35 @@
         "description": "Describe what you need in plain language. The meta-agent creates a fully configured agent — system prompt, skills, tools, and grading suite."
       }
     },
+    "autoResearch": {
+      "title": "Self-Improving",
+      "titleAccent": "Agents",
+      "subtitle": "Inspired by Karpathy's autoresearch — your agents run experiments, measure results, and optimize themselves in a tight feedback loop.",
+      "autotune": {
+        "title": "AutoTune",
+        "description": "Iteratively mutate system prompts using LLM-guided strategies. Each iteration is graded, and only improvements are kept — hill-climbing to the best config."
+      },
+      "autofix": {
+        "title": "AutoFix",
+        "description": "Analyze failing grading cases, diagnose root causes, and automatically patch the system prompt to fix specific weaknesses."
+      },
+      "stressLab": {
+        "title": "Stress Lab",
+        "description": "Generate adversarial test cases — prompt injections, edge cases, ambiguous inputs — and harden your agent's prompt against vulnerabilities."
+      },
+      "tournament": {
+        "title": "Tournament Arena",
+        "description": "Pit multiple model and config combinations against each other. A multi-round tournament reveals the best quality/cost/latency trade-off."
+      },
+      "evolution": {
+        "title": "Evolution Engine",
+        "description": "Multi-dimensional genetic optimization across prompt, model, and thinking level. Population-based search with crossover, mutation, and natural selection."
+      },
+      "distillation": {
+        "title": "Distillation",
+        "description": "Transfer knowledge from expensive teacher models to cheaper students. Maintain quality while dramatically reducing inference costs."
+      }
+    },
     "observability": {
       "title": "Observability &",
       "titleAccent": "Billing",
@@ -170,6 +199,7 @@
       "thinking": "Thinking",
       "builtinTools": "Built-in Tools",
       "gradingScore": "Grading Score",
+      "optimize": "Optimize",
       "notFound": "Agent not found",
       "loadingAgent": "Loading agent...",
       "noPrompt": "No system prompt defined"
@@ -402,6 +432,11 @@
     "planPastDue": "Past Due — please update payment",
     "planCanceled": "Canceled",
     "usageCommission": "Includes 20% Kopern platform fee",
+    "autoresearchUsage": "AutoResearch Usage",
+    "autoresearchIterations": "Optimization Iterations",
+    "autoresearchCost": "Optimization Cost",
+    "autoresearchTokens": "Tokens Used",
+    "includedInTotal": "(included in total above)",
     "viewInvoices": "View Invoices",
     "changePlan": "Change Plan",
     "cancelPlan": "Cancel Subscription"
@@ -686,6 +721,67 @@
     "pipelines": "Pipelines",
     "sessions": "Sessions",
     "billing": "Billing"
+  },
+  "optimize": {
+    "title": "Agent Optimization Lab",
+    "subtitle": "Self-improving agent optimization powered by tight-loop experimentation with objective metrics as feedback signal.",
+    "currentScore": "Current Score",
+    "modes": {
+      "autotune": "AutoTune",
+      "autofix": "AutoFix",
+      "stress_lab": "Stress Lab",
+      "tournament": "Tournament",
+      "distillation": "Distillation",
+      "evolution": "Evolution"
+    },
+    "modesShort": {
+      "autotune": "Tune",
+      "autofix": "Fix",
+      "stress_lab": "Stress",
+      "tournament": "Arena",
+      "distillation": "Distill",
+      "evolution": "Evolve"
+    },
+    "descriptions": {
+      "autotune": "Hill-climbing optimization loop: iteratively refines your agent's system prompt by analyzing grading results and proposing targeted improvements. Keeps improvements, discards regressions.",
+      "autofix": "One-click fix: analyzes failed grading cases, diagnoses root causes, and patches your system prompt to pass. Verifies the fix with a full re-run.",
+      "stress_lab": "Adversarial red-team testing: generates attack cases (prompt injection, edge cases, hallucination traps, jailbreak attempts) and automatically hardens your agent.",
+      "tournament": "A/B tournament: pits different model/config combinations against your grading suite and ranks them by score, cost, and latency. Find the best config for YOUR use case.",
+      "distillation": "Cost optimizer: evaluates your agent on cheaper models and finds the best quality/cost ratio. Same quality for a fraction of the price.",
+      "evolution": "Multi-dimensional evolution: simultaneously optimizes prompt, model, thinking level, and more using population-based search. The most thorough optimization mode."
+    },
+    "gradingSuite": "Grading Suite",
+    "selectSuite": "Select a grading suite",
+    "maxIterations": "Max Iterations",
+    "targetScore": "Target Score (0-1)",
+    "startRun": "Start Optimization",
+    "running": "Running...",
+    "stop": "Stop",
+    "runComplete": "Optimization complete!",
+    "progressChart": "Score Progression",
+    "kept": "Kept (improved)",
+    "discarded": "Discarded",
+    "iterationLog": "Iteration Log",
+    "bestResult": "Best Result",
+    "applyPrompt": "Apply Optimized Prompt",
+    "promptApplied": "Optimized prompt applied to agent!",
+    "securityReport": "Security Report",
+    "totalTests": "Total Tests",
+    "passed": "Passed",
+    "robustness": "Robustness",
+    "vulnerabilities": "Vulnerabilities Found",
+    "applyHardenedPrompt": "Apply Hardened Prompt",
+    "leaderboard": "Tournament Leaderboard",
+    "config": "Configuration",
+    "score": "Score",
+    "cost": "Cost/req",
+    "latency": "Latency",
+    "evolutionProgress": "Evolution Progress",
+    "generationCount": "Generations",
+    "populationSize": "Population",
+    "runHistory": "Run History",
+    "noSuites": "No Grading Suites",
+    "noSuitesDesc": "Create a grading suite first to use the Optimization Lab."
   },
   "planLimit": {
     "title": "Plan limit reached",

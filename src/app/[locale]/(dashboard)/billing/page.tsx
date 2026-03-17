@@ -30,6 +30,7 @@ import {
   Zap,
   Shield,
   AlertTriangle,
+  FlaskConical,
 } from "lucide-react";
 
 function formatTokens(n: number): string {
@@ -113,6 +114,7 @@ export default function BillingPage() {
     { name: "Anthropic", input: TOKEN_PRICING.anthropic.input, output: TOKEN_PRICING.anthropic.output, color: "text-orange-500" },
     { name: "OpenAI", input: TOKEN_PRICING.openai.input, output: TOKEN_PRICING.openai.output, color: "text-emerald-500" },
     { name: "Google", input: TOKEN_PRICING.google.input, output: TOKEN_PRICING.google.output, color: "text-blue-500" },
+    { name: "Mistral AI", input: TOKEN_PRICING.mistral.input, output: TOKEN_PRICING.mistral.output, color: "text-amber-500" },
     { name: "Ollama", input: TOKEN_PRICING.ollama.input, output: TOKEN_PRICING.ollama.output, color: "text-gray-500" },
   ];
 
@@ -318,6 +320,41 @@ export default function BillingPage() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </FadeIn>
+          )}
+
+          {/* AutoResearch Usage */}
+          {usage && (usage.autoresearchIterations ?? 0) > 0 && (
+            <FadeIn delay={0.25}>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FlaskConical className="h-4 w-4 text-primary" />
+                    {t.billing.autoresearchUsage}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="rounded-lg border p-3">
+                      <p className="text-sm text-muted-foreground">{t.billing.autoresearchIterations}</p>
+                      <p className="text-2xl font-bold tabular-nums">{usage.autoresearchIterations ?? 0}</p>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <p className="text-sm text-muted-foreground">{t.billing.autoresearchCost}</p>
+                      <p className="text-2xl font-bold tabular-nums">
+                        ${((usage.autoresearchIterations ?? 0) * 0.10).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <p className="text-sm text-muted-foreground">{t.billing.autoresearchTokens}</p>
+                      <p className="text-2xl font-bold tabular-nums">
+                        {formatTokens(usage.inputTokens + usage.outputTokens)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{t.billing.includedInTotal}</p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

@@ -11,6 +11,7 @@ export const TOKEN_PRICING: Record<string, { input: number; output: number }> = 
   anthropic: { input: 3.0, output: 15.0 },
   openai: { input: 2.5, output: 10.0 },
   google: { input: 1.25, output: 5.0 },
+  mistral: { input: 0.5, output: 1.5 },
   ollama: { input: 0, output: 0 },
 };
 

@@ -63,7 +63,15 @@ Create a **Grading Suite** to automatically test your agent's quality:
 3. Run the suite — each case is tested and scored
 4. Iterate until your agent meets your quality threshold
 
-### 6. Deploy as API
+### 6. Optimize with AutoResearch
+
+Once your grading suite is set up, let AutoResearch automatically improve your agent:
+1. Go to the **Optimize** tab
+2. Select your grading suite and run **AutoTune** to iteratively improve the system prompt
+3. Use **Stress Lab** to find vulnerabilities, **Tournament** to compare models, or **Evolution** for multi-dimensional optimization
+4. Apply the best result with one click
+
+### 7. Deploy as API
 
 Create an **MCP Server** to expose your agent as an API:
 1. Go to your agent's **MCP Servers** tab
@@ -81,8 +89,8 @@ Create an **MCP Server** to expose your agent as an API:
 | **Name** | Human-readable identifier |
 | **Description** | What the agent does |
 | **Domain** | Category (DevOps, Legal, Support, Sales, Finance, HR, etc.) |
-| **Provider** | Anthropic, OpenAI, Google, or Ollama |
-| **Model** | Specific model (e.g. claude-sonnet-4-6, gpt-4o, gemini-2.5-pro) |
+| **Provider** | Anthropic, OpenAI, Google, Mistral AI, or Ollama |
+| **Model** | Specific model (e.g. claude-sonnet-4-6, gpt-4o, gemini-2.5-pro, mistral-large-latest) |
 | **Thinking Level** | Controls reasoning depth: off, minimal, low, medium, high, xhigh |
 | **System Prompt** | The core instructions that define agent behavior |
 | **Connected Repos** | GitHub repositories the agent can read and search |
@@ -292,6 +300,88 @@ A case passes if all criteria pass. The suite score is the average of all case s
 5. Review results — see per-case scores and agent outputs
 6. Improve your agent (prompt, skills, tools) and re-run
 7. Track progress across versions
+
+---
+
+## AutoResearch (Self-Improving Agents)
+
+AutoResearch is Kopern's automated optimization system, inspired by Karpathy's autoresearch. It uses your grading suites as an objective fitness function and iteratively improves your agent's configuration — system prompt, model, thinking level — in a tight feedback loop.
+
+### Prerequisites
+
+Before using AutoResearch, you need:
+1. **A configured agent** with a system prompt
+2. **At least one grading suite** with test cases and criteria
+3. **An initial grading run** (for AutoFix mode)
+
+### Modes
+
+#### AutoTune
+
+The core optimization loop. AutoTune iteratively mutates your agent's system prompt using LLM-guided strategies, grades each variant against your test suite, and keeps only improvements.
+
+1. Go to your agent's **Optimize** tab
+2. Select a grading suite and set max iterations (default: 10)
+3. Optionally set a target score (e.g., 0.9)
+4. Click **Start Run** — watch iterations in real-time
+5. When complete, review the best prompt and click **Apply** to update your agent
+
+**How it works:** Each iteration, the optimizer analyzes previous results, generates a mutated prompt, runs grading, and compares scores. Only mutations that improve the score are kept (hill-climbing).
+
+#### AutoFix
+
+Targeted repair for failing test cases. AutoFix analyzes your latest grading results, diagnoses root causes for failures, and patches the system prompt to fix specific weaknesses.
+
+1. Select a grading suite that has at least one completed run
+2. Switch to the **AutoFix** tab
+3. Click **Start Run** — the analyzer identifies failing cases, diagnoses issues, and applies fixes
+4. Review the patched prompt and apply if satisfied
+
+#### Stress Lab
+
+Adversarial testing that probes your agent for vulnerabilities. Stress Lab generates edge cases — prompt injections, ambiguous inputs, boundary conditions — and evaluates your agent's robustness.
+
+1. Switch to the **Stress Lab** tab
+2. Select your grading suite
+3. Click **Start Run** — the system generates adversarial test cases and runs them
+4. Review the security report: total tests, pass rate, robustness score
+5. If vulnerabilities are found, click **Apply Hardened Prompt** to automatically strengthen defenses
+
+#### Tournament Arena
+
+A/B testing across multiple model and configuration combinations. Tournament runs your grading suite against different configs and ranks them by quality, cost, and latency.
+
+1. Switch to the **Tournament** tab
+2. Select a grading suite
+3. Click **Start Run** — candidates compete in multi-round evaluation
+4. Review the leaderboard: score, cost per run, and average latency
+5. Use results to pick the best quality/cost trade-off for production
+
+#### Evolution Engine
+
+Genetic algorithm-based optimization across multiple dimensions simultaneously — prompt, model, and thinking level. A population of agent configs evolves through mutation, crossover, and selection over generations.
+
+1. Switch to the **Evolution** tab
+2. Set max iterations (generations)
+3. Click **Start Run** — watch population fitness improve over generations
+4. The best-performing config across all dimensions is reported at the end
+
+#### Distillation
+
+Knowledge transfer from expensive teacher models to cheaper students. Distillation runs your grading suite with powerful models, then finds the cheapest model that maintains acceptable quality.
+
+1. Switch to the **Distillation** tab
+2. Select your grading suite
+3. Click **Start Run** — the system tests progressively cheaper models
+4. Review quality retention percentages and cost savings
+
+### Run History
+
+All AutoResearch runs are persisted in Firestore. View past runs at the bottom of the Optimize page — each shows mode, status, score, iteration count, and token usage.
+
+### Billing
+
+AutoResearch runs consume tokens (often many iterations × full grading suite). Usage is tracked per-agent in the Billing page under **AutoResearch Usage**. Plan limits apply.
 
 ---
 

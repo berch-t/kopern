@@ -43,6 +43,11 @@ import {
   Plug,
   Workflow,
   Heart,
+  Target,
+  Zap,
+  Trophy,
+  Dna,
+  ArrowDown,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BugReportDialog } from "@/components/feedback/BugReportDialog";
@@ -919,6 +924,86 @@ export default function LandingPage() {
           </div>
         </motion.section>
       </div>
+      </div>
+
+        {/* AutoResearch — Self-Improving Agents */}
+      <div className="max-w-6xl mx-auto px-6">
+        <motion.section
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.7 }}
+          className="py-24"
+        >
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold sm:text-4xl">
+              {t.landing.autoResearch.title}{" "}
+              <span className="text-primary">{t.landing.autoResearch.titleAccent}</span>
+            </h2>
+            <p className="mt-4 max-w-2xl mx-auto text-muted-foreground">
+              {t.landing.autoResearch.subtitle}
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                icon: Target,
+                title: t.landing.autoResearch.autotune.title,
+                description: t.landing.autoResearch.autotune.description,
+                accent: "text-blue-500",
+                bg: "bg-blue-500/10",
+              },
+              {
+                icon: Zap,
+                title: t.landing.autoResearch.autofix.title,
+                description: t.landing.autoResearch.autofix.description,
+                accent: "text-amber-500",
+                bg: "bg-amber-500/10",
+              },
+              {
+                icon: Shield,
+                title: t.landing.autoResearch.stressLab.title,
+                description: t.landing.autoResearch.stressLab.description,
+                accent: "text-red-500",
+                bg: "bg-red-500/10",
+              },
+              {
+                icon: Trophy,
+                title: t.landing.autoResearch.tournament.title,
+                description: t.landing.autoResearch.tournament.description,
+                accent: "text-purple-500",
+                bg: "bg-purple-500/10",
+              },
+              {
+                icon: Dna,
+                title: t.landing.autoResearch.evolution.title,
+                description: t.landing.autoResearch.evolution.description,
+                accent: "text-pink-500",
+                bg: "bg-pink-500/10",
+              },
+              {
+                icon: ArrowDown,
+                title: t.landing.autoResearch.distillation.title,
+                description: t.landing.autoResearch.distillation.description,
+                accent: "text-emerald-500",
+                bg: "bg-emerald-500/10",
+              },
+            ].map((item) => (
+              <div
+                key={item.title}
+                className="rounded-lg border bg-card p-6 space-y-4"
+              >
+                <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${item.bg}`}>
+                  <item.icon className={`h-6 w-6 ${item.accent}`} />
+                </div>
+                <h3 className="text-lg font-semibold">{item.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {item.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </motion.section>
       </div>
 
         {/* Observability & Billing */}

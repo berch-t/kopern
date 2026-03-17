@@ -143,7 +143,8 @@ export async function reportUsageToStripe(
   userId: string,
   inputTokens: number,
   outputTokens: number,
-  gradingRuns: number
+  gradingRuns: number,
+  autoresearchIterations: number = 0
 ): Promise<void> {
   const sub = await getUserPlan(userId);
 
@@ -184,6 +185,18 @@ export async function reportUsageToStripe(
         payload: {
           stripe_customer_id: sub.stripeCustomerId,
           value: String(gradingRuns),
+        },
+      })
+    );
+  }
+
+  if (autoresearchIterations > 0) {
+    reports.push(
+      stripe.billing.meterEvents.create({
+        event_name: "kopern_autoresearch_iterations",
+        payload: {
+          stripe_customer_id: sub.stripeCustomerId,
+          value: String(autoresearchIterations),
         },
       })
     );
