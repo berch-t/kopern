@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { Bug, Github, AlertTriangle, AlertCircle, Info, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useDictionary } from "@/providers/LocaleProvider";
@@ -42,10 +44,17 @@ const GITHUB_URL = "https://github.com/berch-t/kopern";
 export function BugReportDialog() {
   const [severity, setSeverity] = useState<Severity>("medium");
   const [description, setDescription] = useState("");
+  const [email, setEmail] = useState("");
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const t = useDictionary();
+  const { user } = useAuth();
+
+  // Pre-fill email from auth
+  useEffect(() => {
+    if (user?.email && !email) setEmail(user.email);
+  }, [user?.email]);
 
   const severityLabels: Record<Severity, string> = {
     low: t.bugReport.low,
@@ -69,6 +78,7 @@ export function BugReportDialog() {
           severity,
           description,
           pageUrl: window.location.href,
+          reporterEmail: email.trim() || undefined,
         }),
       });
 
@@ -79,6 +89,7 @@ export function BugReportDialog() {
         setOpen(false);
         setSent(false);
         setDescription("");
+        setEmail("");
         setSeverity("medium");
       }, 1500);
     } catch {
@@ -90,6 +101,7 @@ export function BugReportDialog() {
       window.open(`mailto:berchet.thomas@gmail.com?subject=${subject}&body=${body}`, "_self");
       setOpen(false);
       setDescription("");
+      setEmail("");
       setSeverity("medium");
     } finally {
       setSending(false);
@@ -159,6 +171,20 @@ export function BugReportDialog() {
               placeholder={t.bugReport.descriptionPlaceholder}
               className="min-h-[120px] resize-none"
             />
+          </div>
+
+          {/* Email (optional) */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              {t.bugReport.emailLabel} <span className="text-muted-foreground font-normal">({t.bugReport.emailOptional})</span>
+            </label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={t.bugReport.emailPlaceholder}
+            />
+            <p className="text-xs text-muted-foreground">{t.bugReport.emailHint}</p>
           </div>
         </div>
 
