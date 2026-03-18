@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   Bot,
   BookOpen,
+  Bug,
   Cable,
   CreditCard,
   LayoutDashboard,
@@ -27,19 +28,31 @@ import {
 } from "@/components/ui/sheet";
 import { LocalizedLink } from "@/components/LocalizedLink";
 import { useDictionary } from "@/providers/LocaleProvider";
+import { useAuth } from "@/hooks/useAuth";
+
+const ADMIN_UIDS = (process.env.NEXT_PUBLIC_ADMIN_UID ?? "").split(",").filter(Boolean);
 
 function useNavItems() {
   const t = useDictionary();
+  const { user } = useAuth();
+  const isAdmin = user ? ADMIN_UIDS.includes(user.uid) : false;
+
+  const items = [
+    { href: "/dashboard", label: t.nav.dashboard, icon: LayoutDashboard },
+    { href: "/agents", label: t.nav.agents, icon: Bot },
+    { href: "/teams", label: t.nav.teams, icon: Users },
+    { href: "/billing", label: t.nav.billing, icon: CreditCard },
+    { href: "/api-keys", label: t.nav.api, icon: Cable },
+    { href: "/examples", label: t.nav.examples, icon: Lightbulb },
+    { href: "/settings", label: t.nav.settings, icon: Settings },
+  ];
+
+  if (isAdmin) {
+    items.push({ href: "/bugs", label: t.nav.bugs, icon: Bug });
+  }
+
   return {
-    main: [
-      { href: "/dashboard", label: t.nav.dashboard, icon: LayoutDashboard },
-      { href: "/agents", label: t.nav.agents, icon: Bot },
-      { href: "/teams", label: t.nav.teams, icon: Users },
-      { href: "/billing", label: t.nav.billing, icon: CreditCard },
-      { href: "/api-keys", label: t.nav.api, icon: Cable },
-      { href: "/examples", label: t.nav.examples, icon: Lightbulb },
-      { href: "/settings", label: t.nav.settings, icon: Settings },
-    ],
+    main: items,
     docs: { href: "/docs", label: t.nav.docs, icon: BookOpen },
   };
 }

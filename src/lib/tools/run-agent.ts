@@ -10,6 +10,7 @@ import {
   executeTool,
   type ToolExecutionContext,
 } from "@/lib/tools/agent-tools";
+import { getBugTools, executeBugTool, isBugTool } from "@/lib/tools/bug-tools";
 import { runExtensions } from "@/lib/extensions/extension-runner";
 import type { ExtensionEventType } from "@/lib/firebase/firestore";
 
@@ -95,9 +96,28 @@ export async function runAgentWithTools(
     }
   }
 
-  // GitHub tools
+  // Check agent's builtinTools for special capabilities
+  let hasBugManagement = false;
+  let hasGitHubWrite = false;
+  if (config.userId && config.agentId) {
+    try {
+      const agentSnap = await adminDb.doc(`users/${config.userId}/agents/${config.agentId}`).get();
+      const builtinTools: string[] = agentSnap.data()?.builtinTools || [];
+      hasBugManagement = builtinTools.includes("bug_management");
+      hasGitHubWrite = builtinTools.includes("github_write");
+    } catch {
+      // Skip
+    }
+  }
+
+  // GitHub tools (with write access if agent has github_write builtin)
   if (connectedRepos.length > 0) {
-    tools.push(...getGithubTools(connectedRepos));
+    tools.push(...getGithubTools(connectedRepos, hasGitHubWrite));
+  }
+
+  // Bug management tools
+  if (hasBugManagement) {
+    tools.push(...getBugTools());
   }
 
   const toolCtx: ToolExecutionContext = {
@@ -185,7 +205,9 @@ export async function runAgentWithTools(
 
                 const toolResults: ContentBlock[] = [];
                 for (const tc of pendingToolCalls) {
-                  const result = await executeTool(tc, toolCtx);
+                  const result = isBugTool(tc.name)
+                    ? await executeBugTool(tc.name, tc.input, config.userId || "")
+                    : await executeTool(tc, toolCtx);
                   // Count tool result tokens as additional input
                   inputTokens += estimateTokens(result.result);
                   callbacks.onToolEnd?.({

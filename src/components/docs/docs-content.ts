@@ -200,15 +200,154 @@ When the agent decides to use a tool:
 
 ## Extensions
 
-Extensions are **event hooks** that intercept and modify agent behavior. They can log interactions, filter content, add commands, or persist state.
+Extensions are **event hooks** that intercept and modify agent behavior at runtime. They fire on specific events during the agent lifecycle — from session start to tool execution, team orchestration, and beyond.
+
+### Creating an Extension
+
+1. Go to your agent's **Extensions** tab
+2. Click **Add Extension**
+3. Fill in **Name** and **Description**
+4. Select one or more **Events** — these determine when your extension code runs
+5. Toggle **Blocking** if your extension should be able to prevent actions
+6. Write your **Code** — JavaScript that runs when the selected events fire
+
+### How Extension Code Works
+
+Your code has access to:
+- \`context.eventType\` — the event that triggered the extension (e.g. \`"tool_call_start"\`)
+- \`context.data\` — event-specific data (tool name, arguments, results, errors...)
+- \`log(message)\` — log a message for debugging
+- \`blocked = true\` — (blocking extensions only) prevent the action from proceeding
+- \`blockReason = "..."\` — explain why the action was blocked
 
 ### Use Cases
 
-- **Logging** — track all agent interactions for compliance
+- **Logging** — track all agent interactions for compliance or debugging
 - **Content filtering** — block or modify unsafe outputs
-- **Custom commands** — add slash commands like \`/reset\` or \`/export\`
-- **State management** — persist data across conversation sessions
-- **Guardrails** — enforce business rules on agent responses
+- **Guardrails** — enforce business rules, block dangerous commands
+- **Cost control** — stop execution when cost exceeds a threshold
+- **Notifications** — log important events like PR creation or errors
+
+### Extension Events Reference
+
+Events are grouped by category. **Blocking events** (marked with a shield icon) can prevent the action from proceeding when an extension sets \`blocked = true\`.
+
+#### Session Lifecycle
+
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`session_start\` | Fired when a new session begins | \`{ sessionId, purpose }\` |
+| \`session_end\` | Fired when a session ends | \`{ sessionId, totalTokens, totalCost }\` |
+| \`session_compact\` | Fired when context is compacted (long conversations) | \`{ sessionId, messageCount }\` |
+
+#### Message Lifecycle
+
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`message_start\` | Fired before the LLM processes a user message | \`{ role, content }\` |
+| \`message_end\` | Fired after the LLM finishes responding | \`{ role, content, tokensUsed }\` |
+| \`message_stream_token\` | Fired for each streamed token (high frequency) | \`{ token }\` |
+
+#### Tool Lifecycle
+
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`tool_call_start\` | Fired before a tool executes | \`{ toolName, args }\` |
+| \`tool_call_end\` | Fired after a tool completes successfully | \`{ toolName, result, isError }\` |
+| \`tool_call_error\` | Fired when a tool execution fails | \`{ toolName, error }\` |
+| \`tool_call_blocked\` | **Blocking** — can prevent a tool from executing | \`{ toolName, args }\` |
+
+> **Example:** Block dangerous shell commands by checking \`context.data.toolName === "bash"\` and inspecting \`context.data.args.command\` for patterns like \`rm -rf\`.
+
+#### Agent Lifecycle
+
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`agent_thinking_start\` | Fired when the LLM begins its thinking/reasoning phase | \`{}\` |
+| \`agent_thinking_end\` | Fired when thinking completes | \`{ thinkingContent }\` |
+| \`agent_response_start\` | Fired when the LLM starts generating its response | \`{}\` |
+| \`agent_response_end\` | Fired when response generation completes | \`{ responseLength }\` |
+
+#### Sub-agent Lifecycle
+
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`sub_agent_spawn\` | Fired when a sub-agent is delegated work | \`{ subAgentId, task }\` |
+| \`sub_agent_result\` | Fired when a sub-agent returns its result | \`{ subAgentId, result }\` |
+| \`sub_agent_error\` | Fired when a sub-agent encounters an error | \`{ subAgentId, error }\` |
+
+#### Pipeline Lifecycle
+
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`pipeline_start\` | Fired when a pipeline begins execution | \`{ pipelineId, stepCount }\` |
+| \`pipeline_step_start\` | Fired before each step in the pipeline | \`{ pipelineId, stepIndex, stepName }\` |
+| \`pipeline_step_end\` | Fired after each step completes | \`{ pipelineId, stepIndex, result }\` |
+| \`pipeline_end\` | Fired when the entire pipeline completes | \`{ pipelineId, totalSteps }\` |
+
+#### Team Lifecycle
+
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`team_execution_start\` | Fired when a team begins execution | \`{ teamId, memberCount }\` |
+| \`team_member_start\` | Fired before each team member runs | \`{ teamId, memberId, memberName }\` |
+| \`team_member_end\` | Fired after a team member completes | \`{ teamId, memberId, result }\` |
+| \`team_execution_end\` | Fired when all team members have completed | \`{ teamId, results }\` |
+
+#### User Interaction
+
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`user_input\` | **Blocking** — fired when user sends a message | \`{ content }\` |
+| \`user_confirm\` | Fired when user confirms a prompted action | \`{ action }\` |
+| \`user_deny\` | Fired when user denies a prompted action | \`{ action }\` |
+
+#### System
+
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`error\` | Fired on any unhandled error during execution | \`{ message, stack }\` |
+| \`context_limit_warning\` | Fired when context window usage is near the limit | \`{ usagePercent }\` |
+| \`cost_limit_warning\` | **Blocking** — fired when session cost approaches the limit | \`{ totalCost, limit }\` |
+
+> **Example:** Set a cost ceiling by listening to \`cost_limit_warning\` and setting \`blocked = true\` when \`context.data.totalCost > 5.0\`.
+
+#### AutoResearch
+
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`autoresearch_run_start\` | Fired when an AutoResearch optimization run begins | \`{ mode, suiteId }\` |
+| \`autoresearch_iteration_start\` | Fired before each optimization iteration | \`{ iteration, totalIterations }\` |
+| \`autoresearch_iteration_end\` | Fired after each iteration with results | \`{ iteration, score, improved }\` |
+| \`autoresearch_mutation\` | Fired when a prompt mutation is applied | \`{ mutationType, diff }\` |
+| \`autoresearch_run_end\` | Fired when the optimization run completes | \`{ bestScore, totalIterations }\` |
+
+### Code Examples
+
+**Log all tool calls:**
+\`\`\`javascript
+log("[" + context.eventType + "] " + (context.data.toolName || ""));
+\`\`\`
+
+**Block dangerous bash commands (blocking, on \`tool_call_blocked\`):**
+\`\`\`javascript
+if (context.data.toolName === "bash") {
+  var cmd = String(context.data.args.command || "");
+  if (/rm\\s+-rf/i.test(cmd) || /drop\\s+table/i.test(cmd)) {
+    blocked = true;
+    blockReason = "Dangerous command blocked: " + cmd;
+  }
+}
+\`\`\`
+
+**Cost guard (blocking, on \`cost_limit_warning\`):**
+\`\`\`javascript
+var maxCost = 5.0;
+if (context.data.totalCost > maxCost) {
+  blocked = true;
+  blockReason = "Cost limit exceeded: $" + context.data.totalCost.toFixed(2);
+}
+\`\`\`
 
 ---
 

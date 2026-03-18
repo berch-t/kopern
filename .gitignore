@@ -48,3 +48,5 @@ next-env.d.ts
 CLAUDE.md
 STRIPE-DEPLOYMENT-GUIDE.md
 KOPERN-AGENT.md
+.mcp.json
+KOPERN_BUG_FIXER_AGENT.md

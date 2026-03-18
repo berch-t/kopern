@@ -18,6 +18,8 @@ export const BUILTIN_TOOLS = [
   { id: "grep", name: "Grep", description: "Search file contents" },
   { id: "find", name: "Find", description: "Find files by pattern" },
   { id: "ls", name: "List", description: "List directory contents" },
+  { id: "github_write", name: "GitHub Write", description: "Create branches, commit files, and open PRs on connected repos" },
+  { id: "bug_management", name: "Bug Management", description: "Track, update, and respond to bug reports (admin)", adminOnly: true },
 ] as const;
 
 export function buildCustomTool(toolDoc: ToolDoc): BuiltTool {

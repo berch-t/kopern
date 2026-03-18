@@ -98,6 +98,8 @@ export interface ExtensionDoc {
   name: string;
   description: string;
   code: string;
+  events: ExtensionEventType[];
+  blocking: boolean;
   enabled: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -513,4 +515,34 @@ export function usageCollection(userId: string) {
 
 export function usageDoc(userId: string, yearMonth: string) {
   return doc(db, "users", userId, "usage", yearMonth);
+}
+
+// --- Bug tracking collections ---
+
+export type BugStatus = "new" | "analyzing" | "fixing" | "awaiting_review" | "fixed" | "closed" | "wont_fix";
+
+export interface BugDoc {
+  severity: "low" | "medium" | "high" | "critical";
+  description: string;
+  pageUrl: string;
+  reporterEmail: string;
+  status: BugStatus;
+  agentId: string | null;
+  assignedAt: Timestamp | null;
+  analysis: string | null;
+  fixBranch: string | null;
+  fixPrUrl: string | null;
+  fixCommitSha: string | null;
+  thankYouSent: boolean;
+  notes: string[];
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export function bugsCollection(userId: string) {
+  return typedCollection<BugDoc>(`users/${userId}/bugs`);
+}
+
+export function bugDoc(userId: string, bugId: string) {
+  return doc(db, "users", userId, "bugs", bugId);
 }

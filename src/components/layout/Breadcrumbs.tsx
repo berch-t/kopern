@@ -88,6 +88,7 @@ export function Breadcrumbs() {
     teams: t.breadcrumbs.teams,
     pipelines: t.breadcrumbs.pipelines,
     sessions: t.breadcrumbs.sessions,
+    bugs: t.breadcrumbs.bugs,
     billing: t.breadcrumbs.billing,
   };
 

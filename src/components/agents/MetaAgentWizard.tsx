@@ -201,6 +201,8 @@ export function MetaAgentWizard({ userId, onCreated }: MetaAgentWizardProps) {
               name: ext.name,
               description: ext.description,
               code: ext.code,
+              events: ext.events ?? [],
+              blocking: ext.blocking ?? false,
             })
           )
         );

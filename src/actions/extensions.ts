@@ -16,7 +16,7 @@ import {
 export async function createExtension(
   userId: string,
   agentId: string,
-  data: { name: string; description: string; code: string }
+  data: { name: string; description: string; code: string; events: string[]; blocking: boolean }
 ) {
   const ref = await addDoc(extensionsCollection(userId, agentId), {
     ...data,
@@ -31,7 +31,7 @@ export async function updateExtension(
   userId: string,
   agentId: string,
   extensionId: string,
-  data: Partial<Pick<ExtensionDoc, "name" | "description" | "code" | "enabled">>
+  data: Partial<Pick<ExtensionDoc, "name" | "description" | "code" | "events" | "blocking" | "enabled">>
 ) {
   await updateDoc(extensionDoc(userId, agentId, extensionId), {
     ...data,

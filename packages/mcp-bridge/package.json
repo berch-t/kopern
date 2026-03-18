@@ -1,0 +1,14 @@
+{
+  "name": "@kopern/mcp-bridge",
+  "version": "0.1.0",
+  "description": "MCP stdio bridge for connecting Claude Code to Kopern agents",
+  "main": "index.js",
+  "bin": {
+    "kopern-mcp": "./index.js"
+  },
+  "keywords": ["mcp", "kopern", "claude-code", "ai-agent"],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}

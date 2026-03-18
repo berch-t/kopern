@@ -200,15 +200,154 @@ Quand l'agent decide d'utiliser un outil :
 
 ## Extensions
 
-Les extensions sont des **hooks d'evenements** qui interceptent et modifient le comportement de l'agent.
+Les extensions sont des **hooks d'evenements** qui interceptent et modifient le comportement de l'agent au runtime. Elles se declenchent sur des evenements specifiques du cycle de vie de l'agent — du demarrage de session a l'execution de tools, l'orchestration d'equipes, et bien plus.
+
+### Creer une Extension
+
+1. Allez dans l'onglet **Extensions** de votre agent
+2. Cliquez sur **Ajouter une Extension**
+3. Remplissez le **Nom** et la **Description**
+4. Selectionnez un ou plusieurs **Evenements** — ils determinent quand votre code s'execute
+5. Activez **Bloquant** si votre extension doit pouvoir empecher des actions
+6. Ecrivez votre **Code** — du JavaScript qui s'execute quand les evenements selectionnes se declenchent
+
+### Fonctionnement du Code
+
+Votre code a acces a :
+- \`context.eventType\` — l'evenement qui a declenche l'extension (ex: \`"tool_call_start"\`)
+- \`context.data\` — les donnees specifiques a l'evenement (nom du tool, arguments, resultats, erreurs...)
+- \`log(message)\` — afficher un message de debug
+- \`blocked = true\` — (extensions bloquantes uniquement) empecher l'action de se poursuivre
+- \`blockReason = "..."\` — expliquer pourquoi l'action a ete bloquee
 
 ### Cas d'utilisation
 
-- **Journalisation** — suivre toutes les interactions pour la conformite
+- **Journalisation** — suivre les interactions pour la conformite ou le debug
 - **Filtrage de contenu** — bloquer ou modifier les sorties non securisees
-- **Commandes personnalisees** — ajouter des commandes comme \`/reset\` ou \`/export\`
-- **Gestion d'etat** — persister des donnees entre les sessions
-- **Garde-fous** — appliquer des regles metier sur les reponses
+- **Garde-fous** — appliquer des regles metier, bloquer les commandes dangereuses
+- **Controle des couts** — arreter l'execution quand le cout depasse un seuil
+- **Notifications** — journaliser les evenements importants (creation de PR, erreurs)
+
+### Reference des Evenements
+
+Les evenements sont groupes par categorie. Les **evenements bloquants** (marques d'une icone bouclier) peuvent empecher l'action quand une extension definit \`blocked = true\`.
+
+#### Cycle de vie Session
+
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`session_start\` | Declenche quand une nouvelle session demarre | \`{ sessionId, purpose }\` |
+| \`session_end\` | Declenche quand une session se termine | \`{ sessionId, totalTokens, totalCost }\` |
+| \`session_compact\` | Declenche quand le contexte est compacte (conversations longues) | \`{ sessionId, messageCount }\` |
+
+#### Cycle de vie Message
+
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`message_start\` | Declenche avant que le LLM traite un message utilisateur | \`{ role, content }\` |
+| \`message_end\` | Declenche apres la reponse du LLM | \`{ role, content, tokensUsed }\` |
+| \`message_stream_token\` | Declenche pour chaque token streame (haute frequence) | \`{ token }\` |
+
+#### Cycle de vie Tool
+
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`tool_call_start\` | Declenche avant l'execution d'un tool | \`{ toolName, args }\` |
+| \`tool_call_end\` | Declenche apres l'execution reussie d'un tool | \`{ toolName, result, isError }\` |
+| \`tool_call_error\` | Declenche quand l'execution d'un tool echoue | \`{ toolName, error }\` |
+| \`tool_call_blocked\` | **Bloquant** — peut empecher l'execution d'un tool | \`{ toolName, args }\` |
+
+> **Exemple :** Bloquer les commandes shell dangereuses en verifiant \`context.data.toolName === "bash"\` et en inspectant \`context.data.args.command\` pour des patterns comme \`rm -rf\`.
+
+#### Cycle de vie Agent
+
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`agent_thinking_start\` | Declenche quand le LLM commence sa phase de raisonnement | \`{}\` |
+| \`agent_thinking_end\` | Declenche quand le raisonnement se termine | \`{ thinkingContent }\` |
+| \`agent_response_start\` | Declenche quand le LLM commence a generer sa reponse | \`{}\` |
+| \`agent_response_end\` | Declenche quand la generation de reponse se termine | \`{ responseLength }\` |
+
+#### Cycle de vie Sub-agent
+
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`sub_agent_spawn\` | Declenche quand un sub-agent recoit une delegation | \`{ subAgentId, task }\` |
+| \`sub_agent_result\` | Declenche quand un sub-agent retourne son resultat | \`{ subAgentId, result }\` |
+| \`sub_agent_error\` | Declenche quand un sub-agent rencontre une erreur | \`{ subAgentId, error }\` |
+
+#### Cycle de vie Pipeline
+
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`pipeline_start\` | Declenche quand un pipeline demarre | \`{ pipelineId, stepCount }\` |
+| \`pipeline_step_start\` | Declenche avant chaque etape du pipeline | \`{ pipelineId, stepIndex, stepName }\` |
+| \`pipeline_step_end\` | Declenche apres chaque etape | \`{ pipelineId, stepIndex, result }\` |
+| \`pipeline_end\` | Declenche quand le pipeline entier se termine | \`{ pipelineId, totalSteps }\` |
+
+#### Cycle de vie Equipe
+
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`team_execution_start\` | Declenche quand une equipe demarre l'execution | \`{ teamId, memberCount }\` |
+| \`team_member_start\` | Declenche avant l'execution de chaque membre | \`{ teamId, memberId, memberName }\` |
+| \`team_member_end\` | Declenche apres l'execution d'un membre | \`{ teamId, memberId, result }\` |
+| \`team_execution_end\` | Declenche quand tous les membres ont termine | \`{ teamId, results }\` |
+
+#### Interaction Utilisateur
+
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`user_input\` | **Bloquant** — declenche quand l'utilisateur envoie un message | \`{ content }\` |
+| \`user_confirm\` | Declenche quand l'utilisateur confirme une action | \`{ action }\` |
+| \`user_deny\` | Declenche quand l'utilisateur refuse une action | \`{ action }\` |
+
+#### Systeme
+
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`error\` | Declenche sur toute erreur non geree | \`{ message, stack }\` |
+| \`context_limit_warning\` | Declenche quand la fenetre de contexte approche la limite | \`{ usagePercent }\` |
+| \`cost_limit_warning\` | **Bloquant** — declenche quand le cout approche la limite | \`{ totalCost, limit }\` |
+
+> **Exemple :** Definir un plafond de cout en ecoutant \`cost_limit_warning\` et en mettant \`blocked = true\` quand \`context.data.totalCost > 5.0\`.
+
+#### AutoResearch
+
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`autoresearch_run_start\` | Declenche quand un run d'optimisation AutoResearch demarre | \`{ mode, suiteId }\` |
+| \`autoresearch_iteration_start\` | Declenche avant chaque iteration d'optimisation | \`{ iteration, totalIterations }\` |
+| \`autoresearch_iteration_end\` | Declenche apres chaque iteration avec les resultats | \`{ iteration, score, improved }\` |
+| \`autoresearch_mutation\` | Declenche quand une mutation de prompt est appliquee | \`{ mutationType, diff }\` |
+| \`autoresearch_run_end\` | Declenche quand le run d'optimisation se termine | \`{ bestScore, totalIterations }\` |
+
+### Exemples de Code
+
+**Journaliser tous les appels de tools :**
+\`\`\`javascript
+log("[" + context.eventType + "] " + (context.data.toolName || ""));
+\`\`\`
+
+**Bloquer les commandes bash dangereuses (bloquant, sur \`tool_call_blocked\`) :**
+\`\`\`javascript
+if (context.data.toolName === "bash") {
+  var cmd = String(context.data.args.command || "");
+  if (/rm\\s+-rf/i.test(cmd) || /drop\\s+table/i.test(cmd)) {
+    blocked = true;
+    blockReason = "Commande dangereuse bloquee : " + cmd;
+  }
+}
+\`\`\`
+
+**Garde-fou de cout (bloquant, sur \`cost_limit_warning\`) :**
+\`\`\`javascript
+var maxCost = 5.0;
+if (context.data.totalCost > maxCost) {
+  blocked = true;
+  blockReason = "Limite de cout depassee : $" + context.data.totalCost.toFixed(2);
+}
+\`\`\`
 
 ---
 

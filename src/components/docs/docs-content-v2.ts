@@ -894,209 +894,154 @@ Reduce \`maxIterations\` for agents that should respond quickly. Increase it for
 
 ## Extensions
 
-### What Are Extensions?
-
-Extensions are **event hooks** that run JavaScript code when specific events occur during agent execution. They can intercept, modify, or block agent behavior. Extensions are useful for logging, content filtering, custom commands, guardrails, and state management.
+Extensions are **event hooks** that intercept and modify agent behavior at runtime. They fire on specific events during the agent lifecycle — from session start to tool execution, team orchestration, and beyond.
 
 Unlike tools (which the LLM calls when it decides to), extensions fire automatically on predefined events.
 
-### Available Events
-
-Kopern provides 30 events organized into 9 categories:
-
-#### Session Lifecycle
-| Event | Description |
-|-------|-------------|
-| \`session_start\` | Fired when a new session begins |
-| \`session_end\` | Fired when a session ends |
-| \`session_compact\` | Fired when conversation context is compacted to save tokens |
-
-#### Message Lifecycle
-| Event | Description |
-|-------|-------------|
-| \`message_start\` | Fired before processing a user message |
-| \`message_end\` | Fired after the agent finishes processing a message |
-| \`message_stream_token\` | Fired for each streamed token during generation |
-
-#### Tool Lifecycle
-| Event | Description |
-|-------|-------------|
-| \`tool_call_start\` | Fired before a tool executes |
-| \`tool_call_end\` | Fired after a tool finishes execution |
-| \`tool_call_error\` | Fired when a tool execution fails |
-| \`tool_call_blocked\` | **Blocking** -- can prevent tool execution entirely |
-
-#### Agent Lifecycle
-| Event | Description |
-|-------|-------------|
-| \`agent_thinking_start\` | Fired when the agent begins internal reasoning |
-| \`agent_thinking_end\` | Fired when the agent finishes internal reasoning |
-| \`agent_response_start\` | Fired when response generation begins |
-| \`agent_response_end\` | Fired when response generation completes |
-
-#### Sub-agent Lifecycle
-| Event | Description |
-|-------|-------------|
-| \`sub_agent_spawn\` | Fired when a sub-agent is spawned |
-| \`sub_agent_result\` | Fired when a sub-agent returns its result |
-| \`sub_agent_error\` | Fired when a sub-agent encounters an error |
-
-#### Pipeline Lifecycle
-| Event | Description |
-|-------|-------------|
-| \`pipeline_start\` | Fired when pipeline execution begins |
-| \`pipeline_step_start\` | Fired before each pipeline step |
-| \`pipeline_step_end\` | Fired after each pipeline step |
-| \`pipeline_end\` | Fired when the pipeline completes |
-
-#### Team Lifecycle
-| Event | Description |
-|-------|-------------|
-| \`team_execution_start\` | Fired when team execution begins |
-| \`team_member_start\` | Fired before each team member runs |
-| \`team_member_end\` | Fired after each team member completes |
-| \`team_execution_end\` | Fired when team execution completes |
-
-#### User Interaction
-| Event | Description |
-|-------|-------------|
-| \`user_input\` | **Blocking** -- fired on user input |
-| \`user_confirm\` | Fired when the user confirms an action |
-| \`user_deny\` | Fired when the user denies an action |
-
-#### System
-| Event | Description |
-|-------|-------------|
-| \`error\` | Fired on any error |
-| \`context_limit_warning\` | Fired when approaching context token limit |
-| \`cost_limit_warning\` | **Blocking** -- fired when approaching cost limit |
-
-**Blocking events** (\`tool_call_blocked\`, \`user_input\`, \`cost_limit_warning\`) can prevent the action from proceeding if the extension returns \`{ blocked: true }\`.
-
 ### Creating an Extension
 
-1. Open your agent's detail page
-2. Go to the **Extensions** tab
-3. Click **New Extension**
-4. Fill in:
-   - **Name**: Extension identifier (e.g., "content-filter")
-   - **Description**: What the extension does
-   - **Events**: Select which events trigger this extension (multi-select)
-   - **Code**: JavaScript code that runs when an event fires
-5. Click **Save**
+1. Go to your agent's **Extensions** tab
+2. Click **Add Extension**
+3. Fill in **Name** and **Description**
+4. Select one or more **Events** — these determine when your extension code runs
+5. Toggle **Blocking** if your extension should be able to prevent actions
+6. Write your **Code** — JavaScript that runs when the selected events fire
 
-**Code structure:**
+### How Extension Code Works
 
-Your extension code receives a \`context\` object with:
-- \`context.eventType\` -- which event fired (e.g., \`"message_end"\`)
-- \`context.data\` -- event-specific data (message content, tool call info, etc.)
+Your code has access to:
+- \`context.eventType\` — the event that triggered the extension (e.g. \`"tool_call_start"\`)
+- \`context.data\` — event-specific data (tool name, arguments, results, errors...)
+- \`log(message)\` — log a message for debugging
+- \`blocked = true\` — (blocking extensions only) prevent the action from proceeding
+- \`blockReason = "..."\` — explain why the action was blocked
 
-For blocking events, return \`{ blocked: true, reason: "..." }\` to prevent the action.
+### Use Cases
 
-### Extension Examples
+- **Logging** — track all agent interactions for compliance or debugging
+- **Content filtering** — block or modify unsafe outputs
+- **Guardrails** — enforce business rules, block dangerous commands
+- **Cost control** — stop execution when cost exceeds a threshold
+- **Notifications** — log important events like PR creation or errors
 
-#### 1. Content Filter
+### Extension Events Reference
 
-Blocks profanity and PII (personal identifiable information) from agent output.
+Events are grouped by category. **Blocking events** (marked with a shield icon) can prevent the action from proceeding when an extension sets \`blocked = true\`.
 
-**Events**: \`message_end\`
+#### Session Lifecycle
 
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`session_start\` | Fired when a new session begins | \`{ sessionId, purpose }\` |
+| \`session_end\` | Fired when a session ends | \`{ sessionId, totalTokens, totalCost }\` |
+| \`session_compact\` | Fired when context is compacted (long conversations) | \`{ sessionId, messageCount }\` |
+
+#### Message Lifecycle
+
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`message_start\` | Fired before the LLM processes a user message | \`{ role, content }\` |
+| \`message_end\` | Fired after the LLM finishes responding | \`{ role, content, tokensUsed }\` |
+| \`message_stream_token\` | Fired for each streamed token (high frequency) | \`{ token }\` |
+
+#### Tool Lifecycle
+
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`tool_call_start\` | Fired before a tool executes | \`{ toolName, args }\` |
+| \`tool_call_end\` | Fired after a tool completes successfully | \`{ toolName, result, isError }\` |
+| \`tool_call_error\` | Fired when a tool execution fails | \`{ toolName, error }\` |
+| \`tool_call_blocked\` | **Blocking** — can prevent a tool from executing | \`{ toolName, args }\` |
+
+> **Example:** Block dangerous shell commands by checking \`context.data.toolName === "bash"\` and inspecting \`context.data.args.command\` for patterns like \`rm -rf\`.
+
+#### Agent Lifecycle
+
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`agent_thinking_start\` | Fired when the LLM begins its thinking/reasoning phase | \`{}\` |
+| \`agent_thinking_end\` | Fired when thinking completes | \`{ thinkingContent }\` |
+| \`agent_response_start\` | Fired when the LLM starts generating its response | \`{}\` |
+| \`agent_response_end\` | Fired when response generation completes | \`{ responseLength }\` |
+
+#### Sub-agent Lifecycle
+
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`sub_agent_spawn\` | Fired when a sub-agent is delegated work | \`{ subAgentId, task }\` |
+| \`sub_agent_result\` | Fired when a sub-agent returns its result | \`{ subAgentId, result }\` |
+| \`sub_agent_error\` | Fired when a sub-agent encounters an error | \`{ subAgentId, error }\` |
+
+#### Pipeline Lifecycle
+
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`pipeline_start\` | Fired when a pipeline begins execution | \`{ pipelineId, stepCount }\` |
+| \`pipeline_step_start\` | Fired before each step in the pipeline | \`{ pipelineId, stepIndex, stepName }\` |
+| \`pipeline_step_end\` | Fired after each step completes | \`{ pipelineId, stepIndex, result }\` |
+| \`pipeline_end\` | Fired when the entire pipeline completes | \`{ pipelineId, totalSteps }\` |
+
+#### Team Lifecycle
+
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`team_execution_start\` | Fired when a team begins execution | \`{ teamId, memberCount }\` |
+| \`team_member_start\` | Fired before each team member runs | \`{ teamId, memberId, memberName }\` |
+| \`team_member_end\` | Fired after a team member completes | \`{ teamId, memberId, result }\` |
+| \`team_execution_end\` | Fired when all team members have completed | \`{ teamId, results }\` |
+
+#### User Interaction
+
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`user_input\` | **Blocking** — fired when user sends a message | \`{ content }\` |
+| \`user_confirm\` | Fired when user confirms a prompted action | \`{ action }\` |
+| \`user_deny\` | Fired when user denies a prompted action | \`{ action }\` |
+
+#### System
+
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`error\` | Fired on any unhandled error during execution | \`{ message, stack }\` |
+| \`context_limit_warning\` | Fired when context window usage is near the limit | \`{ usagePercent }\` |
+| \`cost_limit_warning\` | **Blocking** — fired when session cost approaches the limit | \`{ totalCost, limit }\` |
+
+> **Example:** Set a cost ceiling by listening to \`cost_limit_warning\` and setting \`blocked = true\` when \`context.data.totalCost > 5.0\`.
+
+#### AutoResearch
+
+| Event | Description | \`context.data\` |
+|-------|-------------|-----------------|
+| \`autoresearch_run_start\` | Fired when an AutoResearch optimization run begins | \`{ mode, suiteId }\` |
+| \`autoresearch_iteration_start\` | Fired before each optimization iteration | \`{ iteration, totalIterations }\` |
+| \`autoresearch_iteration_end\` | Fired after each iteration with results | \`{ iteration, score, improved }\` |
+| \`autoresearch_mutation\` | Fired when a prompt mutation is applied | \`{ mutationType, diff }\` |
+| \`autoresearch_run_end\` | Fired when the optimization run completes | \`{ bestScore, totalIterations }\` |
+
+### Code Examples
+
+**Log all tool calls:**
 \`\`\`javascript
-const output = context.data.content || "";
+log("[" + context.eventType + "] " + (context.data.toolName || ""));
+\`\`\`
 
-// Check for common PII patterns
-const ssnPattern = /\\b\\d{3}-\\d{2}-\\d{4}\\b/;
-const emailPattern = /\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b/;
-const phonePattern = /\\b\\d{3}[-.\\s]?\\d{3}[-.\\s]?\\d{4}\\b/;
-
-const violations = [];
-if (ssnPattern.test(output)) violations.push("SSN detected");
-if (emailPattern.test(output)) violations.push("Email address detected");
-if (phonePattern.test(output)) violations.push("Phone number detected");
-
-// Check for profanity (simplified)
-const forbidden = ["badword1", "badword2"];
-for (const word of forbidden) {
-  if (output.toLowerCase().includes(word)) {
-    violations.push("Profanity detected: " + word);
+**Block dangerous bash commands (blocking, on \`tool_call_blocked\`):**
+\`\`\`javascript
+if (context.data.toolName === "bash") {
+  var cmd = String(context.data.args.command || "");
+  if (/rm\\s+-rf/i.test(cmd) || /drop\\s+table/i.test(cmd)) {
+    blocked = true;
+    blockReason = "Dangerous command blocked: " + cmd;
   }
 }
-
-if (violations.length > 0) {
-  return {
-    blocked: true,
-    reason: "Content filtered: " + violations.join(", ")
-  };
-}
 \`\`\`
 
-#### 2. Usage Logger
-
-Logs all interactions for compliance auditing.
-
-**Events**: \`message_start\`, \`message_end\`, \`tool_call_start\`, \`tool_call_end\`
-
+**Cost guard (blocking, on \`cost_limit_warning\`):**
 \`\`\`javascript
-const timestamp = new Date().toISOString();
-const logEntry = {
-  timestamp,
-  event: context.eventType,
-  data: context.data,
-  sessionId: context.data.sessionId || "unknown"
-};
-console.log(JSON.stringify(logEntry));
-\`\`\`
-
-#### 3. Slash Commands
-
-Adds custom slash commands to the agent.
-
-**Events**: \`user_input\`
-
-\`\`\`javascript
-const input = (context.data.content || "").trim();
-
-if (input === "/help") {
-  return {
-    blocked: true,
-    reason: "Available commands: /help, /reset, /export, /stats"
-  };
-}
-
-if (input === "/reset") {
-  return {
-    blocked: true,
-    reason: "Session has been reset. Start a new conversation."
-  };
-}
-
-if (input === "/stats") {
-  return {
-    blocked: true,
-    reason: "Session stats: " + JSON.stringify(context.data.metrics || {})
-  };
-}
-\`\`\`
-
-#### 4. Rate Limiter
-
-Limits the number of messages per session to prevent abuse.
-
-**Events**: \`message_start\`
-
-\`\`\`javascript
-const maxMessages = 50;
-const messageCount = context.data.messageCount || 0;
-
-if (messageCount >= maxMessages) {
-  return {
-    blocked: true,
-    reason: "Session message limit reached (" + maxMessages + "). Please start a new session."
-  };
-}
-
-if (messageCount >= maxMessages - 5) {
-  console.log("Warning: approaching message limit (" + messageCount + "/" + maxMessages + ")");
+var maxCost = 5.0;
+if (context.data.totalCost > maxCost) {
+  blocked = true;
+  blockReason = "Cost limit exceeded: $" + context.data.totalCost.toFixed(2);
 }
 \`\`\`
 

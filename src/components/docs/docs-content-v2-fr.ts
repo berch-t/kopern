@@ -760,187 +760,155 @@ Vous pouvez personnaliser le comportement du système d'outils pour chaque agent
 
 ## Extensions
 
-### Que sont les extensions ?
+Les extensions sont des **hooks d'evenements** qui interceptent et modifient le comportement de l'agent au runtime. Elles se declenchent sur des evenements specifiques du cycle de vie de l'agent — du demarrage de session a l'execution de tools, l'orchestration d'equipes, et bien plus.
 
-Les extensions sont des **hooks d'événements** écrits en JavaScript qui interceptent et modifient le comportement de l'agent à des points précis du cycle de vie. Elles permettent d'ajouter de la logique métier personnalisée sans modifier le prompt système ou les outils.
+Contrairement aux tools (que le LLM appelle quand il le decide), les extensions se declenchent automatiquement sur des evenements predefinis.
 
-Les extensions sont des scripts JavaScript qui reçoivent un événement et peuvent :
-- **Modifier** le contenu des messages ou des réponses
-- **Bloquer** des actions (extensions bloquantes)
-- **Logger** des informations pour la conformité
-- **Déclencher** des effets secondaires
+### Creer une Extension
 
----
+1. Allez dans l'onglet **Extensions** de votre agent
+2. Cliquez sur **Ajouter une Extension**
+3. Remplissez le **Nom** et la **Description**
+4. Selectionnez un ou plusieurs **Evenements** — ils determinent quand votre code s'execute
+5. Activez **Bloquant** si votre extension doit pouvoir empecher des actions
+6. Ecrivez votre **Code** — du JavaScript qui s'execute quand les evenements selectionnes se declenchent
 
-### Événements disponibles
+### Fonctionnement du Code
 
-Voici les événements auxquels une extension peut s'accrocher :
+Votre code a acces a :
+- \`context.eventType\` — l'evenement qui a declenche l'extension (ex: \`"tool_call_start"\`)
+- \`context.data\` — les donnees specifiques a l'evenement (nom du tool, arguments, resultats, erreurs...)
+- \`log(message)\` — afficher un message de debug
+- \`blocked = true\` — (extensions bloquantes uniquement) empecher l'action de se poursuivre
+- \`blockReason = "..."\` — expliquer pourquoi l'action a ete bloquee
 
-| Événement | Description |
-|-----------|-------------|
-| \`message:before\` | Avant l'envoi d'un message au LLM |
-| \`message:after\` | Après la réponse du LLM |
-| \`tool:before\` | Avant l'exécution d'un outil |
-| \`tool:after\` | Après l'exécution d'un outil |
-| \`tool:error\` | Quand un outil échoue |
-| \`session:start\` | Au début d'une session |
-| \`session:end\` | À la fin d'une session |
-| \`stream:token\` | À chaque token streamé |
-| \`stream:start\` | Au début du streaming |
-| \`stream:end\` | À la fin du streaming |
-| \`error\` | Quand une erreur survient |
-| \`message:blocked\` | Quand un message est bloqué par le Purpose Gate |
-| \`tool:blocked\` | Quand un appel d'outil est bloqué |
-| \`grading:start\` | Au début d'un run de notation |
-| \`grading:case:start\` | Au début d'un cas de notation |
-| \`grading:case:end\` | À la fin d'un cas de notation |
-| \`grading:end\` | À la fin d'un run de notation |
-| \`pipeline:start\` | Au début d'un pipeline |
-| \`pipeline:step:start\` | Au début d'une étape de pipeline |
-| \`pipeline:step:end\` | À la fin d'une étape de pipeline |
-| \`pipeline:end\` | À la fin d'un pipeline |
-| \`team:start\` | Au début d'une exécution d'équipe |
-| \`team:member:start\` | Au début du tour d'un membre d'équipe |
-| \`team:member:end\` | À la fin du tour d'un membre d'équipe |
-| \`team:end\` | À la fin d'une exécution d'équipe |
+### Cas d'utilisation
 
----
+- **Journalisation** — suivre les interactions pour la conformite ou le debug
+- **Filtrage de contenu** — bloquer ou modifier les sorties non securisees
+- **Garde-fous** — appliquer des regles metier, bloquer les commandes dangereuses
+- **Controle des couts** — arreter l'execution quand le cout depasse un seuil
+- **Notifications** — journaliser les evenements importants (creation de PR, erreurs)
 
-### Créer une extension
+### Reference des Evenements
 
-1. Ouvrez votre agent et allez dans l'onglet **Extensions**
-2. Cliquez sur **Nouvelle Extension**
-3. Configurez :
-   - **Nom** — identifiant de l'extension
-   - **Description** — ce que fait l'extension
-   - **Événement** — l'événement sur lequel s'accrocher
-   - **Bloquante** — si activé, l'extension peut empêcher l'action de se poursuivre
-   - **Code** — le JavaScript qui s'exécute quand l'événement se déclenche
+Les evenements sont groupes par categorie. Les **evenements bloquants** (marques d'une icone bouclier) peuvent empecher l'action quand une extension definit \`blocked = true\`.
 
-**Structure du code :**
+#### Cycle de vie Session
 
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`session_start\` | Declenche quand une nouvelle session demarre | \`{ sessionId, purpose }\` |
+| \`session_end\` | Declenche quand une session se termine | \`{ sessionId, totalTokens, totalCost }\` |
+| \`session_compact\` | Declenche quand le contexte est compacte (conversations longues) | \`{ sessionId, messageCount }\` |
+
+#### Cycle de vie Message
+
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`message_start\` | Declenche avant que le LLM traite un message utilisateur | \`{ role, content }\` |
+| \`message_end\` | Declenche apres la reponse du LLM | \`{ role, content, tokensUsed }\` |
+| \`message_stream_token\` | Declenche pour chaque token streame (haute frequence) | \`{ token }\` |
+
+#### Cycle de vie Tool
+
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`tool_call_start\` | Declenche avant l'execution d'un tool | \`{ toolName, args }\` |
+| \`tool_call_end\` | Declenche apres l'execution reussie d'un tool | \`{ toolName, result, isError }\` |
+| \`tool_call_error\` | Declenche quand l'execution d'un tool echoue | \`{ toolName, error }\` |
+| \`tool_call_blocked\` | **Bloquant** — peut empecher l'execution d'un tool | \`{ toolName, args }\` |
+
+> **Exemple :** Bloquer les commandes shell dangereuses en verifiant \`context.data.toolName === "bash"\` et en inspectant \`context.data.args.command\` pour des patterns comme \`rm -rf\`.
+
+#### Cycle de vie Agent
+
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`agent_thinking_start\` | Declenche quand le LLM commence sa phase de raisonnement | \`{}\` |
+| \`agent_thinking_end\` | Declenche quand le raisonnement se termine | \`{ thinkingContent }\` |
+| \`agent_response_start\` | Declenche quand le LLM commence a generer sa reponse | \`{}\` |
+| \`agent_response_end\` | Declenche quand la generation de reponse se termine | \`{ responseLength }\` |
+
+#### Cycle de vie Sub-agent
+
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`sub_agent_spawn\` | Declenche quand un sub-agent recoit une delegation | \`{ subAgentId, task }\` |
+| \`sub_agent_result\` | Declenche quand un sub-agent retourne son resultat | \`{ subAgentId, result }\` |
+| \`sub_agent_error\` | Declenche quand un sub-agent rencontre une erreur | \`{ subAgentId, error }\` |
+
+#### Cycle de vie Pipeline
+
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`pipeline_start\` | Declenche quand un pipeline demarre | \`{ pipelineId, stepCount }\` |
+| \`pipeline_step_start\` | Declenche avant chaque etape du pipeline | \`{ pipelineId, stepIndex, stepName }\` |
+| \`pipeline_step_end\` | Declenche apres chaque etape | \`{ pipelineId, stepIndex, result }\` |
+| \`pipeline_end\` | Declenche quand le pipeline entier se termine | \`{ pipelineId, totalSteps }\` |
+
+#### Cycle de vie Equipe
+
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`team_execution_start\` | Declenche quand une equipe demarre l'execution | \`{ teamId, memberCount }\` |
+| \`team_member_start\` | Declenche avant l'execution de chaque membre | \`{ teamId, memberId, memberName }\` |
+| \`team_member_end\` | Declenche apres l'execution d'un membre | \`{ teamId, memberId, result }\` |
+| \`team_execution_end\` | Declenche quand tous les membres ont termine | \`{ teamId, results }\` |
+
+#### Interaction Utilisateur
+
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`user_input\` | **Bloquant** — declenche quand l'utilisateur envoie un message | \`{ content }\` |
+| \`user_confirm\` | Declenche quand l'utilisateur confirme une action | \`{ action }\` |
+| \`user_deny\` | Declenche quand l'utilisateur refuse une action | \`{ action }\` |
+
+#### Systeme
+
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`error\` | Declenche sur toute erreur non geree | \`{ message, stack }\` |
+| \`context_limit_warning\` | Declenche quand la fenetre de contexte approche la limite | \`{ usagePercent }\` |
+| \`cost_limit_warning\` | **Bloquant** — declenche quand le cout approche la limite | \`{ totalCost, limit }\` |
+
+> **Exemple :** Definir un plafond de cout en ecoutant \`cost_limit_warning\` et en mettant \`blocked = true\` quand \`context.data.totalCost > 5.0\`.
+
+#### AutoResearch
+
+| Evenement | Description | \`context.data\` |
+|-----------|-------------|-----------------|
+| \`autoresearch_run_start\` | Declenche quand un run d'optimisation AutoResearch demarre | \`{ mode, suiteId }\` |
+| \`autoresearch_iteration_start\` | Declenche avant chaque iteration d'optimisation | \`{ iteration, totalIterations }\` |
+| \`autoresearch_iteration_end\` | Declenche apres chaque iteration avec les resultats | \`{ iteration, score, improved }\` |
+| \`autoresearch_mutation\` | Declenche quand une mutation de prompt est appliquee | \`{ mutationType, diff }\` |
+| \`autoresearch_run_end\` | Declenche quand le run d'optimisation se termine | \`{ bestScore, totalIterations }\` |
+
+### Exemples de Code
+
+**Journaliser tous les appels de tools :**
 \`\`\`javascript
-// L'objet 'event' contient les données de l'événement
-// Pour les extensions bloquantes, retournez { blocked: true, reason: "..." } pour bloquer
-
-const message = event.data.content;
-
-// Votre logique ici...
-
-// Retour optionnel pour modifier ou bloquer
-return { modified: false };
+log("[" + context.eventType + "] " + (context.data.toolName || ""));
 \`\`\`
 
----
-
-### Exemples d'extensions
-
-#### 1. Filtre de contenu
-
-**Événement :** \`message:after\`
-**Bloquante :** Oui
-
+**Bloquer les commandes bash dangereuses (bloquant, sur \`tool_call_blocked\`) :**
 \`\`\`javascript
-const response = event.data.content || "";
-const forbiddenPatterns = [
-  /mot-de-passe\\s*:/i,
-  /numéro de carte/i,
-  /\\b\\d{16}\\b/,
-  /\\b\\d{3}-\\d{2}-\\d{4}\\b/
-];
-
-for (const pattern of forbiddenPatterns) {
-  if (pattern.test(response)) {
-    return {
-      blocked: true,
-      reason: "La réponse contient des informations sensibles potentielles qui ont été bloquées."
-    };
+if (context.data.toolName === "bash") {
+  var cmd = String(context.data.args.command || "");
+  if (/rm\\s+-rf/i.test(cmd) || /drop\\s+table/i.test(cmd)) {
+    blocked = true;
+    blockReason = "Commande dangereuse bloquee : " + cmd;
   }
 }
-
-return { blocked: false };
 \`\`\`
 
-#### 2. Logger d'utilisation
-
-**Événement :** \`message:after\`
-**Bloquante :** Non
-
+**Garde-fou de cout (bloquant, sur \`cost_limit_warning\`) :**
 \`\`\`javascript
-const timestamp = new Date().toISOString();
-const inputLength = event.data.input ? event.data.input.length : 0;
-const outputLength = event.data.content ? event.data.content.length : 0;
-
-console.log(JSON.stringify({
-  timestamp,
-  event: "message_completed",
-  inputChars: inputLength,
-  outputChars: outputLength,
-  model: event.data.model || "unknown"
-}));
-
-return { modified: false };
-\`\`\`
-
-#### 3. Commandes slash
-
-**Événement :** \`message:before\`
-**Bloquante :** Oui
-
-\`\`\`javascript
-const message = event.data.content || "";
-
-if (message.trim() === "/reset") {
-  return {
-    blocked: true,
-    reason: "Session réinitialisée. Vous pouvez recommencer la conversation.",
-    action: "reset_session"
-  };
+var maxCost = 5.0;
+if (context.data.totalCost > maxCost) {
+  blocked = true;
+  blockReason = "Limite de cout depassee : $" + context.data.totalCost.toFixed(2);
 }
-
-if (message.trim() === "/export") {
-  return {
-    blocked: true,
-    reason: "Export de la conversation en cours...",
-    action: "export_session"
-  };
-}
-
-if (message.trim().startsWith("/help")) {
-  return {
-    blocked: true,
-    reason: "Commandes disponibles :\\n- /reset — Réinitialiser la session\\n- /export — Exporter la conversation\\n- /help — Afficher l'aide"
-  };
-}
-
-return { blocked: false };
-\`\`\`
-
-#### 4. Limiteur de débit
-
-**Événement :** \`message:before\`
-**Bloquante :** Oui
-
-\`\`\`javascript
-const MAX_MESSAGES_PER_MINUTE = 10;
-const now = Date.now();
-const windowMs = 60 * 1000;
-
-// Utilise le stockage de l'extension pour compter les messages
-const history = event.storage.messageTimestamps || [];
-const recentMessages = history.filter(ts => now - ts < windowMs);
-
-if (recentMessages.length >= MAX_MESSAGES_PER_MINUTE) {
-  const waitSeconds = Math.ceil((recentMessages[0] + windowMs - now) / 1000);
-  return {
-    blocked: true,
-    reason: \`Limite de débit atteinte. Veuillez attendre \\\\\${waitSeconds} secondes avant d'envoyer un nouveau message.\`
-  };
-}
-
-recentMessages.push(now);
-event.storage.messageTimestamps = recentMessages;
-return { blocked: false };
 \`\`\`
 
 ---

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TableOfContents } from "@/components/docs/TableOfContents";
 import { docsMarkdown } from "@/components/docs/docs-content";
 import { docsMarkdownFr } from "@/components/docs/docs-content-fr";
@@ -20,11 +20,15 @@ function slugify(text: string): string {
 }
 
 export default function DocsPage() {
-  const contentRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const t = useDictionary();
   const locale = useLocale();
   const content = locale === "fr" ? docsMarkdownFr : docsMarkdown;
+  const [mounted, setMounted] = useState(false);
+
+  // Force TOC re-extraction after first render
+  useEffect(() => setMounted(true), []);
 
   const handleSaveMarkdown = () => {
     const blob = new Blob([content.trim()], { type: "text/markdown" });
@@ -48,9 +52,9 @@ export default function DocsPage() {
   };
 
   return (
-    <div className="flex h-full gap-0">
+    <div className="flex h-[calc(100vh-8rem)] gap-0 -mx-6 -mt-6">
       {/* Main content — scrollable */}
-      <div ref={contentRef} className="flex-1 overflow-y-auto">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-4xl px-6 py-6">
           <SlideUp>
             <div className="flex items-center justify-between mb-8">
@@ -86,9 +90,9 @@ export default function DocsPage() {
         </div>
       </div>
 
-      {/* Right sidebar — Table of Contents */}
-      <aside className="hidden xl:block w-64 shrink-0 border-l pl-6 sticky top-0 h-full overflow-y-auto py-6">
-        <TableOfContents contentRef={contentRef} />
+      {/* Right sidebar — Table of Contents, scrolls independently */}
+      <aside className="hidden xl:flex w-64 shrink-0 border-l flex-col overflow-y-auto py-6 pl-6">
+        {mounted && <TableOfContents contentRef={scrollRef} contentKey={locale} />}
       </aside>
     </div>
   );
