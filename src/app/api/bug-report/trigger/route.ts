@@ -78,28 +78,83 @@ export async function POST(req: NextRequest) {
     "5. Send a warm thank-you email to the reporter if they provided their email",
   ].filter(Boolean).join("\n");
 
-  // 8. Fire-and-forget: call chat route internally
+  // 8. Fire-and-forget: call chat route, read SSE stream, save response as note
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
-  fetch(`${baseUrl}/api/agents/${BUG_FIXER_AGENT_ID}/chat`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Internal-Trigger": "bug-fixer",
-    },
-    body: JSON.stringify({
-      userId: BUG_FIXER_OWNER_ID,
-      message: triggerMessage,
-      history: [],
-      connectedRepos: agent.connectedRepos || [],
-      agentConfig: {
-        systemPrompt: agent.systemPrompt || "",
-        modelProvider: agent.modelProvider || "anthropic",
-        modelId: agent.modelId || "claude-sonnet-4-5-20250514",
-        skills,
-      },
-    }),
-  }).catch((err) => console.error("Failed to trigger bug fixer:", err));
+  (async () => {
+    try {
+      const res = await fetch(`${baseUrl}/api/agents/${BUG_FIXER_AGENT_ID}/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Internal-Trigger": "bug-fixer",
+        },
+        body: JSON.stringify({
+          userId: BUG_FIXER_OWNER_ID,
+          message: triggerMessage,
+          history: [],
+          connectedRepos: agent.connectedRepos || [],
+          agentConfig: {
+            systemPrompt: agent.systemPrompt || "",
+            modelProvider: agent.modelProvider || "anthropic",
+            modelId: agent.modelId || "claude-sonnet-4-5-20250514",
+            skills,
+          },
+        }),
+      });
+
+      // Read SSE stream to collect agent response
+      let agentResponse = "";
+      const reader = res.body?.getReader();
+      if (reader) {
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          // Parse SSE: extract "data:" lines with event "token"
+          for (const line of chunk.split("\n")) {
+            if (line.startsWith("data: ")) {
+              try {
+                const parsed = JSON.parse(line.slice(6));
+                if (typeof parsed === "string") {
+                  agentResponse += parsed;
+                } else if (parsed?.text) {
+                  agentResponse += parsed.text;
+                }
+              } catch {
+                // Not JSON, skip
+              }
+            }
+          }
+        }
+      }
+
+      // Save agent response as a note on the bug
+      if (agentResponse.trim()) {
+        const summary = agentResponse.length > 500
+          ? agentResponse.slice(0, 500) + "..."
+          : agentResponse;
+        const { FieldValue } = await import("firebase-admin/firestore");
+        await adminDb.doc(`users/${BUG_FIXER_OWNER_ID}/bugs/${bugId}`).update({
+          notes: FieldValue.arrayUnion(`[Bug Fixer] ${summary.trim()}`),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (err) {
+      console.error("Failed to trigger bug fixer:", err);
+      // Save error as note
+      try {
+        const { FieldValue } = await import("firebase-admin/firestore");
+        await adminDb.doc(`users/${BUG_FIXER_OWNER_ID}/bugs/${bugId}`).update({
+          notes: FieldValue.arrayUnion(`[Bug Fixer Error] ${(err as Error).message}`),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      } catch {
+        // Best effort
+      }
+    }
+  })();
 
   return NextResponse.json({ ok: true, bugId });
 }

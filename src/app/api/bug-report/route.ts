@@ -143,23 +143,57 @@ async function triggerBugFixer(
     return { name: s.name, content: s.content };
   });
 
-  await fetch(`${baseUrl}/api/agents/${agentId}/chat`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Internal-Trigger": process.env.FIREBASE_PRIVATE_KEY ? "bug-fixer" : "",
-    },
-    body: JSON.stringify({
-      userId,
-      message: triggerMessage,
-      history: [],
-      connectedRepos: agent.connectedRepos || [],
-      agentConfig: {
-        systemPrompt: agent.systemPrompt || "",
-        modelProvider: agent.modelProvider || "anthropic",
-        modelId: agent.modelId || "claude-sonnet-4-5-20250514",
-        skills,
+  try {
+    const res = await fetch(`${baseUrl}/api/agents/${agentId}/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Internal-Trigger": "bug-fixer",
       },
-    }),
-  });
+      body: JSON.stringify({
+        userId,
+        message: triggerMessage,
+        history: [],
+        connectedRepos: agent.connectedRepos || [],
+        agentConfig: {
+          systemPrompt: agent.systemPrompt || "",
+          modelProvider: agent.modelProvider || "anthropic",
+          modelId: agent.modelId || "claude-sonnet-4-5-20250514",
+          skills,
+        },
+      }),
+    });
+
+    // Read SSE stream and save agent response as note
+    let agentResponse = "";
+    const reader = res.body?.getReader();
+    if (reader) {
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        for (const line of chunk.split("\n")) {
+          if (line.startsWith("data: ")) {
+            try {
+              const parsed = JSON.parse(line.slice(6));
+              if (typeof parsed === "string") agentResponse += parsed;
+              else if (parsed?.text) agentResponse += parsed.text;
+            } catch { /* skip */ }
+          }
+        }
+      }
+    }
+
+    if (agentResponse.trim()) {
+      const { FieldValue } = await import("firebase-admin/firestore");
+      const summary = agentResponse.length > 500 ? agentResponse.slice(0, 500) + "..." : agentResponse;
+      await adminDb.doc(`users/${userId}/bugs/${bugId}`).update({
+        notes: FieldValue.arrayUnion(`[Bug Fixer] ${summary.trim()}`),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+  } catch (err) {
+    console.error("Bug fixer stream error:", err);
+  }
 }
