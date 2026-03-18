@@ -13,7 +13,8 @@ interface PlanCheck {
  */
 export async function checkPlanLimits(
   userId: string,
-  check: "agents" | "tokens" | "grading" | "teams" | "pipelines" | "mcp" | "meta_agent" | "sub_agents" | "autoresearch"
+  check: "agents" | "tokens" | "grading" | "teams" | "pipelines" | "mcp" | "meta_agent" | "sub_agents" | "autoresearch" | "github" | "version_history" | "model",
+  options?: { modelId?: string }
 ): Promise<PlanCheck> {
   const userSnap = await adminDb.doc(`users/${userId}`).get();
   const userData = userSnap.data();
@@ -118,6 +119,29 @@ export async function checkPlanLimits(
       const arRuns = usage?.autoresearchIterations || 0;
       if (arRuns >= limits.autoresearchRunsPerMonth) {
         return { allowed: false, reason: `Monthly AutoResearch run limit reached (${limits.autoresearchRunsPerMonth})`, plan };
+      }
+      return { allowed: true, plan };
+    }
+
+    case "github": {
+      if (!limits.githubIntegration) {
+        return { allowed: false, reason: "GitHub integration not available on this plan. Upgrade to Pro or higher.", plan };
+      }
+      return { allowed: true, plan };
+    }
+
+    case "version_history": {
+      if (!limits.versionHistory) {
+        return { allowed: false, reason: "Version history not available on this plan. Upgrade to Pro or higher.", plan };
+      }
+      return { allowed: true, plan };
+    }
+
+    case "model": {
+      if (!limits.allowedModels) return { allowed: true, plan }; // null = all models
+      const modelId = options?.modelId || "";
+      if (modelId && !limits.allowedModels.includes(modelId)) {
+        return { allowed: false, reason: `Model "${modelId}" not available on Starter plan. Upgrade for access to all models.`, plan };
       }
       return { allowed: true, plan };
     }

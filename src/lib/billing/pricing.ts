@@ -48,6 +48,9 @@ export const PLAN_LIMITS = {
     metaAgent: false,
     autoresearchRunsPerMonth: 0,
     autoresearchMaxIterations: 0,
+    githubIntegration: false,
+    versionHistory: false,
+    allowedModels: ["claude-sonnet-4-5-20250514", "claude-haiku-4-5-20251001"] as readonly string[],
   },
   pro: {
     agents: 25,
@@ -60,6 +63,9 @@ export const PLAN_LIMITS = {
     metaAgent: true,
     autoresearchRunsPerMonth: 5,
     autoresearchMaxIterations: 20,
+    githubIntegration: true,
+    versionHistory: true,
+    allowedModels: null as readonly string[] | null, // all models
   },
   usage: {
     agents: Infinity,
@@ -72,6 +78,9 @@ export const PLAN_LIMITS = {
     metaAgent: true,
     autoresearchRunsPerMonth: Infinity,
     autoresearchMaxIterations: 100,
+    githubIntegration: true,
+    versionHistory: true,
+    allowedModels: null as readonly string[] | null,
   },
   enterprise: {
     agents: Infinity,
@@ -84,6 +93,9 @@ export const PLAN_LIMITS = {
     metaAgent: true,
     autoresearchRunsPerMonth: Infinity,
     autoresearchMaxIterations: 500,
+    githubIntegration: true,
+    versionHistory: true,
+    allowedModels: null as readonly string[] | null,
   },
 } as const;
 

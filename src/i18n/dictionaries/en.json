@@ -53,9 +53,9 @@
       }
     },
     "autoResearch": {
-      "title": "Self-Improving",
-      "titleAccent": "Agents",
-      "subtitle": "Your agents run experiments, measure results, and optimize themselves in a tight feedback loop.",
+      "title": "Optimization",
+      "titleAccent": "Lab",
+      "subtitle": "6 optimization modes to push your agents further — hill-climbing prompt tuning, one-click bug fixing, adversarial stress testing, model tournaments, cost distillation, and multi-dimensional evolution. Each mode runs experiments, grades results, and keeps only what improves performance.",
       "autotune": {
         "title": "AutoTune",
         "description": "Iteratively mutate system prompts using LLM-guided strategies. Each iteration is graded, and only improvements are kept — hill-climbing to the best config."
@@ -66,7 +66,7 @@
       },
       "stressLab": {
         "title": "Stress Lab",
-        "description": "Generate adversarial test cases — prompt injections, edge cases, ambiguous inputs — and harden your agent's prompt against vulnerabilities."
+        "description": "Red team your agent automatically — generate adversarial attacks (prompt injections, jailbreaks, hallucination traps, edge cases) and harden its defenses until it passes."
       },
       "tournament": {
         "title": "Tournament Arena",
@@ -74,7 +74,7 @@
       },
       "evolution": {
         "title": "Evolution Engine",
-        "description": "Multi-dimensional genetic optimization across prompt, model, and thinking level. Population-based search with crossover, mutation, and natural selection."
+        "description": "Explore every combination of prompt, model, and config simultaneously. Runs parallel candidates, compares their grading scores, and converges on the best-performing setup for your use case."
       },
       "distillation": {
         "title": "Distillation",
@@ -286,7 +286,7 @@
       "team": "Team Lifecycle",
       "user": "User Interaction",
       "system": "System",
-      "autoresearch": "AutoResearch"
+      "autoresearch": "Optimization Lab"
     }
   },
   "playground": {
@@ -512,7 +512,7 @@
     "planPastDue": "Past Due — please update payment",
     "planCanceled": "Canceled",
     "usageCommission": "Includes 20% Kopern platform fee",
-    "autoresearchUsage": "AutoResearch Usage",
+    "autoresearchUsage": "Optimization Lab Usage",
     "autoresearchIterations": "Optimization Iterations",
     "autoresearchCost": "Optimization Cost",
     "autoresearchTokens": "Tokens Used",
@@ -630,12 +630,15 @@
       "sso": "SSO",
       "auditLogs": "Audit Logs",
       "versionHistory": "Version History",
-      "batchProcessing": "Batch Processing",
       "teams": "Agent Teams",
       "pipelines": "Pipelines",
       "subAgents": "Sub-agent Delegation",
       "metaAgent": "AI Agent Builder",
       "observability": "Observability",
+      "autoResearch": "Optimization Lab",
+      "mcpProtocol": "MCP Protocol (Claude Code, Cursor...)",
+      "extensions": "Extensions (30+ event hooks)",
+      "githubIntegration": "GitHub Integration",
       "inputTokenPrice": "Input tokens",
       "outputTokenPrice": "Output tokens",
       "gradingPrice": "Grading"
@@ -650,7 +653,8 @@
         "support": "Community",
         "teams": "0",
         "pipelines": "0",
-        "observability": "Basic"
+        "observability": "Basic",
+        "autoResearch": "—"
       },
       "pro": {
         "agents": "25",
@@ -661,7 +665,8 @@
         "support": "Priority email",
         "teams": "5",
         "pipelines": "10",
-        "observability": "Advanced"
+        "observability": "Advanced",
+        "autoResearch": "All 6 modes"
       },
       "usage": {
         "agents": "Unlimited",
@@ -673,6 +678,7 @@
         "teams": "Unlimited",
         "pipelines": "Unlimited",
         "observability": "Advanced",
+        "autoResearch": "All 6 modes",
         "inputTokenPrice": "$3 / 1M",
         "outputTokenPrice": "$15 / 1M",
         "gradingPrice": "$0.10 / run"
@@ -686,7 +692,8 @@
         "support": "Dedicated + SLA",
         "teams": "Unlimited",
         "pipelines": "Unlimited",
-        "observability": "Complete"
+        "observability": "Complete",
+        "autoResearch": "All 6 + priority"
       }
     },
     "comparisonTitle": "Compare Plans",

@@ -72,10 +72,14 @@ export async function POST(
           systemPrompt += `\n\n<skills>\n${skillsXml}\n</skills>`;
         }
 
-        // Inject repo context if connected
+        // Inject repo context if connected (plan check)
         if (connectedRepos.length > 0) {
+          const ghCheck = await checkPlanLimits(userId, "github");
+          if (!ghCheck.allowed) {
+            connectedRepos = []; // Silently skip — don't fail grading
+          }
           const fetchCtx = (await import("./fetch-repo-context")).default;
-          const repoCtx = await fetchCtx(userId, connectedRepos);
+          const repoCtx = connectedRepos.length > 0 ? await fetchCtx(userId, connectedRepos) : null;
           if (repoCtx) {
             systemPrompt += `\n\n${repoCtx}`;
           }

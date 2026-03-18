@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 
 async function getGithubToken(req: NextRequest): Promise<{ token: string; uid: string } | NextResponse> {
   const authHeader = req.headers.get("authorization");
@@ -30,7 +31,13 @@ async function getGithubToken(req: NextRequest): Promise<{ token: string; uid: s
 export async function GET(req: NextRequest) {
   const result = await getGithubToken(req);
   if (result instanceof NextResponse) return result;
-  const { token } = result;
+  const { token, uid } = result;
+
+  // Enforce GitHub integration plan limit
+  const ghCheck = await checkPlanLimits(uid, "github");
+  if (!ghCheck.allowed) {
+    return NextResponse.json({ error: ghCheck.reason, plan: ghCheck.plan }, { status: 403 });
+  }
 
   const repo = req.nextUrl.searchParams.get("repo");
   const branch = req.nextUrl.searchParams.get("branch") || "main";
@@ -125,7 +132,12 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const result = await getGithubToken(req);
   if (result instanceof NextResponse) return result;
-  const { token } = result;
+  const { token, uid } = result;
+
+  const ghCheck = await checkPlanLimits(uid, "github");
+  if (!ghCheck.allowed) {
+    return NextResponse.json({ error: ghCheck.reason, plan: ghCheck.plan }, { status: 403 });
+  }
 
   const { repo, path, branch = "main" } = await req.json();
 

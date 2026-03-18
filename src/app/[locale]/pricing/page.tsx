@@ -38,6 +38,7 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(true);
   const [billing, setBilling] = useState<BillingPeriod>("monthly");
   const [checkingOut, setCheckingOut] = useState<string | null>(null);
+  const [scrolled, setScrolled] = useState(false);
   const t = useDictionary();
   const locale = useLocale();
 
@@ -47,6 +48,12 @@ export default function PricingPage() {
       setLoading(false);
     });
     return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   async function handleCheckout(plan: string) {
@@ -122,17 +129,21 @@ export default function PricingPage() {
   ] as const;
 
   const booleanFeatures = [
+    { key: "autoResearch", starter: false, pro: true, enterprise: true, usage: true },
     { key: "subAgents", starter: false, pro: true, enterprise: true, usage: true },
     { key: "metaAgent", starter: false, pro: true, enterprise: true, usage: true },
+    { key: "githubIntegration", starter: false, pro: true, enterprise: true, usage: true },
+    { key: "mcpProtocol", starter: true, pro: true, enterprise: true, usage: true },
+    { key: "extensions", starter: true, pro: true, enterprise: true, usage: true },
+    { key: "versionHistory", starter: false, pro: true, enterprise: true, usage: true },
     { key: "sso", starter: false, pro: false, enterprise: true, usage: false },
     { key: "auditLogs", starter: false, pro: false, enterprise: true, usage: false },
-    { key: "versionHistory", starter: false, pro: true, enterprise: true, usage: true },
-    { key: "batchProcessing", starter: false, pro: true, enterprise: true, usage: true },
   ] as const;
 
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
+      <div className={`sticky top-0 z-50 backdrop-blur-sm transition-all duration-300 ${scrolled ? "bg-background/50 border-b border-accent shadow-[0_2px_16px_oklch(0.7677_0.1606_310.19_/_0.5)]" : "bg-background"}`}>
       <nav className="flex items-center px-6 py-4 max-w-6xl mx-auto">
         <LocalizedLink href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
           <img src="/logo_small.png" alt="Kopern" className="h-7" />
@@ -175,6 +186,7 @@ export default function PricingPage() {
           )}
         </div>
       </nav>
+      </div>
 
       <main className="max-w-6xl mx-auto px-6">
         {/* Hero */}
@@ -236,8 +248,11 @@ export default function PricingPage() {
                         <li key={fk} className="flex items-center gap-2 text-sm">
                           <Check className="h-4 w-4 text-primary shrink-0" />
                           <span>
-                            <span className="font-medium">{t.pricing.featureValues[tier.key][fk]}</span>{" "}
-                            {t.pricing.features[fk]}
+                            {locale === "fr" ? (
+                              <>{t.pricing.features[fk]} : <span className="font-medium">{t.pricing.featureValues[tier.key][fk]}</span></>
+                            ) : (
+                              <><span className="font-medium">{t.pricing.featureValues[tier.key][fk]}</span> {t.pricing.features[fk]}</>
+                            )}
                           </span>
                         </li>
                       ))}

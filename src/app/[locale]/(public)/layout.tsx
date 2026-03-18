@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { type User } from "firebase/auth";
 import { onAuthChanged } from "@/lib/firebase/auth";
 import { AuthProvider } from "@/providers/AuthProvider";
@@ -24,12 +24,20 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   const [loading, setLoading] = useState(true);
   const t = useDictionary();
 
+  const [scrolled, setScrolled] = useState(false);
+
   useEffect(() => {
     const unsubscribe = onAuthChanged((u) => {
       setUser(u);
       setLoading(false);
     });
     return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   // Authenticated: wrap in dashboard chrome (sidebar + header)
@@ -54,6 +62,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
+      <div className={`sticky top-0 z-50 backdrop-blur-sm transition-all duration-300 ${scrolled ? "bg-background/50 border-b border-accent shadow-[0_2px_16px_oklch(0.7677_0.1606_310.19_/_0.5)]" : "bg-background"}`}>
       <nav className="flex items-center px-6 py-4 max-w-6xl mx-auto">
         {/* Logo — left */}
         <LocalizedLink href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
@@ -98,6 +107,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           )}
         </div>
       </nav>
+      </div>
 
       {/* Content */}
       <AuthProvider>

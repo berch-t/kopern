@@ -30,7 +30,7 @@ export async function POST(
   const body = (await request.json()) as ChatRequestBody;
   const { message, history, agentConfig, userId, connectedRepos } = body;
 
-  // Enforce plan token limits
+  // Enforce plan limits
   if (userId) {
     const planCheck = await checkPlanLimits(userId, "tokens");
     if (!planCheck.allowed) {
@@ -38,6 +38,24 @@ export async function POST(
         { error: planCheck.reason, plan: planCheck.plan },
         { status: 403 }
       );
+    }
+    // Enforce model restriction
+    const modelCheck = await checkPlanLimits(userId, "model", { modelId: agentConfig.modelId });
+    if (!modelCheck.allowed) {
+      return NextResponse.json(
+        { error: modelCheck.reason, plan: modelCheck.plan },
+        { status: 403 }
+      );
+    }
+    // Enforce GitHub integration limit
+    if (connectedRepos && connectedRepos.length > 0) {
+      const ghCheck = await checkPlanLimits(userId, "github");
+      if (!ghCheck.allowed) {
+        return NextResponse.json(
+          { error: ghCheck.reason, plan: ghCheck.plan },
+          { status: 403 }
+        );
+      }
     }
   }
 

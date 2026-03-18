@@ -53,9 +53,9 @@
       }
     },
     "autoResearch": {
-      "title": "Agents",
-      "titleAccent": "Auto-Améliorants",
-      "subtitle": "Vos agents lancent des expériences, mesurent les résultats et s'optimisent dans une boucle de feedback serrée.",
+      "title": "Labo",
+      "titleAccent": "d'Optimisation",
+      "subtitle": "6 modes d'optimisation pour repousser les limites de vos agents — affinage de prompts par hill-climbing, correction de bugs en un clic, stress testing adversarial, tournois de modèles, distillation de coûts et évolution multi-dimensionnelle. Chaque mode lance des expériences, note les résultats et ne conserve que ce qui améliore les performances.",
       "autotune": {
         "title": "AutoTune",
         "description": "Mute itérativement les prompts système via des stratégies guidées par LLM. Chaque itération est évaluée, seules les améliorations sont conservées — hill-climbing vers la meilleure config."
@@ -66,7 +66,7 @@
       },
       "stressLab": {
         "title": "Stress Lab",
-        "description": "Génère des cas de test adversariaux — injections de prompts, cas limites, entrées ambiguës — et renforce le prompt de votre agent contre les vulnérabilités."
+        "description": "Red team automatique de votre agent — génère des attaques adversariales (injections de prompts, jailbreaks, pièges à hallucination, cas limites) et renforce ses défenses jusqu'à ce qu'il résiste."
       },
       "tournament": {
         "title": "Arène Tournoi",
@@ -74,7 +74,7 @@
       },
       "evolution": {
         "title": "Moteur d'Évolution",
-        "description": "Optimisation génétique multi-dimensionnelle sur le prompt, le modèle et le niveau de réflexion. Recherche par population avec croisement, mutation et sélection naturelle."
+        "description": "Explore toutes les combinaisons de prompt, modèle et config en parallèle. Lance des candidats simultanés, compare leurs scores de notation et converge vers la meilleure configuration pour votre cas d'usage."
       },
       "distillation": {
         "title": "Distillation",
@@ -286,7 +286,7 @@
       "team": "Cycle de vie Équipe",
       "user": "Interaction Utilisateur",
       "system": "Système",
-      "autoresearch": "AutoResearch"
+      "autoresearch": "Labo d'Optimisation"
     }
   },
   "playground": {
@@ -512,7 +512,7 @@
     "planPastDue": "Paiement en retard — veuillez mettre à jour",
     "planCanceled": "Annulé",
     "usageCommission": "Inclut 20% de frais de plateforme Kopern",
-    "autoresearchUsage": "Utilisation AutoResearch",
+    "autoresearchUsage": "Utilisation Labo d'Optimisation",
     "autoresearchIterations": "Itérations d'Optimisation",
     "autoresearchCost": "Coût d'Optimisation",
     "autoresearchTokens": "Tokens Utilisés",
@@ -630,12 +630,15 @@
       "sso": "SSO",
       "auditLogs": "Journaux d'Audit",
       "versionHistory": "Historique des Versions",
-      "batchProcessing": "Traitement par Lots",
       "teams": "Équipes d'Agents",
       "pipelines": "Pipelines",
       "subAgents": "Délégation de Sous-agents",
       "metaAgent": "Constructeur d'Agents IA",
       "observability": "Observabilité",
+      "autoResearch": "Labo d'Optimisation",
+      "mcpProtocol": "Protocole MCP (Claude Code, Cursor...)",
+      "extensions": "Extensions (30+ hooks)",
+      "githubIntegration": "Intégration GitHub",
       "inputTokenPrice": "Tokens entrants",
       "outputTokenPrice": "Tokens sortants",
       "gradingPrice": "Notation"
@@ -650,43 +653,47 @@
         "support": "Communauté",
         "teams": "0",
         "pipelines": "0",
-        "observability": "Basique"
+        "observability": "Basique",
+        "autoResearch": "—"
       },
       "pro": {
         "agents": "25",
         "tokensPerMonth": "1M",
         "mcpEndpoints": "10",
         "gradingRunsPerMonth": "100",
-        "models": "Tous les modèles",
+        "models": "Tous",
         "support": "Email prioritaire",
         "teams": "5",
         "pipelines": "10",
-        "observability": "Avancée"
+        "observability": "Avancée",
+        "autoResearch": "Les 6 modes"
       },
       "usage": {
-        "agents": "Illimité",
+        "agents": "Illimités",
         "tokensPerMonth": "À l'usage",
-        "mcpEndpoints": "Illimité",
+        "mcpEndpoints": "Illimités",
         "gradingRunsPerMonth": "0,10$ / exécution",
-        "models": "Tous les modèles",
+        "models": "Tous",
         "support": "Email",
-        "teams": "Illimité",
-        "pipelines": "Illimité",
+        "teams": "Illimitées",
+        "pipelines": "Illimités",
         "observability": "Avancée",
+        "autoResearch": "Les 6 modes",
         "inputTokenPrice": "3$ / 1M",
         "outputTokenPrice": "15$ / 1M",
         "gradingPrice": "0,10$ / exécution"
       },
       "enterprise": {
-        "agents": "Illimité",
+        "agents": "Illimités",
         "tokensPerMonth": "10M",
-        "mcpEndpoints": "Illimité",
-        "gradingRunsPerMonth": "Illimité",
+        "mcpEndpoints": "Illimités",
+        "gradingRunsPerMonth": "Illimitées",
         "models": "Tous + fine-tunés",
         "support": "Dédié + SLA",
-        "teams": "Illimité",
-        "pipelines": "Illimité",
-        "observability": "Complète"
+        "teams": "Illimitées",
+        "pipelines": "Illimités",
+        "observability": "Complète",
+        "autoResearch": "Les 6 + priorité"
       }
     },
     "comparisonTitle": "Comparer les Plans",
