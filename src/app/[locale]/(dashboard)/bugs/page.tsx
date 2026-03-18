@@ -175,21 +175,20 @@ export default function BugsPage() {
     try {
       const bug = bugs.find((b) => b.id === bugId);
       if (!bug) return;
-      const res = await fetch("/api/bug-report", {
+      const token = await user.getIdToken();
+      const res = await fetch("/api/bug-report/trigger", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          severity: bug.severity,
-          description: bug.description,
-          pageUrl: bug.pageUrl,
-          reporterEmail: bug.reporterEmail,
-          _retrigger: bugId,
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ bugId }),
       });
       if (res.ok) {
         toast.success(t.bugs.agentTriggered);
       } else {
-        toast.error(t.bugs.errorTrigger);
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || t.bugs.errorTrigger);
       }
     } catch {
       toast.error(t.bugs.errorTrigger);

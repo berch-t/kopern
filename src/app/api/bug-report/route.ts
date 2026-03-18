@@ -115,7 +115,6 @@ async function triggerBugFixer(
 ) {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
-  // We call the chat API internally with a system message describing the bug
   const triggerMessage = [
     `A new bug report has been submitted (Bug ID: ${bugId}).`,
     `Severity: ${severity.toUpperCase()}`,
@@ -129,12 +128,38 @@ async function triggerBugFixer(
     "5. Send a warm thank-you email to the reporter if they provided their email",
   ].join("\n");
 
+  // Load agent config from Firestore for the chat route
+  const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
+  if (!agentSnap.exists) {
+    console.error("Bug fixer agent not found:", agentId);
+    return;
+  }
+  const agent = agentSnap.data()!;
+
+  // Load skills
+  const skillsSnap = await adminDb.collection(`users/${userId}/agents/${agentId}/skills`).get();
+  const skills = skillsSnap.docs.map((d) => {
+    const s = d.data();
+    return { name: s.name, content: s.content };
+  });
+
   await fetch(`${baseUrl}/api/agents/${agentId}/chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "X-Internal-Trigger": process.env.FIREBASE_PRIVATE_KEY ? "bug-fixer" : "",
+    },
     body: JSON.stringify({
       userId,
-      messages: [{ role: "user", content: triggerMessage }],
+      message: triggerMessage,
+      history: [],
+      connectedRepos: agent.connectedRepos || [],
+      agentConfig: {
+        systemPrompt: agent.systemPrompt || "",
+        modelProvider: agent.modelProvider || "anthropic",
+        modelId: agent.modelId || "claude-sonnet-4-5-20250514",
+        skills,
+      },
     }),
   });
 }

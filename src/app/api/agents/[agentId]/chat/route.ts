@@ -30,8 +30,13 @@ export async function POST(
   const body = (await request.json()) as ChatRequestBody;
   const { message, history, agentConfig, userId, connectedRepos } = body;
 
-  // Enforce plan limits
-  if (userId) {
+  // Skip plan limits for internal triggers (bug fixer, admin)
+  const isInternalTrigger = request.headers.get("X-Internal-Trigger") === "bug-fixer";
+  const ADMIN_UIDS = (process.env.NEXT_PUBLIC_ADMIN_UID ?? "").split(",").filter(Boolean);
+  const isAdmin = userId ? ADMIN_UIDS.includes(userId) : false;
+
+  // Enforce plan limits (unless internal trigger or admin)
+  if (userId && !isInternalTrigger && !isAdmin) {
     const planCheck = await checkPlanLimits(userId, "tokens");
     if (!planCheck.allowed) {
       return NextResponse.json(
