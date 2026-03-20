@@ -113,8 +113,8 @@ export function WebhookManager({ agentId, apiKeyPrefix, onBack }: WebhookManager
       if (editingId) {
         await updateWebhook(userId, agentId, editingId, {
           name: formName.trim(),
-          targetUrl: formType === "outbound" ? formTargetUrl.trim() : undefined,
-          secret: formSecret.trim() || undefined,
+          targetUrl: formType === "outbound" ? formTargetUrl.trim() : null,
+          secret: formSecret.trim() || null,
           events: formType === "outbound" ? formEvents : [],
         });
         toast.success(wt.toastSaved ?? wt.toastCreated);

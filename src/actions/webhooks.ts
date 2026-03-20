@@ -48,8 +48,12 @@ export async function updateWebhook(
   webhookId: string,
   data: Partial<Pick<WebhookDoc, "name" | "enabled" | "secret" | "targetUrl" | "events">>
 ) {
+  // Filter out undefined values — Firestore rejects them
+  const clean = Object.fromEntries(
+    Object.entries(data).filter(([, v]) => v !== undefined)
+  );
   await updateDoc(webhookDoc(userId, agentId, webhookId), {
-    ...data,
+    ...clean,
     updatedAt: serverTimestamp(),
   });
 }
