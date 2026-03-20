@@ -45,6 +45,7 @@ import {
   ExternalLink,
   CheckCircle2,
   XCircle,
+  Pencil,
 } from "lucide-react";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { toast } from "sonner";
@@ -82,8 +83,9 @@ export function WebhookManager({ agentId, apiKeyPrefix, onBack }: WebhookManager
   const [logs, setLogs] = useState<(WebhookLogDoc & { id: string })[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
 
-  // Create dialog
+  // Create/Edit dialog
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formName, setFormName] = useState("");
   const [formType, setFormType] = useState<"inbound" | "outbound">("inbound");
   const [formTargetUrl, setFormTargetUrl] = useState("");
@@ -108,21 +110,41 @@ export function WebhookManager({ agentId, apiKeyPrefix, onBack }: WebhookManager
     if (!userId || !formName.trim()) return;
     setCreating(true);
     try {
-      await createWebhook(userId, agentId, {
-        name: formName.trim(),
-        type: formType,
-        targetUrl: formType === "outbound" ? formTargetUrl.trim() : undefined,
-        secret: formSecret.trim() || undefined,
-        events: formType === "outbound" ? formEvents : [],
-      });
-      toast.success(wt.toastCreated);
+      if (editingId) {
+        await updateWebhook(userId, agentId, editingId, {
+          name: formName.trim(),
+          targetUrl: formType === "outbound" ? formTargetUrl.trim() : undefined,
+          secret: formSecret.trim() || undefined,
+          events: formType === "outbound" ? formEvents : [],
+        });
+        toast.success(wt.toastSaved ?? wt.toastCreated);
+      } else {
+        await createWebhook(userId, agentId, {
+          name: formName.trim(),
+          type: formType,
+          targetUrl: formType === "outbound" ? formTargetUrl.trim() : undefined,
+          secret: formSecret.trim() || undefined,
+          events: formType === "outbound" ? formEvents : [],
+        });
+        toast.success(wt.toastCreated);
+      }
       setCreateOpen(false);
       resetForm();
     } catch {
-      toast.error(wt.toastCreateError);
+      toast.error(editingId ? wt.toastUpdateError : wt.toastCreateError);
     } finally {
       setCreating(false);
     }
+  };
+
+  const openEdit = (wh: WebhookDoc & { id: string }) => {
+    setEditingId(wh.id);
+    setFormName(wh.name);
+    setFormType(wh.type);
+    setFormTargetUrl(wh.targetUrl || "");
+    setFormSecret(wh.secret || "");
+    setFormEvents(wh.events || []);
+    setCreateOpen(true);
   };
 
   const handleDelete = async (webhookId: string) => {
@@ -151,6 +173,7 @@ export function WebhookManager({ agentId, apiKeyPrefix, onBack }: WebhookManager
   };
 
   const resetForm = () => {
+    setEditingId(null);
     setFormName("");
     setFormType("inbound");
     setFormTargetUrl("");
@@ -192,7 +215,7 @@ export function WebhookManager({ agentId, apiKeyPrefix, onBack }: WebhookManager
 
           {/* ─── Webhooks Tab ───────────────────────────────────────── */}
           <TabsContent value="webhooks" className="space-y-4">
-            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetForm(); }}>
               <DialogTrigger asChild>
                 <Button size="sm" onClick={() => { resetForm(); setCreateOpen(true); }}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -201,7 +224,7 @@ export function WebhookManager({ agentId, apiKeyPrefix, onBack }: WebhookManager
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{wt.createWebhook}</DialogTitle>
+                  <DialogTitle>{editingId ? (wt.editWebhook ?? "Edit Webhook") : wt.createWebhook}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
@@ -218,6 +241,7 @@ export function WebhookManager({ agentId, apiKeyPrefix, onBack }: WebhookManager
                     <Select
                       value={formType}
                       onValueChange={(v) => setFormType(v as "inbound" | "outbound")}
+                      disabled={!!editingId}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -276,7 +300,7 @@ export function WebhookManager({ agentId, apiKeyPrefix, onBack }: WebhookManager
                     disabled={creating || !formName.trim()}
                     className="w-full"
                   >
-                    {creating ? wt.creating : wt.create}
+                    {creating ? wt.creating : editingId ? (wt.save ?? "Save") : wt.create}
                   </Button>
                 </div>
               </DialogContent>
@@ -303,11 +327,18 @@ export function WebhookManager({ agentId, apiKeyPrefix, onBack }: WebhookManager
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                           <Switch
                             checked={wh.enabled}
                             onCheckedChange={(checked) => handleToggle(wh.id, checked)}
                           />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEdit(wh)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"

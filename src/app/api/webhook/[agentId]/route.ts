@@ -7,7 +7,6 @@ import type { LLMMessage } from "@/lib/llm/client";
 import {
   verifyHmacSignature,
   logWebhookExecution,
-  fireOutboundWebhooks,
 } from "@/lib/connectors/webhook";
 
 // ─── Auth helper ─────────────────────────────────────────────────────
@@ -199,12 +198,8 @@ export async function POST(
       durationMs: Date.now() - start,
     }).catch(() => {});
 
-    // 11. Fire outbound webhooks (fire-and-forget)
-    fireOutboundWebhooks(userId, agentId, "message_sent", {
-      inputTokens: metrics.inputTokens,
-      outputTokens: metrics.outputTokens,
-      toolCallCount: metrics.toolCallCount,
-    }).catch(() => {});
+    // 11. Do NOT fire outbound webhooks from inbound to prevent infinite loops
+    //     (inbound → outbound → external service → inbound → ...)
 
     return NextResponse.json({
       response,
@@ -228,10 +223,7 @@ export async function POST(
       durationMs: Date.now() - start,
     }).catch(() => {});
 
-    // Fire error outbound webhooks
-    fireOutboundWebhooks(userId, agentId, "error", {
-      error: errorMessage,
-    }).catch(() => {});
+    // Do NOT fire outbound webhooks from inbound (anti-loop)
 
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
