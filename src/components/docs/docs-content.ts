@@ -897,6 +897,167 @@ Create a team with these three agents in sequential mode. When executed, each ag
 
 ---
 
+## Connectors (External Deployment)
+
+Deploy your agents beyond the Kopern dashboard. Connectors let your agents interact with users on websites, respond to external events via webhooks, and join Slack conversations.
+
+### Embeddable Chat Widget
+
+Add an AI chat bubble to any website with a single \`<script>\` tag.
+
+#### Setup
+
+1. Go to **Agents → [Your Agent] → Connectors → Widget**
+2. Enable the widget and configure:
+   - **Welcome message** — first message shown to visitors
+   - **Position** — bottom-right or bottom-left
+   - **Allowed origins** — CORS whitelist (leave empty to allow all)
+   - **Powered by Kopern** — visible on Starter plan, removable on Pro+
+3. Generate an **API key** (same key system as MCP)
+4. Copy the embed snippet and paste it into your website's HTML
+
+#### Embed Snippet
+
+\`\`\`html
+<script
+  src="https://kopern.vercel.app/api/widget/script"
+  data-key="kpn_your_api_key_here"
+  async
+></script>
+\`\`\`
+
+#### Features
+
+- **Shadow DOM** — fully isolated CSS, no conflicts with your site
+- **SSE streaming** — real-time token-by-token responses
+- **Markdown rendering** — headers, bold, italic, code blocks, links, lists
+- **Mobile responsive** — full-screen panel on screens < 640px
+- **Dark mode** — automatically follows system preference
+- **Tool calling** — agent can use all configured tools
+
+#### API Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| \`/api/widget/script\` | GET | Serves the widget JavaScript |
+| \`/api/widget/config\` | GET | Returns widget configuration (branding, welcome message) |
+| \`/api/widget/chat\` | POST | SSE streaming chat (same auth as MCP) |
+
+#### CORS Configuration
+
+By default, the widget allows requests from any origin. For production, add specific origins in the widget configuration:
+
+\`\`\`
+https://mysite.com
+https://app.mysite.com
+\`\`\`
+
+Each origin must include the protocol (\`https://\`).
+
+### Webhooks
+
+Connect your agents to external services (Stripe, Jira, n8n, Zapier...) via HTTP webhooks.
+
+#### Inbound Webhooks
+
+External services send data to your agent, which processes the message and returns a JSON response.
+
+**Endpoint:** \`POST /api/webhook/{agentId}?key=kpn_xxx\`
+
+**Request:**
+\`\`\`json
+{
+  "message": "New order #1234 placed for $99.99",
+  "metadata": {
+    "orderId": "1234",
+    "source": "stripe"
+  }
+}
+\`\`\`
+
+**Response:**
+\`\`\`json
+{
+  "response": "I've noted the new order #1234...",
+  "metrics": {
+    "inputTokens": 1250,
+    "outputTokens": 85,
+    "toolCallCount": 0
+  }
+}
+\`\`\`
+
+#### HMAC Signature Verification
+
+For security, you can configure a signing secret on your webhook. The sender must include an \`X-Webhook-Signature\` header with the HMAC-SHA256 signature of the request body.
+
+#### Outbound Webhooks
+
+Your agent automatically notifies external services when events occur:
+
+| Event | Trigger |
+|-------|---------|
+| \`message_sent\` | Agent sends a response |
+| \`tool_call_completed\` | Agent finishes using a tool |
+| \`session_ended\` | Conversation session ends |
+| \`error\` | An error occurs during processing |
+
+**Outbound payload:**
+\`\`\`json
+{
+  "event": "message_sent",
+  "agentId": "abc123",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "data": {
+    "inputTokens": 1250,
+    "outputTokens": 85,
+    "toolCallCount": 1
+  }
+}
+\`\`\`
+
+#### Webhook Logs
+
+All webhook executions (inbound and outbound) are logged with direction, status, HTTP status code, duration, and timestamp. View logs in **Agents → [Your Agent] → Connectors → Webhooks → Logs tab**.
+
+### Slack Bot
+
+Let users interact with your agent directly in Slack channels and DMs.
+
+#### Setup
+
+1. **Create a Slack App** at [api.slack.com/apps](https://api.slack.com/apps)
+2. Configure **OAuth Scopes**: \`chat:write\`, \`app_mentions:read\`, \`channels:history\`, \`im:history\`, \`reactions:write\`
+3. Set **Event Subscriptions** URL: \`https://kopern.vercel.app/api/slack/events\`
+4. Subscribe to events: \`app_mention\`, \`message.im\`
+5. Add environment variables: \`SLACK_CLIENT_ID\`, \`SLACK_CLIENT_SECRET\`, \`SLACK_SIGNING_SECRET\`
+6. Go to **Agents → [Your Agent] → Connectors → Slack → Connect**
+7. Authorize the bot in your Slack workspace
+
+#### How It Works
+
+- **@mention** the bot in any channel → agent responds in a thread
+- **Direct message** the bot → agent responds directly
+- **Thread replies** maintain conversation context (full thread history is sent to the agent)
+- The bot adds 👀 reaction while thinking, then ✅ when done
+
+#### Security
+
+- All incoming events are verified using Slack's signing secret (HMAC-SHA256)
+- Bot tokens are stored securely in Firestore (server-side only)
+- Events return 200 immediately, processing happens asynchronously (Slack requires < 3s response)
+
+### Connector Plan Limits
+
+| Feature | Starter | Pro | Usage | Enterprise |
+|---------|---------|-----|-------|-----------|
+| Connectors | 0 | 3 | Unlimited | Unlimited |
+| Remove "Powered by" | No | Yes | Yes | Yes |
+
+Connector usage counts toward your plan's token limits.
+
+---
+
 ## Best Practices
 
 ### Agent Design

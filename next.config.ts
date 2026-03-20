@@ -4,6 +4,14 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Widget routes: no X-Frame-Options so they can be embedded
+        source: "/api/widget/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+      {
         source: "/(.*)",
         headers: [
           {

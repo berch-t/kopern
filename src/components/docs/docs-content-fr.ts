@@ -897,6 +897,167 @@ Creez une equipe avec ces trois agents en mode sequentiel. A l'execution, chaque
 
 ---
 
+## Connecteurs (Deploiement externe)
+
+Deployez vos agents au-dela du dashboard Kopern. Les connecteurs permettent a vos agents d'interagir avec les utilisateurs sur des sites web, de repondre a des evenements externes via des webhooks et de participer a des conversations Slack.
+
+### Widget de chat integrable
+
+Ajoutez une bulle de chat IA a n'importe quel site web avec une seule balise \`<script>\`.
+
+#### Configuration
+
+1. Allez dans **Agents → [Votre agent] → Connecteurs → Widget**
+2. Activez le widget et configurez :
+   - **Message d'accueil** — premier message affiche aux visiteurs
+   - **Position** — en bas a droite ou en bas a gauche
+   - **Origines autorisees** — liste blanche CORS (laissez vide pour tout autoriser)
+   - **Powered by Kopern** — visible sur le plan Starter, masquable sur Pro+
+3. Generez une **cle API** (meme systeme de cles que MCP)
+4. Copiez le snippet d'integration et collez-le dans le HTML de votre site
+
+#### Snippet d'integration
+
+\`\`\`html
+<script
+  src="https://kopern.vercel.app/api/widget/script"
+  data-key="kpn_votre_cle_api"
+  async
+></script>
+\`\`\`
+
+#### Fonctionnalites
+
+- **Shadow DOM** — CSS totalement isole, aucun conflit avec votre site
+- **Streaming SSE** — reponses en temps reel token par token
+- **Rendu Markdown** — titres, gras, italique, blocs de code, liens, listes
+- **Responsive mobile** — panneau plein ecran sur les ecrans < 640px
+- **Mode sombre** — suit automatiquement les preferences systeme
+- **Appel d'outils** — l'agent peut utiliser tous les outils configures
+
+#### Points d'acces API
+
+| Endpoint | Methode | Usage |
+|----------|---------|-------|
+| \`/api/widget/script\` | GET | Sert le JavaScript du widget |
+| \`/api/widget/config\` | GET | Retourne la configuration du widget (branding, message d'accueil) |
+| \`/api/widget/chat\` | POST | Chat en streaming SSE (meme auth que MCP) |
+
+#### Configuration CORS
+
+Par defaut, le widget autorise les requetes de toute origine. En production, ajoutez des origines specifiques dans la configuration du widget :
+
+\`\`\`
+https://monsite.com
+https://app.monsite.com
+\`\`\`
+
+Chaque origine doit inclure le protocole (\`https://\`).
+
+### Webhooks
+
+Connectez vos agents a des services externes (Stripe, Jira, n8n, Zapier...) via des webhooks HTTP.
+
+#### Webhooks entrants
+
+Les services externes envoient des donnees a votre agent, qui traite le message et retourne une reponse JSON.
+
+**Endpoint :** \`POST /api/webhook/{agentId}?key=kpn_xxx\`
+
+**Requete :**
+\`\`\`json
+{
+  "message": "Nouvelle commande #1234 pour 99,99€",
+  "metadata": {
+    "orderId": "1234",
+    "source": "stripe"
+  }
+}
+\`\`\`
+
+**Reponse :**
+\`\`\`json
+{
+  "response": "J'ai note la nouvelle commande #1234...",
+  "metrics": {
+    "inputTokens": 1250,
+    "outputTokens": 85,
+    "toolCallCount": 0
+  }
+}
+\`\`\`
+
+#### Verification de signature HMAC
+
+Pour la securite, vous pouvez configurer un secret de signature sur votre webhook. L'expediteur doit inclure un en-tete \`X-Webhook-Signature\` avec la signature HMAC-SHA256 du corps de la requete.
+
+#### Webhooks sortants
+
+Votre agent notifie automatiquement les services externes lorsque des evenements se produisent :
+
+| Evenement | Declencheur |
+|-----------|-------------|
+| \`message_sent\` | L'agent envoie une reponse |
+| \`tool_call_completed\` | L'agent finit d'utiliser un outil |
+| \`session_ended\` | La session de conversation se termine |
+| \`error\` | Une erreur survient pendant le traitement |
+
+**Payload sortant :**
+\`\`\`json
+{
+  "event": "message_sent",
+  "agentId": "abc123",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "data": {
+    "inputTokens": 1250,
+    "outputTokens": 85,
+    "toolCallCount": 1
+  }
+}
+\`\`\`
+
+#### Journaux de webhooks
+
+Toutes les executions de webhooks (entrants et sortants) sont enregistrees avec la direction, le statut, le code HTTP, la duree et l'horodatage. Consultez les journaux dans **Agents → [Votre agent] → Connecteurs → Webhooks → onglet Journaux**.
+
+### Bot Slack
+
+Permettez aux utilisateurs d'interagir avec votre agent directement dans les channels et DMs Slack.
+
+#### Configuration
+
+1. **Creez une Slack App** sur [api.slack.com/apps](https://api.slack.com/apps)
+2. Configurez les **OAuth Scopes** : \`chat:write\`, \`app_mentions:read\`, \`channels:history\`, \`im:history\`, \`reactions:write\`
+3. Definissez l'URL **Event Subscriptions** : \`https://kopern.vercel.app/api/slack/events\`
+4. Abonnez-vous aux evenements : \`app_mention\`, \`message.im\`
+5. Ajoutez les variables d'environnement : \`SLACK_CLIENT_ID\`, \`SLACK_CLIENT_SECRET\`, \`SLACK_SIGNING_SECRET\`
+6. Allez dans **Agents → [Votre agent] → Connecteurs → Slack → Connecter**
+7. Autorisez le bot dans votre workspace Slack
+
+#### Comment ca marche
+
+- **@mentionnez** le bot dans n'importe quel channel → l'agent repond dans un thread
+- **Message direct** au bot → l'agent repond directement
+- **Les reponses en thread** conservent le contexte de conversation (l'historique complet du thread est envoye a l'agent)
+- Le bot ajoute une reaction 👀 pendant la reflexion, puis ✅ quand c'est termine
+
+#### Securite
+
+- Tous les evenements entrants sont verifies via le signing secret de Slack (HMAC-SHA256)
+- Les tokens du bot sont stockes de maniere securisee dans Firestore (cote serveur uniquement)
+- Les evenements retournent 200 immediatement, le traitement se fait de maniere asynchrone (Slack exige une reponse < 3s)
+
+### Limites par plan
+
+| Fonctionnalite | Starter | Pro | Usage | Enterprise |
+|----------------|---------|-----|-------|-----------|
+| Connecteurs | 0 | 3 | Illimite | Illimite |
+| Retirer « Powered by » | Non | Oui | Oui | Oui |
+
+L'utilisation des connecteurs est comptabilisee dans les limites de tokens de votre plan.
+
+---
+
 ## Bonnes pratiques
 
 ### Conception d'agent

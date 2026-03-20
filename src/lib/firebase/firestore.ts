@@ -546,3 +546,81 @@ export function bugsCollection(userId: string) {
 export function bugDoc(userId: string, bugId: string) {
   return doc(db, "users", userId, "bugs", bugId);
 }
+
+// --- Connectors ---
+
+export type WebhookEventType = "message_sent" | "tool_call_completed" | "session_ended" | "error";
+
+export interface WidgetConfigDoc {
+  enabled: boolean;
+  apiKeyHash: string;
+  apiKeyPrefix: string;
+  apiKeyPlain?: string;
+  welcomeMessage: string;
+  position: "bottom-right" | "bottom-left";
+  showPoweredBy: boolean;
+  allowedOrigins: string[];
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface WebhookDoc {
+  name: string;
+  type: "inbound" | "outbound";
+  enabled: boolean;
+  secret: string | null;
+  targetUrl: string | null;
+  events: WebhookEventType[];
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface WebhookLogDoc {
+  webhookId: string;
+  direction: "inbound" | "outbound";
+  status: "success" | "error";
+  statusCode: number | null;
+  requestBody: string;
+  responseBody: string;
+  durationMs: number;
+  createdAt: Timestamp;
+}
+
+export interface SlackConnectionDoc {
+  teamId: string;
+  teamName: string;
+  botToken: string;
+  botUserId: string;
+  channels: string[];
+  enabled: boolean;
+  installedBy: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface SlackTeamIndexDoc {
+  userId: string;
+  agentId: string;
+}
+
+// --- Connector collection helpers ---
+
+export function widgetConfigDoc(userId: string, agentId: string) {
+  return doc(db, "users", userId, "agents", agentId, "connectors", "widget");
+}
+
+export function webhooksCollection(userId: string, agentId: string) {
+  return typedCollection<WebhookDoc>(`users/${userId}/agents/${agentId}/webhooks`);
+}
+
+export function webhookDoc(userId: string, agentId: string, webhookId: string) {
+  return doc(db, "users", userId, "agents", agentId, "webhooks", webhookId);
+}
+
+export function webhookLogsCollection(userId: string, agentId: string) {
+  return typedCollection<WebhookLogDoc>(`users/${userId}/agents/${agentId}/webhookLogs`);
+}
+
+export function slackConnectionDoc(userId: string, agentId: string) {
+  return doc(db, "users", userId, "agents", agentId, "connectors", "slackConnection");
+}

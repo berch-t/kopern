@@ -80,6 +80,22 @@ service cloud.firestore {
         match /sessions/{sessionId} {
           allow read, write: if request.auth != null && request.auth.uid == userId;
         }
+
+        // Connectors (widget, slack)
+        match /connectors/{connectorId} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+
+        // Webhooks
+        match /webhooks/{webhookId} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+
+        // Webhook Logs (read-only for owner, writes via admin SDK)
+        match /webhookLogs/{logId} {
+          allow read: if request.auth != null && request.auth.uid == userId;
+          allow write: if false;
+        }
       }
 
       // Agent Teams (user-level)
@@ -97,6 +113,11 @@ service cloud.firestore {
       match /bugs/{bugId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+    }
+
+    // Slack Teams index (admin SDK only — no client access)
+    match /slackTeams/{teamId} {
+      allow read, write: if false;
     }
   }
 }

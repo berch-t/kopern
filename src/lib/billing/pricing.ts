@@ -50,6 +50,8 @@ export const PLAN_LIMITS = {
     autoresearchMaxIterations: 0,
     githubIntegration: false,
     versionHistory: false,
+    connectors: 0,
+    widgetRemoveBranding: false,
     allowedModels: ["claude-sonnet-4-5-20250514", "claude-haiku-4-5-20251001"] as readonly string[],
   },
   pro: {
@@ -65,6 +67,8 @@ export const PLAN_LIMITS = {
     autoresearchMaxIterations: 20,
     githubIntegration: true,
     versionHistory: true,
+    connectors: 3,
+    widgetRemoveBranding: true,
     allowedModels: null as readonly string[] | null, // all models
   },
   usage: {
@@ -80,6 +84,8 @@ export const PLAN_LIMITS = {
     autoresearchMaxIterations: 100,
     githubIntegration: true,
     versionHistory: true,
+    connectors: Infinity,
+    widgetRemoveBranding: true,
     allowedModels: null as readonly string[] | null,
   },
   enterprise: {
@@ -95,6 +101,8 @@ export const PLAN_LIMITS = {
     autoresearchMaxIterations: 500,
     githubIntegration: true,
     versionHistory: true,
+    connectors: Infinity,
+    widgetRemoveBranding: true,
     allowedModels: null as readonly string[] | null,
   },
 } as const;

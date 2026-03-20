@@ -13,7 +13,7 @@ interface PlanCheck {
  */
 export async function checkPlanLimits(
   userId: string,
-  check: "agents" | "tokens" | "grading" | "teams" | "pipelines" | "mcp" | "meta_agent" | "sub_agents" | "autoresearch" | "github" | "version_history" | "model",
+  check: "agents" | "tokens" | "grading" | "teams" | "pipelines" | "mcp" | "meta_agent" | "sub_agents" | "autoresearch" | "github" | "version_history" | "model" | "connectors",
   options?: { modelId?: string }
 ): Promise<PlanCheck> {
   const userSnap = await adminDb.doc(`users/${userId}`).get();
@@ -142,6 +142,14 @@ export async function checkPlanLimits(
       const modelId = options?.modelId || "";
       if (modelId && !limits.allowedModels.includes(modelId)) {
         return { allowed: false, reason: `Model "${modelId}" not available on Starter plan. Upgrade for access to all models.`, plan };
+      }
+      return { allowed: true, plan };
+    }
+
+    case "connectors": {
+      if (limits.connectors === Infinity) return { allowed: true, plan };
+      if (limits.connectors === 0) {
+        return { allowed: false, reason: "Connectors not available on this plan. Upgrade to Pro or higher.", plan };
       }
       return { allowed: true, plan };
     }

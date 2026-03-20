@@ -1525,6 +1525,105 @@ Les métriques (tokens, coût, appels d'outils) sont suivies **par étape** et *
 
 ---
 
+## Connecteurs (Déploiement externe)
+
+Déployez vos agents au-delà du dashboard Kopern — sur des sites web, via des webhooks et dans des workspaces Slack.
+
+### Widget de chat intégrable
+
+Ajoutez une bulle de chat IA à n'importe quel site web avec une seule balise script :
+
+\`\`\`html
+<script
+  src="https://kopern.vercel.app/api/widget/script"
+  data-key="kpn_votre_cle_api"
+  async
+></script>
+\`\`\`
+
+**Fonctionnalités clés :**
+- **Shadow DOM** — isolation CSS totale, zéro conflit avec votre site
+- **Streaming SSE** — réponses en temps réel token par token avec rendu markdown
+- **Responsive mobile** — panneau plein écran sous 640px
+- **Mode sombre** — suit automatiquement les préférences système
+- **Contrôle CORS** — liste blanche d'origines spécifiques ou tout autoriser
+- **Badge Powered by Kopern** — visible sur Starter, masquable sur Pro+
+
+**Configuration :** Agents → Connecteurs → Widget → Activer → Générer une clé API → Copier le snippet
+
+| Endpoint | Méthode | Usage |
+|----------|---------|-------|
+| \`/api/widget/script\` | GET | Sert le JavaScript du widget |
+| \`/api/widget/config\` | GET | Retourne la configuration du widget |
+| \`/api/widget/chat\` | POST | Chat en streaming SSE |
+
+### Webhooks (Entrants et Sortants)
+
+#### Entrants — Des services externes déclenchent votre agent
+
+\`\`\`bash
+curl -X POST "https://kopern.vercel.app/api/webhook/{agentId}?key=kpn_xxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{"message": "Nouvelle commande #1234", "metadata": {"source": "stripe"}}'
+\`\`\`
+
+**Réponse :**
+\`\`\`json
+{
+  "response": "J'ai noté la nouvelle commande #1234...",
+  "metrics": { "inputTokens": 1250, "outputTokens": 85, "toolCallCount": 0 }
+}
+\`\`\`
+
+- Réponse JSON synchrone (pas SSE)
+- Vérification de signature HMAC-SHA256 optionnelle via l'en-tête \`X-Webhook-Signature\`
+- Compatible avec Stripe, Jira, n8n, Zapier, Make et tout client HTTP
+
+#### Sortants — Votre agent notifie des services externes
+
+Configurez des URLs cibles et des événements déclencheurs :
+
+| Événement | Déclencheur |
+|-----------|-------------|
+| \`message_sent\` | L'agent envoie une réponse |
+| \`tool_call_completed\` | L'agent finit d'utiliser un outil |
+| \`session_ended\` | La session se termine |
+| \`error\` | Une erreur survient |
+
+Les webhooks sortants se déclenchent automatiquement (fire-and-forget) avec un payload JSON contenant le type d'événement, l'ID de l'agent, l'horodatage et les métriques.
+
+#### Journaux de webhooks
+
+Toutes les exécutions sont enregistrées avec la direction, le statut, le code HTTP, la durée et l'horodatage. Consultez dans Connecteurs → Webhooks → onglet Journaux.
+
+### Bot Slack
+
+Permettez aux utilisateurs d'interagir avec votre agent directement dans Slack.
+
+**Configuration :**
+1. Créez une Slack App sur [api.slack.com/apps](https://api.slack.com/apps)
+2. Ajoutez les OAuth scopes : \`chat:write\`, \`app_mentions:read\`, \`channels:history\`, \`im:history\`, \`reactions:write\`
+3. Définissez l'URL Event Subscriptions : \`https://kopern.vercel.app/api/slack/events\`
+4. Abonnez-vous à : \`app_mention\`, \`message.im\`
+5. Connectez depuis Kopern : Agents → Connecteurs → Slack → Connecter
+
+**Comment ça marche :**
+- \`@mention\` dans n'importe quel channel → réponse en thread
+- Message direct → réponse directe
+- Le contexte des threads est préservé (historique complet envoyé à l'agent)
+- Réaction 👀 pendant la réflexion, ✅ quand c'est terminé
+
+**Sécurité :** Vérification du signing secret Slack (HMAC-SHA256), traitement asynchrone (réponse < 3s), stockage des tokens côté serveur.
+
+### Limites par plan
+
+| Fonctionnalité | Starter | Pro | Usage | Enterprise |
+|----------------|---------|-----|-------|-----------|
+| Connecteurs | 0 | 3 | Illimité | Illimité |
+| Retirer le branding | Non | Oui | Oui | Oui |
+
+---
+
 ## Sessions et observabilité
 
 ### Consulter les sessions

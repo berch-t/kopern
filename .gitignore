@@ -46,7 +46,6 @@ next-env.d.ts
 /docs/
 /pi-mono/
 CLAUDE.md
-STRIPE-DEPLOYMENT-GUIDE.md
-KOPERN-AGENT.md
 .mcp.json
-KOPERN_BUG_FIXER_AGENT.md
+PHASE_1_ROADMAP.md
+test-widget.html

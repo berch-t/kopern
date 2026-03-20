@@ -12,6 +12,7 @@ import {
 } from "@/lib/tools/agent-tools";
 import { getBugTools, executeBugTool, isBugTool } from "@/lib/tools/bug-tools";
 import { runExtensions } from "@/lib/extensions/extension-runner";
+import { fireOutboundWebhooks } from "@/lib/connectors/webhook";
 import type { ExtensionEventType } from "@/lib/firebase/firestore";
 
 const MAX_TOOL_ITERATIONS = 10;
@@ -240,6 +241,14 @@ export async function runAgentWithTools(
                     inputTokens,
                     outputTokens
                   ).catch(() => {}); // Don't block on tracking errors
+
+                  // Fire outbound webhooks (fire-and-forget)
+                  fireOutboundWebhooks(
+                    config.userId,
+                    config.agentId,
+                    "message_sent",
+                    { inputTokens, outputTokens, toolCallCount: totalToolCalls }
+                  ).catch(() => {});
                 }
 
                 const metrics: AgentRunMetrics = {

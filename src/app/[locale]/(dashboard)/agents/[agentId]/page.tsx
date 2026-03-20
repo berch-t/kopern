@@ -25,6 +25,7 @@ import {
   Workflow,
   Activity,
   FlaskConical,
+  Plug,
 } from "lucide-react";
 
 export default function AgentDetailPage({
@@ -57,6 +58,7 @@ export default function AgentDetailPage({
     { href: `/agents/${agentId}/optimize`, label: t.agents.detail.optimize, icon: FlaskConical, accent: "text-pink-500", bg: "bg-pink-500/10" },
     { href: `/agents/${agentId}/mcp-servers`, label: t.agents.detail.mcpServers, icon: Server, accent: "text-indigo-500", bg: "bg-indigo-500/10" },
     { href: `/agents/${agentId}/pipelines`, label: t.pipelines.title, icon: Workflow, accent: "text-orange-500", bg: "bg-orange-500/10" },
+    { href: `/agents/${agentId}/connectors`, label: t.connectors.title, icon: Plug, accent: "text-rose-500", bg: "bg-rose-500/10" },
     { href: `/agents/${agentId}/sessions`, label: t.sessions.title, icon: Activity, accent: "text-teal-500", bg: "bg-teal-500/10" },
   ];
 
