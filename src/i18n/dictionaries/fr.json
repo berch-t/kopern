@@ -95,7 +95,7 @@
       }
     },
     "hero": {
-      "tagline": "Pas un énième agent de code. Le mien.",
+      "tagline": "Pas un énième agent IA. Le mien.",
       "placeholder": "ex. J'ai besoin d'un agent qui revoit les PRs pour les vulnérabilités de sécurité, vérifie l'OWASP Top 10 et génère des suggestions de correctifs...",
       "generate": "Générer mon Agent",
       "generating": "Conception de votre agent...",
@@ -771,12 +771,16 @@
     }
   },
   "deploySection": {
-    "title": "Déployez Partout,",
-    "titleAccent": "Touchez Tout le Monde",
-    "subtitle": "Vos agents vivent là où vos utilisateurs travaillent déjà — intégrés sur des sites web, déclenchés par webhooks, ou dans Slack.",
+    "title": "Connectez Tout,",
+    "titleAccent": "Déployez Partout",
+    "subtitle": "De vos repos GitHub à vos channels Slack, des webhooks aux widgets embarqués — vos agents se branchent sur toute votre stack.",
     "widget": {
       "title": "Widget Chat",
       "description": "Intégrez une bulle de chat IA complète sur n'importe quel site avec une seule balise script. Isolation Shadow DOM, streaming SSE, responsive mobile."
+    },
+    "automation": {
+      "title": "Plateformes d'Automatisation",
+      "description": "Connectez n8n, Zapier ou Make pour orchestrer des workflows complexes. Votre agent devient un noeud dans votre stack d'automatisation."
     },
     "webhooks": {
       "title": "Webhooks",
@@ -784,10 +788,9 @@
     },
     "slack": {
       "title": "Bot Slack",
-      "description": "Votre agent rejoint les conversations Slack. Mentionnez-le dans les channels, envoyez-lui des DM, contexte de thread complet préservé.",
-      "ready": "Ready"
+      "description": "Votre agent rejoint les conversations Slack. Mentionnez-le dans les channels, envoyez-lui des DM, contexte de thread complet préservé."
     },
-    "integratesWith": "S'intègre avec"
+    "integratesWith": "Intégrations native"
   },
   "bugReport": {
     "button": "Signaler un Bug",

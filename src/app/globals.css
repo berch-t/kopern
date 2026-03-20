@@ -220,14 +220,14 @@
   animation: shimmer 2.5s ease-in-out infinite;
 }
 
-/* Scrolling logo banner */
+/* Scrolling logo banner — 4 copies, scroll 1 set = 25% */
 @keyframes scroll-logos {
   0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  100% { transform: translateX(-25%); }
 }
 
 .animate-scroll-logos {
-  animation: scroll-logos 30s linear infinite;
+  animation: scroll-logos 25s linear infinite;
 }
 
 .animate-scroll-logos:hover {

@@ -95,7 +95,7 @@
       }
     },
     "hero": {
-      "tagline": "Not just another coding agent. Mine.",
+      "tagline": "Not just another AI agent. Mine.",
       "placeholder": "e.g. I need an agent that reviews PRs for security vulnerabilities, checks OWASP Top 10, and generates fix suggestions...",
       "generate": "Generate my Agent",
       "generating": "Designing your agent...",
@@ -771,12 +771,16 @@
     }
   },
   "deploySection": {
-    "title": "Deploy Everywhere,",
-    "titleAccent": "Reach Anyone",
-    "subtitle": "Your agents live where your users already work — embedded on websites, triggered by webhooks, or chatting in Slack.",
+    "title": "Connect Everything,",
+    "titleAccent": "Deploy Anywhere",
+    "subtitle": "From GitHub repos to Slack channels, from webhooks to embedded widgets — your agents plug into your entire stack.",
     "widget": {
       "title": "Chat Widget",
       "description": "Embed a fully-featured AI chat bubble on any website with a single script tag. Shadow DOM isolation, SSE streaming, mobile-ready."
+    },
+    "automation": {
+      "title": "Automation Platforms",
+      "description": "Connect n8n, Zapier, or Make to orchestrate complex workflows. Your agent becomes a node in your automation stack."
     },
     "webhooks": {
       "title": "Webhooks",
@@ -784,10 +788,9 @@
     },
     "slack": {
       "title": "Slack Bot",
-      "description": "Your agent joins Slack conversations. Mention it in channels, DM it directly, full thread context preserved.",
-      "ready": "Ready"
+      "description": "Your agent joins Slack conversations. Mention it in channels, DM it directly, full thread context preserved."
     },
-    "integratesWith": "Integrates with"
+    "integratesWith": "Integrates natively"
   },
   "bugReport": {
     "button": "Report a Bug",
