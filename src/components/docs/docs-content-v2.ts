@@ -1880,6 +1880,23 @@ Configure target URLs and trigger events:
 
 Outbound webhooks fire automatically (fire-and-forget) with a JSON payload containing event type, agent ID, timestamp, and metrics.
 
+#### Anti-Loop Protection
+
+Inbound webhooks **never** fire outbound webhooks — this prevents infinite loops when integrating with automation platforms. Without this, a round-trip between Kopern and n8n/Zapier/Make would create a runaway cycle.
+
+#### Integration with n8n, Zapier & Make
+
+Use the **HTTP Request** node on your automation platform to call Kopern agents, or configure outbound webhooks to trigger external workflows.
+
+**Inbound (platform → Kopern):** Use an HTTP Request node to \`POST /api/webhook/{agentId}?key=kpn_xxx\` with \`{"message": "...", "metadata": {...}}\`. The agent processes the message and returns a synchronous JSON response.
+
+**Outbound (Kopern → platform):**
+- **n8n**: Create a Webhook trigger node → copy URL → add as outbound webhook in Kopern
+- **Zapier**: Create a Catch Hook trigger → copy URL → add as outbound webhook
+- **Make**: Create a Custom Webhook module → copy URL → add as outbound webhook
+
+> **Warning:** Never create circular loops. Kopern blocks outbound from inbound, but design your external workflows to avoid calling the same agent back.
+
 #### Webhook Logs
 
 All executions are logged with direction, status, HTTP code, duration, and timestamp. View in Connectors → Webhooks → Logs tab.

@@ -65,6 +65,7 @@ class DocsBoundary extends Component<{ children: ReactNode }, { hasError: boolea
 }
 
 const PixelBlast = lazy(() => import("@/components/ui/PixelBlast"));
+const MagicRings = lazy(() => import("@/components/ui/MagicRings"));
 
 const THINKING_PHRASES = [
   "Reading between the lines of your idea...",
@@ -111,6 +112,7 @@ export default function LandingPage() {
   // Hero agent creator state
   const [heroStep, setHeroStep] = useState<HeroStep>("input");
   const [heroDescription, setHeroDescription] = useState("");
+  const [heroInputFocused, setHeroInputFocused] = useState(false);
   const [heroStreamText, setHeroStreamText] = useState("");
   const [heroSpec, setHeroSpec] = useState<AgentSpec | null>(null);
   const [heroSaving, setHeroSaving] = useState(false);
@@ -374,20 +376,20 @@ export default function LandingPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="gap-2 text-primary hover:text-primary/80"
+            className="gap-2 text-primary hover:text-primary/80 hover:!bg-transparent dark:hover:!bg-transparent border border-transparent hover:border-primary/50"
             onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}
           >
             <BookOpen className="h-4 w-4" />
             {t.nav.docs}
           </Button>
           <LocalizedLink href="/examples">
-            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground hover:!bg-transparent dark:hover:!bg-transparent border border-transparent hover:border-primary/50">
               <Lightbulb className="h-4 w-4" />
               {t.nav.examples}
             </Button>
           </LocalizedLink>
           <LocalizedLink href="/pricing">
-            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground hover:!bg-transparent dark:hover:!bg-transparent border border-transparent hover:border-primary/50">
               <DollarSignIcon className="h-4 w-4" />
               {t.nav.pricing}
             </Button>
@@ -402,7 +404,7 @@ export default function LandingPage() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground hover:!bg-transparent dark:hover:!bg-transparent border border-transparent hover:border-primary/50">
               <Github className="h-4 w-4" />
             </Button>
           </a>
@@ -445,24 +447,31 @@ export default function LandingPage() {
 
       {/* Hero */}
       <div className="relative overflow-hidden" style={{ background: "var(--landing-section-hero)" }}>
-        {/* PixelBlast background */}
+        {/* MagicRings background */}
         <Suspense fallback={null}>
-          <PixelBlast
-            variant="diamond"
-            pixelSize={9}
-            color="#37005e"
-            patternScale={2.25}
-            patternDensity={0.55}
-            pixelSizeJitter={1.25}
-            enableRipples
-            rippleSpeed={0.05}
-            rippleThickness={0.12}
-            rippleIntensityScale={1.5}
-            liquid={false}
-            speed={1.2}
-            edgeFade={0.15}
-            transparent
-            style={{ zIndex: 0, pointerEvents: "none" }}
+          <MagicRings
+            color="#d394ff"
+            colorTwo="#1a1a1a"
+            ringCount={8}
+            speed={0.5}
+            attenuation={7}
+            lineThickness={2}
+            baseRadius={0.5}
+            radiusStep={0.1}
+            scaleRate={0.15}
+            opacity={0.9}
+            noiseAmount={0.05}
+            rotation={-25}
+            ringGap={3.5}
+            fadeIn={0.5}
+            fadeOut={0.5}
+            followMouse
+            mouseInfluence={0}
+            hoverScale={1.03}
+            parallax={0.03}
+            clickBurst
+            className="absolute inset-0 w-full h-full"
+            style={{ zIndex: 0, pointerEvents: "auto" }}
           />
         </Suspense>
 
@@ -499,7 +508,7 @@ export default function LandingPage() {
                   key="input"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
+                  exit={{ opacity: 0.5 }}
                   transition={{ duration: 0.25 }}
                   className="space-y-4"
                 >
@@ -507,19 +516,26 @@ export default function LandingPage() {
                     <Textarea
                       value={heroDescription}
                       onChange={(e) => setHeroDescription(e.target.value)}
+                      onFocus={() => setHeroInputFocused(true)}
+                      onBlur={() => setHeroInputFocused(false)}
                       placeholder={t.landing.hero.placeholder}
-                      className="min-h-[120px] resize-none text-base pr-4 rounded-xl border-2 border-muted focus:border-primary transition-colors"
+                      className="min-h-[120px] resize-none text-base pr-4 rounded-xl border-2 border-muted-foreground/30 focus:border-primary transition-colors"
+                      style={{ backgroundColor: heroInputFocused ? "var(--background)" : "color-mix(in srgb, var(--background) 50%, transparent)" }}
                     />
                   </div>
-                  <Button
-                    size="lg"
-                    onClick={handleHeroGenerate}
-                    disabled={!canGenerate}
-                    className="w-full gap-2 rounded-xl h-12 text-base"
-                  >
-                    <Sparkles className="h-5 w-5" />
-                    {t.landing.hero.generate}
-                  </Button>
+                  <div className={`gradient-border-wrap w-full transition-opacity duration-300 ${canGenerate ? "opacity-100" : "opacity-40"}`} style={{ borderRadius: "12px" }}>
+                    <div className="bg-background rounded-[11px]">
+                      <Button
+                        size="lg"
+                        onClick={handleHeroGenerate}
+                        disabled={!canGenerate}
+                        className="w-full gap-2 rounded-xl h-12 text-base bg-transparent text-primary hover:bg-muted"
+                      >
+                        <Sparkles className="h-5 w-5" />
+                        {t.landing.hero.generate}
+                      </Button>
+                    </div>
+                  </div>
                 </motion.div>
               )}
 
@@ -761,13 +777,13 @@ export default function LandingPage() {
           {/* Secondary CTA links */}
           <div className="mt-8 flex gap-4">
             <LocalizedLink href={user ? "/dashboard" : "/login"}>
-              <Button size="sm" variant="ghost" className="gap-2 text-muted-foreground">
+              <Button size="sm" variant="ghost" className="gap-2 text-muted-foreground hover:!bg-transparent dark:hover:!bg-transparent hover:text-foreground border border-transparent hover:border-primary/50">
                 {user ? t.landing.ctaDashboard : t.landing.cta}
                 <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </LocalizedLink>
             <LocalizedLink href="/examples">
-              <Button size="sm" variant="ghost" className="gap-2 text-muted-foreground">
+              <Button size="sm" variant="ghost" className="gap-2 text-muted-foreground hover:!bg-transparent dark:hover:!bg-transparent hover:text-foreground border border-transparent hover:border-primary/50">
                 <Lightbulb className="h-3.5 w-3.5" />
                 {t.landing.examples}
               </Button>
@@ -778,8 +794,26 @@ export default function LandingPage() {
       </div>
 
         {/* Deploy Everywhere */}
-      <div className="pt-2 pb-20 px-6">
+      <div className="pt-10 pb-20 px-6">
         <div className="max-w-6xl mx-auto">
+
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              {t.deploySection.title}{" "}
+              <span className="text-primary">{t.deploySection.titleAccent}</span>
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+              {t.deploySection.subtitle}
+            </p>
+          </motion.div>
+
           {/* Scrolling logo banner — directly under hero */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -788,9 +822,6 @@ export default function LandingPage() {
             transition={{ duration: 0.8 }}
             className="text-center mb-12"
           >
-            <span className="inline-block rounded-full bg-primary px-3 py-1 text-xs text-black font-bold uppercase tracking-widest mb-12 mt-6">
-              {t.deploySection.integratesWith}
-            </span>
             <div className="relative overflow-hidden">
               <div className="pointer-events-none absolute inset-y-0 left-0 w-16 z-10 bg-gradient-to-r from-background to-transparent" />
               <div className="pointer-events-none absolute inset-y-0 right-0 w-16 z-10 bg-gradient-to-l from-background to-transparent" />
@@ -811,22 +842,6 @@ export default function LandingPage() {
                 ))}
               </div>
             </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-center mb-12"
-          >
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              {t.deploySection.title}{" "}
-              <span className="text-primary">{t.deploySection.titleAccent}</span>
-            </h2>
-            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-              {t.deploySection.subtitle}
-            </p>
           </motion.div>
 
           {/* Row 1 — 3 cards with brand logos */}
@@ -935,8 +950,6 @@ export default function LandingPage() {
         </div>
       </div>
 
-
-
         {/* Orchestration & Teams */}
       <div style={{ background: "var(--landing-section-alt)" }}>
       <div className="max-w-6xl mx-auto px-6">
@@ -974,18 +987,17 @@ export default function LandingPage() {
                 description: t.landing.orchestration.metaAgent.description,
               },
             ].map((item) => (
-              <div
-                key={item.title}
-                className="rounded-lg border bg-card p-6 space-y-3"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <item.icon className="h-5 w-5 text-primary" />
+              <BorderGlow key={item.title} borderRadius={12}>
+                <div className="p-6 space-y-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <item.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {item.description}
+                  </p>
                 </div>
-                <h3 className="text-lg font-semibold">{item.title}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {item.description}
-                </p>
-              </div>
+              </BorderGlow>
             ))}
           </div>
         </motion.section>
@@ -1055,18 +1067,17 @@ export default function LandingPage() {
                 bg: "bg-emerald-500/10",
               },
             ].map((item) => (
-              <div
-                key={item.title}
-                className="rounded-lg border bg-card p-6 space-y-4"
-              >
-                <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${item.bg}`}>
-                  <item.icon className={`h-6 w-6 ${item.accent}`} />
+              <BorderGlow key={item.title} borderRadius={12}>
+                <div className="p-6 space-y-4">
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${item.bg}`}>
+                    <item.icon className={`h-6 w-6 ${item.accent}`} />
+                  </div>
+                  <h3 className="text-lg font-semibold">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {item.description}
+                  </p>
                 </div>
-                <h3 className="text-lg font-semibold">{item.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {item.description}
-                </p>
-              </div>
+              </BorderGlow>
             ))}
           </div>
         </motion.section>
@@ -1079,8 +1090,16 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 py-24"
+          className="py-24"
         >
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold sm:text-4xl">
+              {t.landing.features.title}{" "}
+              <span className="text-primary">{t.landing.features.titleAccent}</span>
+            </h2>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {[
             {
               icon: Bot,
@@ -1103,19 +1122,19 @@ export default function LandingPage() {
               description: t.landing.features.security.description,
             },
           ].map((feature) => (
-            <div
-              key={feature.title}
-              className="rounded-lg border bg-card p-6 space-y-3"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <feature.icon className="h-5 w-5 text-primary" />
+            <div key={feature.title} className="gradient-border-wrap h-full">
+              <div className="bg-card p-6 space-y-3 h-full">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <feature.icon className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="font-semibold">{feature.title}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {feature.description}
+                </p>
               </div>
-              <h3 className="font-semibold">{feature.title}</h3>
-              <p className="text-sm text-muted-foreground">
-                {feature.description}
-              </p>
             </div>
           ))}
+          </div>
         </motion.section>
       </div>
       </div>
@@ -1151,17 +1170,16 @@ export default function LandingPage() {
                 description: t.landing.observability.billing.description,
               },
             ].map((item) => (
-              <div
-                key={item.title}
-                className="rounded-lg border bg-card p-6 space-y-3"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <item.icon className="h-5 w-5 text-primary" />
+              <div key={item.title} className="gradient-border-wrap">
+                <div className="bg-card p-6 space-y-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <item.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {item.description}
+                  </p>
                 </div>
-                <h3 className="text-lg font-semibold">{item.title}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {item.description}
-                </p>
               </div>
             ))}
           </div>

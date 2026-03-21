@@ -164,7 +164,7 @@ export function MarkdownRenderer({
             return <>{children}</>;
           },
           hr() {
-            return <hr className="border-border" />;
+            return <hr className="border-border my-8" />;
           },
         }}
       >

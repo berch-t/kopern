@@ -33,7 +33,7 @@ export function LocaleSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" className="hover:!bg-transparent dark:hover:!bg-transparent border border-transparent hover:border-primary/50">
           <Languages className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>

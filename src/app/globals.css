@@ -233,3 +233,45 @@
 .animate-scroll-logos:hover {
   animation-play-state: paused;
 }
+
+/* Rotating gradient border */
+@property --gradient-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes gradient-border-spin {
+  to {
+    --gradient-angle: 360deg;
+  }
+}
+
+.gradient-border-wrap {
+  position: relative;
+  border-radius: 12px;
+  padding: 1px;
+}
+
+.gradient-border-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--gradient-angle),
+    oklch(0.7677 0.1606 310.19 / 0.6),
+    oklch(0.7677 0.1606 310.19 / 0.15),
+    oklch(0.7677 0.1606 310.19 / 0.6),
+    oklch(0.7677 0.1606 310.19 / 0.15),
+    oklch(0.7677 0.1606 310.19 / 0.6)
+  );
+  animation: gradient-border-spin 4s linear infinite;
+  z-index: 0;
+}
+
+.gradient-border-wrap > * {
+  position: relative;
+  z-index: 1;
+  border-radius: 11px;
+}

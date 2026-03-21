@@ -30,6 +30,8 @@
     "ctaDashboard": "Aller au Tableau de bord",
     "examples": "Exemples de Workflows",
     "features": {
+      "title": "Conçu pour la",
+      "titleAccent": "Production",
       "agentBuilder": { "title": "Constructeur d'Agents", "description": "Configurez des agents avec des prompts système, des skills, des tools et des extensions. Support multi-modèle." },
       "grading": { "title": "Notation Déterministe", "description": "6 types de critères : correspondance de sortie, validation de schéma, utilisation de tools, vérification de sécurité, juge LLM et plus." },
       "api": { "title": "Endpoints API", "description": "Exposez vos agents comme endpoints JSON-RPC avec authentification par clé API, limitation de débit et suivi d'utilisation." },

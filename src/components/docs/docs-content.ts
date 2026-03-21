@@ -1016,6 +1016,51 @@ Your agent automatically notifies external services when events occur:
 }
 \`\`\`
 
+#### Anti-Loop Protection
+
+**Critical:** Inbound webhooks **never** fire outbound webhooks. This prevents infinite loops when integrating with automation platforms like n8n, Zapier, or Make. Without this protection, an inbound webhook triggering an outbound webhook back to the same platform would create an infinite cycle (this has caused real incidents — 88€ in costs and a database crash in under 1 minute).
+
+#### Integration with n8n, Zapier & Make
+
+Kopern webhooks are designed for seamless integration with workflow automation platforms. Use the **HTTP Request** node (or equivalent) on your platform to connect Kopern agents into existing workflows.
+
+##### n8n
+
+**Trigger a Kopern agent from n8n (inbound):**
+1. Add an **HTTP Request** node in your n8n workflow
+2. Set method to \`POST\` and URL to \`https://kopern.vercel.app/api/webhook/{agentId}?key=kpn_xxx\`
+3. Set body to JSON: \`{"message": "your prompt here", "metadata": {...}}\`
+4. The response contains the agent's reply in \`response\` and token metrics in \`metrics\`
+
+**Trigger an n8n workflow from Kopern (outbound):**
+1. In n8n, create a **Webhook** trigger node — copy the webhook URL
+2. In Kopern, go to **Connectors → Webhooks → Add outbound webhook**
+3. Paste the n8n webhook URL and select trigger events (\`message_sent\`, \`tool_call_completed\`, etc.)
+
+##### Zapier
+
+**Trigger a Kopern agent from Zapier:**
+1. Use a **Webhooks by Zapier → Custom Request** action
+2. Method: POST, URL: \`https://kopern.vercel.app/api/webhook/{agentId}?key=kpn_xxx\`
+3. Body: \`{"message": "...", "metadata": {...}}\`
+
+**Trigger a Zapier workflow from Kopern:**
+1. In Zapier, create a Zap with **Webhooks by Zapier → Catch Hook** trigger — copy the catch hook URL
+2. In Kopern, add it as an outbound webhook URL
+
+##### Make (formerly Integromat)
+
+**Trigger a Kopern agent from Make:**
+1. Use an **HTTP → Make a request** module
+2. URL: \`https://kopern.vercel.app/api/webhook/{agentId}?key=kpn_xxx\`, method: POST
+3. Body type: JSON, body: \`{"message": "...", "metadata": {...}}\`
+
+**Trigger a Make scenario from Kopern:**
+1. In Make, add a **Webhooks → Custom webhook** module — copy the URL
+2. In Kopern, add it as an outbound webhook URL
+
+> **Warning:** Never configure a circular loop where an outbound webhook triggers a workflow that calls the same agent's inbound webhook. Kopern's anti-loop protection blocks this at the inbound level, but your external workflow should also be designed to avoid it.
+
 #### Webhook Logs
 
 All webhook executions (inbound and outbound) are logged with direction, status, HTTP status code, duration, and timestamp. View logs in **Agents → [Your Agent] → Connectors → Webhooks → Logs tab**.

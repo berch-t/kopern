@@ -1016,6 +1016,51 @@ Votre agent notifie automatiquement les services externes lorsque des evenements
 }
 \`\`\`
 
+#### Protection anti-boucle
+
+**Critique :** Les webhooks entrants ne declenchent **jamais** les webhooks sortants. Cela empeche les boucles infinies lors de l'integration avec des plateformes d'automatisation comme n8n, Zapier ou Make. Sans cette protection, un webhook entrant declenchant un webhook sortant vers la meme plateforme creerait un cycle infini (cela a cause des incidents reels — 88€ de couts et un crash de base de donnees en moins d'une minute).
+
+#### Integration avec n8n, Zapier et Make
+
+Les webhooks Kopern sont concus pour une integration transparente avec les plateformes d'automatisation de workflows. Utilisez le noeud **HTTP Request** (ou equivalent) de votre plateforme pour connecter les agents Kopern a vos workflows existants.
+
+##### n8n
+
+**Declencher un agent Kopern depuis n8n (entrant) :**
+1. Ajoutez un noeud **HTTP Request** dans votre workflow n8n
+2. Methode : \`POST\`, URL : \`https://kopern.vercel.app/api/webhook/{agentId}?key=kpn_xxx\`
+3. Corps JSON : \`{"message": "votre prompt ici", "metadata": {...}}\`
+4. La reponse contient la replique de l'agent dans \`response\` et les metriques de tokens dans \`metrics\`
+
+**Declencher un workflow n8n depuis Kopern (sortant) :**
+1. Dans n8n, creez un noeud trigger **Webhook** — copiez l'URL du webhook
+2. Dans Kopern, allez dans **Connecteurs → Webhooks → Ajouter un webhook sortant**
+3. Collez l'URL du webhook n8n et selectionnez les evenements declencheurs (\`message_sent\`, \`tool_call_completed\`, etc.)
+
+##### Zapier
+
+**Declencher un agent Kopern depuis Zapier :**
+1. Utilisez une action **Webhooks by Zapier → Custom Request**
+2. Methode : POST, URL : \`https://kopern.vercel.app/api/webhook/{agentId}?key=kpn_xxx\`
+3. Corps : \`{"message": "...", "metadata": {...}}\`
+
+**Declencher un workflow Zapier depuis Kopern :**
+1. Dans Zapier, creez un Zap avec le trigger **Webhooks by Zapier → Catch Hook** — copiez l'URL du catch hook
+2. Dans Kopern, ajoutez-la comme URL de webhook sortant
+
+##### Make (anciennement Integromat)
+
+**Declencher un agent Kopern depuis Make :**
+1. Utilisez un module **HTTP → Make a request**
+2. URL : \`https://kopern.vercel.app/api/webhook/{agentId}?key=kpn_xxx\`, methode : POST
+3. Type de corps : JSON, corps : \`{"message": "...", "metadata": {...}}\`
+
+**Declencher un scenario Make depuis Kopern :**
+1. Dans Make, ajoutez un module **Webhooks → Custom webhook** — copiez l'URL
+2. Dans Kopern, ajoutez-la comme URL de webhook sortant
+
+> **Attention :** Ne configurez jamais de boucle circulaire ou un webhook sortant declenche un workflow qui rappelle le webhook entrant du meme agent. La protection anti-boucle de Kopern bloque cela au niveau entrant, mais votre workflow externe doit egalement etre concu pour l'eviter.
+
 #### Journaux de webhooks
 
 Toutes les executions de webhooks (entrants et sortants) sont enregistrees avec la direction, le statut, le code HTTP, la duree et l'horodatage. Consultez les journaux dans **Agents → [Votre agent] → Connecteurs → Webhooks → onglet Journaux**.

@@ -30,6 +30,8 @@
     "ctaDashboard": "Go to Dashboard",
     "examples": "Workflow Examples",
     "features": {
+      "title": "Built for",
+      "titleAccent": "Production",
       "agentBuilder": { "title": "Agent Builder", "description": "Configure agents with system prompts, skills, tools and extensions. Multi-model support." },
       "grading": { "title": "Deterministic Grading", "description": "6 criterion types: output match, schema validation, tool usage, safety check, LLM judge and more." },
       "api": { "title": "API Endpoints", "description": "Expose agents as JSON-RPC endpoints with API key auth, rate limiting and usage tracking." },

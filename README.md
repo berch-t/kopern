@@ -35,6 +35,14 @@ Built with Next.js 16, React 19, Firebase, Stripe, and a multi-provider LLM stre
 ### Deployment & Integration
 - **MCP Protocol** — Real MCP Streamable HTTP server (`/api/mcp/server`) — native integration with Claude Code, Cursor, and any MCP client
 - **MCP Endpoints** — Legacy JSON-RPC API (`/api/mcp`) with API key auth, rate limiting, and usage tracking
+- **Connectors** — Deploy agents beyond the dashboard:
+  - **Embeddable Widget** — Drop-in `<script>` tag for any website (Shadow DOM, SSE, markdown, mobile-responsive)
+  - **Webhooks** — Inbound (sync JSON) + Outbound (fire-and-forget) with HMAC-SHA256 verification and anti-loop protection
+  - **Slack Bot** — OAuth install, @mention/DM, thread context, async processing
+- **Workflow Automation** — Native integration with n8n, Zapier, and Make via HTTP Request nodes:
+  - **Inbound**: Use the platform's HTTP Request / Webhook node to call `POST /api/webhook/{agentId}?key=kpn_xxx`
+  - **Outbound**: Configure outbound webhook URLs pointing to n8n/Zapier/Make catch hooks to trigger downstream workflows
+  - **Anti-loop protection**: Inbound webhooks never fire outbound webhooks (prevents infinite loops between Kopern and external automation platforms)
 - **GitHub Integration** — Connect repos via OAuth. Agents read files, search code, and get codebase context injected
 - **Extensions** — 30+ event hooks with blocking support, accordion event selector UI
 
@@ -243,6 +251,9 @@ src/
 │       ├── stripe/checkout|webhook|subscription|portal/    # Stripe billing
 │       ├── github/repos|content/                           # GitHub proxy (admin SDK)
 │       ├── mcp/           # Legacy JSON-RPC + real MCP protocol (/server) + key management
+│       ├── widget/        # Embeddable chat widget (chat SSE, config, script)
+│       ├── webhook/       # Inbound webhooks (sync JSON, HMAC, anti-loop)
+│       ├── slack/         # Slack bot (OAuth install, callback, Events API)
 │       ├── bug-report/    # Bug report submission + email + agent trigger
 │       └── health/        # Liveness check
 ├── components/
@@ -252,7 +263,8 @@ src/
 │   ├── feedback/          # BugReportDialog
 │   ├── grading/           # CaseEditor, CriteriaForm, ResultsTable, ScoreBadge...
 │   ├── layout/            # Sidebar (desktop + MobileSidebar), Header, Breadcrumbs, LocaleSwitcher
-│   ├── motion/            # FadeIn, SlideUp, StaggerChildren, AnimatedCounter
+│   ├── connectors/        # WidgetConfigurator, WebhookManager, SlackConnector, ConnectorCard
+│   ├── motion/            # FadeIn, SlideUp, StaggerChildren, AnimatedCounter, BorderGlow
 │   ├── tools/             # ToolForm, ToolList, BuiltinToolSelector (admin-only filtering)
 │   └── ui/                # shadcn/ui primitives
 ├── data/                  # Examples, meta-agent template, bug-fixer-agent template
@@ -269,6 +281,8 @@ src/
 │   ├── extensions/        # Extension runner + 30+ event types
 │   ├── mcp/               # API key auth + token counting
 │   ├── pi-mono/           # Builtin tool definitions (9 tools incl. github_write + bug_management)
+│   ├── connectors/        # Webhook (HMAC, anti-loop) + Slack (OAuth, signature verification)
+│   ├── widget/            # Widget JS source (Shadow DOM, SSE, markdown renderer)
 │   ├── sandbox/           # Sandboxed JS executor (vm module)
 │   └── utils/             # SSE helpers, cn()
 ├── middleware.ts           # Locale detection + redirect
@@ -298,6 +312,11 @@ users/{userId}
 │       ├── pipelines/{pipelineId}
 │       ├── sessions/{sessionId}
 │       ├── autoresearchRuns/{runId}
+│       ├── connectors/
+│       │   ├── widget              # WidgetConfigDoc (enabled, allowedOrigins, branding)
+│       │   └── slackConnection     # SlackConnectionDoc (botToken, teamId, channelId)
+│       ├── webhooks/{webhookId}    # WebhookDoc (url, direction, events, signingSecret)
+│       ├── webhookLogs/{logId}     # Direction, status, HTTP code, duration, timestamp
 │       └── gradingSuites/{suiteId}
 │           ├── cases/{caseId}
 │           └── runs/{runId}
@@ -325,6 +344,7 @@ apiKeys/{sha256Hash}                    # O(1) key lookup, admin SDK only
 | GitHub Integration | — | ✓ | ✓ | ✓ |
 | Sub-agents | — | ✓ | ✓ | ✓ |
 | Meta-Agent Wizard | — | ✓ | ✓ | ✓ |
+| Connectors | 0 | 3 | Unlimited | Unlimited |
 | Version History | — | ✓ | ✓ | ✓ |
 | SSO | — | — | — | ✓ |
 

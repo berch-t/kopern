@@ -1592,6 +1592,23 @@ Configurez des URLs cibles et des événements déclencheurs :
 
 Les webhooks sortants se déclenchent automatiquement (fire-and-forget) avec un payload JSON contenant le type d'événement, l'ID de l'agent, l'horodatage et les métriques.
 
+#### Protection anti-boucle
+
+Les webhooks entrants ne déclenchent **jamais** les webhooks sortants — cela empêche les boucles infinies lors de l'intégration avec des plateformes d'automatisation. Sans cette protection, un aller-retour entre Kopern et n8n/Zapier/Make créerait un cycle incontrôlé.
+
+#### Intégration avec n8n, Zapier et Make
+
+Utilisez le noeud **HTTP Request** de votre plateforme d'automatisation pour appeler les agents Kopern, ou configurez des webhooks sortants pour déclencher des workflows externes.
+
+**Entrant (plateforme → Kopern) :** Utilisez un noeud HTTP Request pour \`POST /api/webhook/{agentId}?key=kpn_xxx\` avec \`{"message": "...", "metadata": {...}}\`. L'agent traite le message et retourne une réponse JSON synchrone.
+
+**Sortant (Kopern → plateforme) :**
+- **n8n** : Créez un noeud trigger Webhook → copiez l'URL → ajoutez-la comme webhook sortant dans Kopern
+- **Zapier** : Créez un trigger Catch Hook → copiez l'URL → ajoutez-la comme webhook sortant
+- **Make** : Créez un module Custom Webhook → copiez l'URL → ajoutez-la comme webhook sortant
+
+> **Attention :** Ne créez jamais de boucles circulaires. Kopern bloque les sortants depuis les entrants, mais concevez vos workflows externes pour ne pas rappeler le même agent.
+
 #### Journaux de webhooks
 
 Toutes les exécutions sont enregistrées avec la direction, le statut, le code HTTP, la durée et l'horodatage. Consultez dans Connecteurs → Webhooks → onglet Journaux.

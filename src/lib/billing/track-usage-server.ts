@@ -131,13 +131,17 @@ export async function appendSessionEvents(
   if (!userId || !agentId || !sessionId || events.length === 0) return;
 
   const ref = adminDb.doc(`users/${userId}/agents/${agentId}/sessions/${sessionId}`);
+  const now = new Date();
   const timestampedEvents = events.map((e) => ({
     ...e,
-    timestamp: FieldValue.serverTimestamp(),
+    timestamp: now,
   }));
 
+  // arrayUnion doesn't support serverTimestamp(), so we read-then-write
+  const snap = await ref.get();
+  const existing = (snap.data()?.events as unknown[]) || [];
   await ref.update({
-    events: FieldValue.arrayUnion(...timestampedEvents),
+    events: [...existing, ...timestampedEvents],
   });
 }
 
