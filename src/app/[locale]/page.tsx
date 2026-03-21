@@ -466,9 +466,9 @@ export default function LandingPage() {
             fadeIn={0.5}
             fadeOut={0.5}
             followMouse
-            mouseInfluence={0}
+            mouseInfluence={0.03}
             hoverScale={1.03}
-            parallax={0.03}
+            parallax={0.05}
             clickBurst
             className="absolute inset-0 w-full h-full"
             style={{ zIndex: 0, pointerEvents: "auto" }}

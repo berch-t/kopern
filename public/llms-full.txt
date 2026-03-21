@@ -1,0 +1,211 @@
+# Kopern — AI Agent Builder, Orchestrator & Grader (Full Reference)
+
+> Build, test, deploy, and connect production-grade AI agents with tool calling, deterministic grading, multi-agent teams, MCP endpoints, and external connectors.
+
+## Platform Overview
+
+Kopern is a SaaS platform for creating custom AI agents. Unlike simple chatbot builders, Kopern provides:
+1. **Full tool calling** — agents can execute custom JavaScript functions with JSON Schema validation
+2. **Deterministic grading** — automated test suites validate agent behavior before deployment
+3. **Multi-agent orchestration** — teams and pipelines for complex workflows
+4. **External deployment** — embed agents on websites, connect to webhooks, or install as Slack bots
+5. **Self-optimization** — AutoResearch lab with 6 modes for automatic prompt improvement
+
+## Agent Configuration
+
+Each agent has:
+- **System Prompt**: Core behavior instructions
+- **Model**: Choose from 15+ LLMs across 5 providers
+- **Skills**: Markdown templates injected as XML context (reusable knowledge blocks)
+- **Custom Tools**: JSON Schema input + sandboxed JS code — agents call these like functions
+- **Built-in Tools**: `read_file`, `search_files`, `github_write` (auto-enabled when repos connected)
+- **Extensions**: Lifecycle hooks triggered on 30+ events (tool_call_start, tool_call_end, message_sent, etc.)
+- **Purpose Gate**: A question asked at session start to scope the conversation
+- **TillDone Mode**: Agent keeps working until the task is complete (auto-prompting)
+- **Branding**: Custom avatar, icon, and accent color
+- **Tool Overrides**: Temperature, max tokens, thinking level per agent
+- **Connected Repos**: GitHub repositories accessible via OAuth
+
+## LLM Providers & Models
+
+| Provider | Models | Tool Calling |
+|----------|--------|-------------|
+| Anthropic | Claude Opus 4.6, Sonnet 4.6, Haiku 4.5 | Native tool_use blocks |
+| OpenAI | GPT-4o, GPT-4o-mini | Function calling |
+| Google | Gemini 2.5 Flash | functionCall |
+| Mistral AI | Mistral Large, Codestral, Nemo | Function calling |
+| Ollama | Any local model | Via OpenAI-compatible API |
+
+All models support streaming via SSE (Server-Sent Events).
+
+## Grading System
+
+6 criterion types for automated agent evaluation:
+1. **output_match**: Exact or fuzzy text matching
+2. **schema_validation**: JSON Schema validation of agent output
+3. **tool_usage**: Verify the agent called specific tools with expected parameters
+4. **safety_check**: Ensure agent doesn't produce harmful content
+5. **custom_script**: Run arbitrary JavaScript assertions
+6. **llm_judge**: Use another LLM to evaluate quality
+
+Grading runs are persisted to Firestore with full results history.
+
+## AutoResearch — Optimization Lab
+
+| Mode | Purpose |
+|------|---------|
+| AutoTune | Optimize system prompts against grading suites automatically |
+| AutoFix | Diagnose and patch failing test cases |
+| Stress Lab | Adversarial testing with edge-case generation |
+| Tournament | Arena-style prompt variant comparison |
+| Distillation | Transfer prompt effectiveness to cheaper models |
+| Evolution | Genetic algorithm-based prompt evolution |
+
+## Multi-Agent Orchestration
+
+### Agent Teams
+- **Parallel**: All agents run simultaneously, results aggregated
+- **Sequential**: Agents run one after another, each sees prior context
+- **Conditional**: Input routed to specific agent based on rules
+
+### Pipelines
+- Sequential chains where step N's output becomes step N+1's input
+- Input/output mapping between steps
+- Each step can use different tools and models
+
+### Sub-Agent Delegation
+- Agents can delegate subtasks to other agents in your workspace
+
+## External Connectors
+
+### Embeddable Chat Widget
+```html
+<script src="https://kopern.vercel.app/api/widget/script" data-key="kpn_xxx"></script>
+```
+- Shadow DOM for CSS isolation
+- SSE streaming responses
+- Markdown rendering (headers, code, lists, links)
+- Mobile-responsive (full-screen < 640px)
+- "Powered by Kopern" badge (removable on Pro+)
+- CORS whitelist per widget
+- Custom welcome message and position (bottom-right/left)
+
+### Webhooks
+**Inbound**: External services send JSON to your agent
+```
+POST /api/webhook/{agentId}?key=kpn_xxx
+Content-Type: application/json
+
+{"message": "New order received", "data": {...}}
+→ {"response": "Order processed...", "metrics": {...}}
+```
+
+**Outbound**: Agent fires webhooks on events
+- Events: `message_sent`, `tool_call_completed`, `session_ended`, `error`
+- HMAC-SHA256 signing via `X-Webhook-Signature` header
+- Compatible with n8n, Zapier, Make
+
+**Anti-loop protection**: Inbound webhooks never trigger outbound webhooks.
+
+### Slack Bot
+- OAuth install flow via dashboard
+- Responds to @mentions and DMs
+- Thread support (maintains conversation in threads)
+- Reaction checkmark on processed messages
+- Events API (serverless-compatible)
+
+## MCP Protocol (Model Context Protocol)
+
+Any Kopern agent can be used as an MCP server:
+
+```json
+{
+  "mcpServers": {
+    "my-agent": {
+      "type": "http",
+      "url": "https://kopern.vercel.app/api/mcp/server",
+      "headers": { "Authorization": "Bearer kpn_..." }
+    }
+  }
+}
+```
+
+Available MCP tools:
+- `kopern_chat`: Send a message to the agent and get a response
+- `kopern_agent_info`: Get agent metadata (name, model, tools, skills)
+
+Compatible with Claude Code, Cursor, Windsurf, and any MCP client.
+
+## Bug Tracking System
+
+Built-in bug reporting and autonomous fixing:
+- Site-wide bug report dialog (available on every page)
+- Bug Fixer agent auto-triggered on new reports
+- Admin dashboard with KPI stats, status filters, notes timeline
+- Email notifications for reporters
+- Agent can create GitHub branches and pull requests
+
+## Billing & Plans
+
+| Feature | Starter (Free) | Pro ($79/mo) | Usage | Enterprise ($499/mo) |
+|---------|----------------|--------------|-------|---------------------|
+| Agents | 3 | 25 | Unlimited | Unlimited |
+| Tokens/month | 100K | 2M | Pay per use | Unlimited |
+| Grading runs | 10/mo | 200/mo | Unlimited | Unlimited |
+| Teams | 0 | 5 | Unlimited | Unlimited |
+| Pipelines | 0 | 10 | Unlimited | Unlimited |
+| MCP servers | 1 | 5 | Unlimited | Unlimited |
+| Connectors | 0 | 3 | Unlimited | Unlimited |
+| AutoResearch | No | Yes | Yes | Yes |
+
+Usage-based billing via Stripe Billing Meters. Real-time token tracking per agent.
+
+## Technical Architecture
+
+- **Framework**: Next.js 16 (App Router), React 19, TypeScript strict
+- **UI**: shadcn/ui + Radix UI + Tailwind CSS 4 + Framer Motion 12
+- **Database**: Firebase Firestore (real-time subscriptions via onSnapshot)
+- **Auth**: Firebase Auth (Google, GitHub with `repo` scope, Email/Password)
+- **Payments**: Stripe (subscriptions, usage meters, customer portal, 9 webhook events)
+- **Streaming**: Server-Sent Events for all agent interactions
+- **Sandbox**: Node.js vm module for custom tool execution (5s timeout)
+- **i18n**: Custom system with JSON dictionaries, `[locale]` route segment
+
+## API Reference
+
+| Method | Endpoint | Auth | Response |
+|--------|----------|------|----------|
+| POST | /api/agents/{id}/chat | Session | SSE stream |
+| POST | /api/agents/{id}/grading/{suiteId}/run | Session | SSE stream |
+| POST | /api/agents/{id}/autoresearch/* | Session | SSE stream |
+| POST | /api/agents/{id}/pipelines/{id}/execute | Session | SSE stream |
+| POST | /api/teams/{id}/execute | Session | SSE stream |
+| POST | /api/agents/meta-create | Session | SSE stream |
+| POST | /api/mcp/server | API Key | JSON-RPC |
+| POST | /api/widget/chat | API Key | SSE stream |
+| GET | /api/widget/config | API Key | JSON |
+| POST | /api/webhook/{agentId} | API Key | JSON |
+| POST | /api/slack/events | Slack signature | JSON |
+| GET | /api/slack/install | Session | Redirect |
+| POST | /api/stripe/checkout | Session | JSON |
+| POST | /api/stripe/webhook | Stripe signature | JSON |
+
+## Pages
+
+| URL | Content | SEO |
+|-----|---------|-----|
+| `/en` | Landing page with inline agent creator | Indexed |
+| `/en/examples` | 15+ agent templates gallery | Indexed |
+| `/en/pricing` | 4 pricing tiers with feature comparison | Indexed |
+| `/en/docs` | Full documentation with search | Indexed |
+| `/fr` | French landing page | Indexed |
+| `/fr/examples` | French examples | Indexed |
+| `/fr/pricing` | French pricing | Indexed |
+| `/fr/docs` | French documentation | Indexed |
+| `/*/dashboard` | User dashboard | Not indexed |
+| `/*/agents/*` | Agent editor | Not indexed |
+
+## Contact
+
+Website: https://kopern.vercel.app
+GitHub: https://github.com/berch-t/kopern

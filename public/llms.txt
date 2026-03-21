@@ -1,6 +1,6 @@
 # Kopern — AI Agent Builder, Orchestrator & Grader
 
-> Build, test, and deploy production-grade AI agents with tool calling, deterministic grading, multi-agent teams, and MCP server endpoints.
+> Build, test, deploy, and connect production-grade AI agents with tool calling, deterministic grading, multi-agent teams, MCP endpoints, and external connectors (widget, webhooks, Slack).
 
 ## What Kopern Does
 
@@ -8,13 +8,14 @@ Kopern is a web platform for creating custom AI agents that go beyond simple cha
 
 - **System Prompt**: Core instructions defining behavior, role, and output format
 - **Skills**: Markdown knowledge templates injected as XML into the agent's context
-- **Custom Tools**: JSON Schema parameters + sandboxed JavaScript execution code — agents call these as functions
-- **GitHub Integration**: Connect repos → agents get `read_file` + `search_files` tools + repo tree context
-- **Extensions**: TypeScript lifecycle hooks for safety, logging, cost control (25+ event types)
+- **Custom Tools**: JSON Schema parameters + sandboxed JavaScript execution — agents call these as functions
+- **GitHub Integration**: Connect repos → agents get `read_file`, `search_files`, and `github_write` tools + repo tree context
+- **Extensions**: TypeScript lifecycle hooks for safety, logging, cost control (30+ event types, blocking support)
 - **Grading Suites**: Automated testing with 6 criterion types (output_match, schema_validation, tool_usage, safety_check, custom_script, llm_judge)
 - **Purpose Gate**: Session-scoped question to focus agent behavior
 - **TillDone Mode**: Multi-step task enforcement with auto-prompting
 - **Branding**: Custom icons and colors per agent
+- **Tool Overrides**: Fine-tune LLM behavior per agent (temperature, max tokens, thinking level)
 
 ## LLM Support
 
@@ -22,37 +23,79 @@ Multi-provider with native tool calling:
 - Anthropic Claude (Opus 4.6, Sonnet 4.6, Haiku 4.5)
 - OpenAI GPT (GPT-4o, GPT-4o-mini)
 - Google Gemini (2.5 Flash)
+- Mistral AI (Mistral Large, Codestral, Nemo)
 - Ollama (local models)
 
 ## Orchestration
 
-- **Agent Teams**: Parallel, sequential, or conditional execution of multiple agents
-- **Pipelines**: Sequential chains where each step's output feeds the next
-- **MCP Servers**: Expose any agent as a JSON-RPC endpoint with API key authentication (Model Context Protocol)
+- **Agent Teams**: Parallel, sequential, or conditional execution of multiple agents with per-member tools
+- **Pipelines**: Sequential chains where each step's output feeds the next with input/output mapping
+- **Sub-Agent Delegation**: Agents can delegate tasks to other agents
+
+## AutoResearch — Optimization Lab
+
+6 self-improving optimization modes:
+- **AutoTune**: Auto-optimize system prompts against grading suites
+- **AutoFix**: Diagnose and patch failing test cases
+- **Stress Lab**: Adversarial testing with edge-case generation
+- **Tournament**: Arena-style comparison of prompt variants
+- **Distillation**: Transfer knowledge to smaller/cheaper models
+- **Evolution**: Genetic algorithm-based prompt evolution
+
+## External Connectors
+
+- **Embeddable Chat Widget**: `<script>` tag for any website — Shadow DOM isolation, SSE streaming, markdown rendering, mobile-responsive, "Powered by Kopern" badge
+- **Webhooks Inbound/Outbound**: REST API integration — inbound receives JSON, outbound fires on events (message_sent, tool_call_completed, session_ended, error). HMAC-SHA256 signing. Compatible with n8n, Zapier, Make.
+- **Slack Bot**: OAuth install → Events API → thread support with reaction checkmarks. Agents respond to @mentions and DMs.
+
+## MCP Protocol
+
+Expose any agent as an MCP (Model Context Protocol) server:
+- Streamable HTTP transport at `/api/mcp/server`
+- Compatible with Claude Code, Cursor, and any MCP client
+- API key authentication (`kpn_` prefix)
+- Tools: `kopern_chat` (send message), `kopern_agent_info` (agent metadata)
+
+## Billing
+
+- **Starter**: Free tier — 3 agents, 100K tokens/month
+- **Pro** ($79/mo): 25 agents, 2M tokens, grading, teams, 3 connectors
+- **Usage-based**: Unlimited agents and tokens, pay per use
+- **Enterprise** ($499/mo): Unlimited everything, priority support
 
 ## Architecture
 
-- Next.js 16 + React 19 + TypeScript
-- Firebase (Firestore real-time, Auth)
+- Next.js 16 + React 19 + TypeScript (strict mode)
+- Firebase (Firestore real-time subscriptions, Auth with Google/GitHub/Email)
 - SSE streaming for all agent interactions
 - Sandboxed tool execution (Node.js vm module)
-- Real-time billing and usage tracking per agent
+- Real-time billing with Stripe Billing Meters
+- i18n: English and French
 
 ## Key Pages
 
 - `/en` — Landing page with meta-agent creator (create an agent from a text prompt)
 - `/en/examples` — Gallery of 15+ agent templates
 - `/en/pricing` — 4 tiers (Starter free, Pro, Usage, Enterprise)
-- `/en/docs` — Full documentation
+- `/en/docs` — Full documentation with search
 
-## API
+## API Endpoints
 
 - `POST /api/agents/{id}/chat` — SSE streaming chat with tool calling
 - `POST /api/agents/{id}/grading/{suiteId}/run` — Run grading suite
-- `POST /api/teams/{id}/execute` — Execute agent team
-- `POST /api/mcp` — MCP JSON-RPC endpoint
-- All API routes support real-time token tracking and billing
+- `POST /api/agents/{id}/autoresearch/{mode}` — AutoResearch optimization
+- `POST /api/agents/{id}/pipelines/{id}/execute` — Pipeline execution
+- `POST /api/teams/{id}/execute` — Agent team execution
+- `POST /api/mcp/server` — MCP Streamable HTTP (real protocol)
+- `POST /api/widget/chat` — Embeddable widget chat (SSE + CORS)
+- `POST /api/webhook/{agentId}` — Inbound webhook (sync JSON)
+- `POST /api/slack/events` — Slack Events API handler
+- `POST /api/agents/meta-create` — AI-assisted agent creation
 
 ## Languages
 
 Available in English and French.
+
+## More
+
+For extended documentation, see: /llms-full.txt

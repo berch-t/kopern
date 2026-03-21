@@ -24,8 +24,8 @@ export async function generateMetadata({
       ? "Kopern — AI Agent Builder, Orchestrator & Grader"
       : "Kopern — Constructeur, Orchestrateur et Évaluateur d'agents IA",
     description: isEn
-      ? "Build, test, and deploy production-grade AI agents with tool calling, grading pipelines, multi-agent teams, and MCP endpoints. Supports Claude, GPT, and Gemini."
-      : "Créez, testez et déployez des agents IA de qualité production avec tool calling, pipelines de grading, équipes multi-agents et endpoints MCP. Compatible Claude, GPT et Gemini.",
+      ? "Build, test, deploy, and connect production-grade AI agents with tool calling, grading, multi-agent teams, MCP endpoints, and external connectors (widget, webhooks, Slack). Supports Claude, GPT, Gemini, and Mistral."
+      : "Créez, testez, déployez et connectez des agents IA de qualité production avec tool calling, grading, équipes multi-agents, endpoints MCP et connecteurs externes (widget, webhooks, Slack). Compatible Claude, GPT, Gemini et Mistral.",
     alternates: {
       canonical: `${SITE_URL}/${locale}`,
       languages: { en: `${SITE_URL}/en`, fr: `${SITE_URL}/fr` },

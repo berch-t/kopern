@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     template: "%s | Kopern",
   },
   description:
-    "Build, test, and deploy production-grade AI agents with tool calling, grading pipelines, multi-agent teams, and MCP server endpoints. Connect GitHub repos, create custom tools, and validate everything with deterministic grading. Supports Claude, GPT, and Gemini.",
+    "Build, test, deploy, and connect production-grade AI agents with tool calling, deterministic grading, multi-agent teams, MCP endpoints, and external connectors. Embed on websites, trigger via webhooks, or install as Slack bots. Supports Claude, GPT, Gemini, Mistral, and Ollama.",
 
   applicationName: SITE_NAME,
   generator: "Next.js",
@@ -40,6 +40,7 @@ export const metadata: Metadata = {
     "Claude agent",
     "GPT agent",
     "Gemini agent",
+    "Mistral agent",
     "AI automation",
     "AI pipeline builder",
     "agentic AI",
@@ -47,10 +48,23 @@ export const metadata: Metadata = {
     "AI grading",
     "no-code AI agent",
     "AI agent deployment",
+    "AI chat widget",
+    "AI webhook integration",
+    "AI Slack bot",
+    "embeddable AI chat",
+    "AI agent connector",
+    "n8n AI agent",
+    "Zapier AI agent",
+    "AI agent API",
+    "AI agent optimization",
+    "prompt optimization",
+    "AI agent sandbox",
     "constructeur agent IA",
     "agent IA personnalisé",
     "orchestration multi-agents",
     "évaluation agent IA",
+    "chatbot IA personnalisé",
+    "déploiement agent IA",
   ],
 
   authors: [{ name: "Kopern", url: SITE_URL }],
@@ -68,13 +82,13 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: "Kopern — AI Agent Builder, Orchestrator & Grader",
     description:
-      "Build production-grade AI agents with tool calling, deterministic grading, multi-agent teams, and MCP endpoints. Supports Claude, GPT, and Gemini.",
+      "Build production-grade AI agents with tool calling, deterministic grading, multi-agent teams, MCP endpoints, and external connectors (widget, webhooks, Slack). Supports Claude, GPT, Gemini, and Mistral.",
     url: SITE_URL,
     locale: "en_US",
     alternateLocale: "fr_FR",
     images: [
       {
-        url: "/og-image.png",
+        url: "/opengraph-image",
         width: 1200,
         height: 630,
         alt: "Kopern — AI Agent Builder Platform",
@@ -87,8 +101,8 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Kopern — AI Agent Builder, Orchestrator & Grader",
     description:
-      "Build, test, and deploy production-grade AI agents with tool calling, grading pipelines, and multi-agent orchestration.",
-    images: ["/og-image.png"],
+      "Build, test, deploy, and connect production-grade AI agents with tool calling, grading, multi-agent teams, and external connectors.",
+    images: ["/twitter-image"],
     creator: "@kopern_ai",
   },
 
