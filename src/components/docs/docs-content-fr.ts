@@ -1,16 +1,20 @@
 export const docsMarkdownFr = `
 ## Introduction
 
-Kopern est une plateforme de construction et d'evaluation d'agents IA. Creez des agents IA adaptes a votre metier, validez leur qualite avec des tests automatises, connectez-les a vos depots GitHub et deployez-les comme endpoints API — le tout depuis un seul tableau de bord.
+Kopern est une plateforme de construction, d'orchestration et d'evaluation d'agents IA. Creez des agents personnalises, validez-les avec une notation deterministe, optimisez-les dans un Labo d'Optimisation a 6 modes, orchestrez des equipes multi-agents et deployez-les partout — en serveurs MCP, widgets integrables, webhooks ou bots Slack. Le tout depuis un seul tableau de bord avec facturation Stripe et observabilite en temps reel.
 
 ### Ce que vous pouvez faire
 
 - **Construire des agents** pour tout domaine — support, juridique, DevOps, ventes, finance, RH, etc.
-- **Connecter votre code** — les agents peuvent lire et rechercher dans vos depots GitHub
-- **Valider la qualite** — executez des suites de tests avec 6 types de criteres
-- **Deployer en API** — exposez vos agents comme endpoints JSON-RPC avec cles API securisees
-- **Tout suivre** — facturation, sessions, conversations, runs de notation
-- **Collaboration** — orchestrez plusieurs agents travaillant ensemble
+- **Assistant IA** — decrivez votre agent en langage naturel, obtenez un agent entierement configure genere par l'IA
+- **Connecter votre code** — les agents peuvent lire, rechercher et ecrire dans vos depots GitHub
+- **Valider la qualite** — executez des suites de tests avec 6 types de criteres (notation deterministe)
+- **Optimiser automatiquement** — Labo d'Optimisation a 6 modes : AutoTune, AutoFix, Stress Lab, Tournoi, Distillation, Evolution
+- **Orchestrer des equipes** — execution multi-agents parallele, sequentielle ou conditionnelle avec pipelines et delegation de sous-agents
+- **Deployer partout** — protocole MCP (Claude Code, Cursor), widget de chat integrable, webhooks (n8n, Zapier, Make), bot Slack
+- **Automatiser des workflows** — webhooks entrants/sortants avec protection anti-boucle pour une integration transparente avec les plateformes externes
+- **Tout suivre** — sessions, chronologie des conversations, utilisation de tokens, couts, facturation Stripe avec compteurs d'utilisation
+- **Securise par conception** — execution sandboxee, signatures HMAC pour les webhooks, cles API hashees, application des limites de plan sur toutes les routes
 
 ---
 

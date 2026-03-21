@@ -3,18 +3,21 @@ export const docsMarkdownV2 = `
 
 ### What is Kopern?
 
-Kopern is a full-stack **AI Agent Builder, Grader, and Orchestrator**. It lets you create custom AI agents powered by leading LLM providers (Anthropic, OpenAI, Google, Mistral AI, Ollama), equip them with skills and tools, validate their quality with deterministic grading suites, orchestrate them as teams or pipelines, and deploy them as API endpoints -- all from a single web dashboard.
+Kopern is a full-stack **AI Agent Builder, Orchestrator & Grader**. Build custom AI agents powered by leading LLM providers (Anthropic, OpenAI, Google, Ollama), validate them with deterministic grading, optimize them in a 6-mode Optimization Lab, orchestrate multi-agent teams, and deploy them anywhere — as MCP servers, embeddable widgets, webhooks, or Slack bots. All from a single dashboard with Stripe billing and real-time observability.
 
 Key capabilities at a glance:
 
 - **Build** agents for any domain (DevOps, Legal, Support, Sales, Finance, HR, and more)
+- **AI Wizard** — describe what you want in plain text and Kopern generates a complete agent specification automatically
 - **Equip** agents with modular skills (XML-injected instructions) and custom tools (sandboxed JavaScript)
-- **Connect** your GitHub repositories so agents can read and search your codebase
-- **Grade** agents with 6 criterion types -- output matching, schema validation, tool usage, safety checks, custom scripts, and LLM judges
-- **Orchestrate** multiple agents as teams (parallel, sequential, conditional) or pipelines (multi-step chains)
-- **Deploy** agents as MCP Server API endpoints with secure API keys
-- **Track** billing, sessions, tool calls, and costs in real time
-- **Meta-Agent Wizard** -- describe what you want in plain English and Kopern generates the full agent specification automatically
+- **Connect** your GitHub repositories so agents can read, search, and write to your codebase
+- **Grade** agents with 6 criterion types — output matching, schema validation, tool usage, safety checks, custom scripts, and LLM judges
+- **Optimize** with a 6-mode Optimization Lab — AutoTune, AutoFix, Stress Lab, Tournament, Distillation, Evolution
+- **Orchestrate** multiple agents as teams (parallel, sequential, conditional), pipelines (multi-step chains), or via sub-agent delegation
+- **Deploy everywhere** — MCP protocol (Claude Code, Cursor), embeddable chat widget, webhooks (n8n, Zapier, Make), Slack bot
+- **Automate workflows** — inbound/outbound webhooks with anti-loop protection for seamless integration with external automation platforms
+- **Track** billing, sessions, conversation timelines, tool calls, and costs in real time with Stripe usage-based meters
+- **Secure by design** — sandboxed execution, HMAC webhook signatures, hashed API keys, plan enforcement on all routes
 
 ### Create Your First Agent
 

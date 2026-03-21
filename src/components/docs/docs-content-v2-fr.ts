@@ -3,19 +3,20 @@ export const docsMarkdownV2Fr = `
 
 ### Qu'est-ce que Kopern ?
 
-Kopern est un **Constructeur, Évaluateur et Orchestrateur d'Agents IA**. La plateforme vous permet de créer des agents IA sur mesure pour votre métier, de valider leur qualité avec des suites de tests automatisés, de les connecter à vos dépôts GitHub, et de les déployer comme endpoints API — le tout depuis un tableau de bord unique.
-
-Kopern intègre un **wizard Meta-Agent** : décrivez en langage naturel l'agent que vous souhaitez, et la plateforme génère automatiquement une spécification complète (prompt système, compétences, outils, cas de notation) que vous pouvez réviser et déployer en quelques clics.
+Kopern est un **Constructeur, Orchestrateur et Évaluateur d'Agents IA**. Créez des agents IA sur mesure, validez-les avec une notation déterministe, optimisez-les dans un Labo d'Optimisation à 6 modes, orchestrez des équipes multi-agents et déployez-les partout — en serveurs MCP, widgets intégrables, webhooks ou bots Slack. Le tout depuis un seul tableau de bord avec facturation Stripe et observabilité en temps réel.
 
 **Ce que vous pouvez faire :**
 
 - **Construire des agents** pour tout domaine — support client, juridique, DevOps, ventes, finance, RH, etc.
-- **Connecter votre code** — les agents peuvent lire et rechercher dans vos dépôts GitHub
-- **Valider la qualité** — exécutez des suites de tests avec 6 types de critères de notation
-- **Déployer en API** — exposez vos agents comme endpoints JSON-RPC avec clés API sécurisées
-- **Tout suivre** — facturation, sessions, conversations, runs de notation
-- **Orchestrer** — combinez plusieurs agents en équipes ou pipelines multi-étapes
-- **Créer par l'IA** — utilisez le wizard Meta-Agent pour générer des agents complets automatiquement
+- **Assistant IA** — décrivez votre agent en langage naturel, obtenez un agent entièrement configuré généré par l'IA
+- **Connecter votre code** — les agents peuvent lire, rechercher et écrire dans vos dépôts GitHub
+- **Valider la qualité** — exécutez des suites de tests avec 6 types de critères (notation déterministe)
+- **Optimiser automatiquement** — Labo d'Optimisation à 6 modes : AutoTune, AutoFix, Stress Lab, Tournoi, Distillation, Évolution
+- **Orchestrer des équipes** — exécution multi-agents parallèle, séquentielle ou conditionnelle avec pipelines et délégation de sous-agents
+- **Déployer partout** — protocole MCP (Claude Code, Cursor), widget de chat intégrable, webhooks (n8n, Zapier, Make), bot Slack
+- **Automatiser des workflows** — webhooks entrants/sortants avec protection anti-boucle pour une intégration transparente avec les plateformes externes
+- **Tout suivre** — sessions, chronologie des conversations, utilisation de tokens, coûts, facturation Stripe avec compteurs d'utilisation
+- **Sécurisé par conception** — exécution sandboxée, signatures HMAC pour les webhooks, clés API hashées, application des limites de plan sur toutes les routes
 
 ---
 
