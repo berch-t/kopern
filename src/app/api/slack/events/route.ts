@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
@@ -80,15 +80,21 @@ export async function POST(request: NextRequest) {
       severity: "warning",
       metadata: { eventType: body.event?.type, channelType: body.event?.channel_type, teamId: body.team_id, channel: body.event?.channel, text: body.event?.text?.slice(0, 100) },
     });
-    processSlackEvent(body).catch((err) => {
-      logAppError({
-        code: "SLACK_PROCESSING_FAILED",
-        message: (err as Error).message,
-        source: "slack_events",
-        severity: "critical",
-        metadata: { teamId: body.team_id, error: err },
-        userNotified: false,
-      });
+
+    // Use after() to keep the serverless function alive after responding 200
+    after(async () => {
+      try {
+        await processSlackEvent(body);
+      } catch (err) {
+        logAppError({
+          code: "SLACK_PROCESSING_FAILED",
+          message: (err as Error).message,
+          source: "slack_events",
+          severity: "critical",
+          metadata: { teamId: body.team_id, error: err },
+          userNotified: false,
+        });
+      }
     });
 
     return NextResponse.json({ ok: true });
