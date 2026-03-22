@@ -43,13 +43,62 @@ interface SlackMessage {
   thread_ts?: string;
 }
 
+/**
+ * Convert standard Markdown to Slack mrkdwn format.
+ * - **bold** → *bold*
+ * - *italic* / _italic_ → _italic_
+ * - [text](url) → <url|text>
+ * - `code` stays `code`
+ * - ```block``` stays ```block```
+ * - # headers → *header* (bold)
+ */
+function markdownToSlackMrkdwn(text: string): string {
+  let result = text;
+
+  // Preserve code blocks from transformation
+  const codeBlocks: string[] = [];
+  result = result.replace(/```[\s\S]*?```/g, (match) => {
+    codeBlocks.push(match);
+    return `__CODEBLOCK_${codeBlocks.length - 1}__`;
+  });
+
+  // Preserve inline code
+  const inlineCodes: string[] = [];
+  result = result.replace(/`[^`]+`/g, (match) => {
+    inlineCodes.push(match);
+    return `__INLINE_${inlineCodes.length - 1}__`;
+  });
+
+  // Headers: # Title → *Title*
+  result = result.replace(/^#{1,6}\s+(.+)$/gm, "*$1*");
+
+  // Bold: **text** → *text*
+  result = result.replace(/\*\*(.+?)\*\*/g, "*$1*");
+
+  // Italic: single *text* that isn't already bold → _text_
+  // Match *text* only when not preceded/followed by another *
+  result = result.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, "_$1_");
+
+  // Links: [text](url) → <url|text>
+  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, "<$2|$1>");
+
+  // Restore inline code
+  result = result.replace(/__INLINE_(\d+)__/g, (_, i) => inlineCodes[parseInt(i)]);
+
+  // Restore code blocks
+  result = result.replace(/__CODEBLOCK_(\d+)__/g, (_, i) => codeBlocks[parseInt(i)]);
+
+  return result;
+}
+
 export async function postSlackMessage(
   botToken: string,
   channel: string,
   text: string,
   threadTs?: string
 ): Promise<SlackApiResponse> {
-  const payload: Record<string, string> = { channel, text };
+  const slackText = markdownToSlackMrkdwn(text);
+  const payload: Record<string, string> = { channel, text: slackText };
   if (threadTs) {
     payload.thread_ts = threadTs;
   }
