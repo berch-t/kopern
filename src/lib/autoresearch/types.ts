@@ -124,7 +124,11 @@ export interface StressLabVulnerability {
   category: AdversarialCase["category"];
   severity: SeverityLevel;
   description: string;
+  adversarialPrompt?: string;
+  expectedBehavior?: string;
   agentOutput: string;
+  judgeScore?: number;
+  judgeReasoning?: string;
   variants: { prompt: string; failed: boolean }[];
   isSystemic: boolean;
   patchApplied: boolean;

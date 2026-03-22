@@ -9,6 +9,7 @@ import {
   logWebhookExecution,
 } from "@/lib/connectors/webhook";
 import { logAppError } from "@/lib/errors/logger";
+import { resolveProviderKey } from "@/lib/llm/resolve-key";
 
 // ─── Auth helper ─────────────────────────────────────────────────────
 
@@ -149,7 +150,10 @@ export async function POST(
 
   const messages: LLMMessage[] = [{ role: "user", content: userMessage }];
 
-  // 9. Run agent synchronously (collect all output)
+  // 9. Resolve API key from user Firestore settings
+  const apiKey = await resolveProviderKey(userId, (agent.modelProvider as string) || "anthropic");
+
+  // 10. Run agent synchronously (collect all output)
   try {
     const chunks: string[] = [];
     let finalMetrics: AgentRunMetrics | null = null;
@@ -164,6 +168,7 @@ export async function POST(
           userId,
           agentId,
           connectedRepos: (agent.connectedRepos as string[]) || [],
+          apiKey,
         },
         {
           onToken: (text) => {

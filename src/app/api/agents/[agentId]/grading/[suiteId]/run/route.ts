@@ -9,6 +9,7 @@ import { reportUsageToStripe } from "@/lib/stripe/server";
 import { logAppError } from "@/lib/errors/logger";
 import { buildCriterionConfig } from "@/lib/grading/build-criterion-config";
 import { generateImprovementNotes } from "@/lib/grading/improvement-notes";
+import { resolveProviderKey } from "@/lib/llm/resolve-key";
 
 export async function POST(
   request: NextRequest,
@@ -105,6 +106,9 @@ export async function POST(
         runId = runRef.id;
       }
 
+      // Resolve API key from user Firestore settings
+      const apiKey = userId ? await resolveProviderKey(userId, modelProvider) : undefined;
+
       send("status", { status: "running", totalCases: cases.length, runId });
 
       let totalMetrics: AgentRunMetrics = { inputTokens: 0, outputTokens: 0, toolCallCount: 0, toolIterations: 0 };
@@ -135,6 +139,7 @@ export async function POST(
             userId,
             agentId,
             connectedRepos,
+            apiKey,
           },
           {
             onToken: (text) => {
@@ -181,7 +186,7 @@ export async function POST(
           results: criteriaResults,
           score,
           passed,
-        } = await evaluateAllCriteria(enrichedCriteria, collector, uiLocale);
+        } = await evaluateAllCriteria(enrichedCriteria, collector, uiLocale, apiKey);
 
         totalScore += score;
         if (passed) passedCases++;
@@ -270,11 +275,16 @@ export async function POST(
       if (finalScore < 0.99 && caseResultsForAnalysis.length > 0) {
         try {
           send("improvement_status", { status: "analyzing" });
+          // Resolve anthropic key for improvement analysis (always uses anthropic)
+          const improvementApiKey = userId && modelProvider !== "anthropic"
+            ? await resolveProviderKey(userId, "anthropic")
+            : apiKey;
           const analysis = await generateImprovementNotes(
             systemPrompt,
             finalScore,
             caseResultsForAnalysis,
-            uiLocale
+            uiLocale,
+            improvementApiKey
           );
           send("improvement_notes", {
             summary: analysis.summary,

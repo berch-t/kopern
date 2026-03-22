@@ -4,6 +4,36 @@
 import { adminDb } from "@/lib/firebase/admin";
 import { type ToolDefinition, type ToolCallResult } from "@/lib/llm/client";
 
+// --- Slack Tool Definitions ---
+
+export function getSlackTools(): ToolDefinition[] {
+  return [
+    {
+      name: "slack_read_messages",
+      description: `Read messages from a Slack channel for a specific date. Returns the message text, author, and timestamp. Use channel IDs (e.g. C0AN6D3L8KT) or channel names as provided by the user. If no date is given, reads recent messages.`,
+      input_schema: {
+        type: "object",
+        properties: {
+          channel: { type: "string", description: "Slack channel ID (e.g. C0AN6D3L8KT) or channel name reference" },
+          date: { type: "string", description: "Date in YYYY-MM-DD format (optional — defaults to today)" },
+          limit: { type: "number", description: "Maximum number of messages to return (default 100, max 200)" },
+        },
+        required: ["channel"],
+      },
+    },
+    {
+      name: "slack_list_channels",
+      description: `List Slack channels the bot has access to. Returns channel names and IDs. Useful to discover available channels before reading messages.`,
+      input_schema: {
+        type: "object",
+        properties: {
+          limit: { type: "number", description: "Maximum number of channels (default 100)" },
+        },
+      },
+    },
+  ];
+}
+
 // --- Tool Definitions (sent to LLM) ---
 
 export function getGithubTools(connectedRepos: string[], includeWrite = false): ToolDefinition[] {
@@ -164,6 +194,7 @@ export interface ToolExecutionContext {
   userId: string;
   connectedRepos: string[];
   customTools: { name: string; description: string; parametersSchema: string; executeCode: string }[];
+  slackBotToken?: string;
 }
 
 export async function executeTool(
@@ -182,6 +213,10 @@ export async function executeTool(
         return await executeCommitFiles(toolCall.input, ctx);
       case "create_pull_request":
         return await executeCreatePR(toolCall.input, ctx);
+      case "slack_read_messages":
+        return await executeSlackReadMessages(toolCall.input, ctx);
+      case "slack_list_channels":
+        return await executeSlackListChannels(toolCall.input, ctx);
       default:
         return await executeCustomTool(toolCall, ctx);
     }
@@ -442,6 +477,131 @@ async function executeCreatePR(
 
   return {
     result: `Pull request created: ${pr.html_url}\nTitle: ${title}\nStatus: Open (awaiting human review)`,
+    isError: false,
+  };
+}
+
+// --- Built-in: slack_read_messages ---
+
+async function executeSlackReadMessages(
+  args: Record<string, unknown>,
+  ctx: ToolExecutionContext
+): Promise<{ result: string; isError: boolean }> {
+  if (!ctx.slackBotToken) {
+    return { result: "No Slack connection configured for this agent. Connect Slack from the Connectors page in the Kopern dashboard.", isError: true };
+  }
+
+  const channel = args.channel as string;
+  if (!channel) {
+    return { result: "Missing required parameter: channel (channel ID like C0AN6D3L8KT)", isError: true };
+  }
+
+  const limit = Math.min(Number(args.limit) || 100, 200);
+
+  // Build time range from date (if provided)
+  const params = new URLSearchParams({
+    channel,
+    limit: String(limit),
+    inclusive: "true",
+  });
+
+  const dateStr = args.date as string | undefined;
+  if (dateStr) {
+    // Parse YYYY-MM-DD to Unix timestamps (start and end of day UTC)
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) {
+      return { result: `Invalid date format: "${dateStr}". Use YYYY-MM-DD (e.g. 2026-03-22).`, isError: true };
+    }
+    const dayStart = new Date(`${dateStr}T00:00:00Z`).getTime() / 1000;
+    const dayEnd = new Date(`${dateStr}T23:59:59Z`).getTime() / 1000;
+    params.set("oldest", String(dayStart));
+    params.set("latest", String(dayEnd));
+  }
+
+  const res = await fetch(`https://slack.com/api/conversations.history?${params.toString()}`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${ctx.slackBotToken}` },
+  });
+
+  const data = await res.json() as { ok: boolean; error?: string; messages?: { user?: string; bot_id?: string; text: string; ts: string }[] };
+
+  if (!data.ok) {
+    const errorMap: Record<string, string> = {
+      channel_not_found: `Channel "${channel}" not found. Check the channel ID or make sure the bot is invited to the channel.`,
+      not_in_channel: `The bot is not a member of channel "${channel}". Invite the bot with /invite @bot in that channel.`,
+      missing_scope: "The bot lacks the 'channels:history' permission. Reinstall the Slack app with the correct scopes.",
+      invalid_auth: "The bot token is invalid. Reconnect Slack from the Kopern dashboard.",
+    };
+    return { result: errorMap[data.error || ""] || `Slack API error: ${data.error}`, isError: true };
+  }
+
+  const messages = data.messages || [];
+  if (messages.length === 0) {
+    return {
+      result: dateStr
+        ? `No messages found in channel ${channel} for date ${dateStr}.`
+        : `No messages found in channel ${channel}.`,
+      isError: false,
+    };
+  }
+
+  // Format messages (reverse to chronological order)
+  const formatted = messages
+    .reverse()
+    .map((msg) => {
+      const time = new Date(parseFloat(msg.ts) * 1000).toISOString().slice(0, 19).replace("T", " ");
+      const author = msg.bot_id ? "[bot]" : (msg.user || "unknown");
+      return `[${time}] <@${author}> ${msg.text}`;
+    })
+    .join("\n");
+
+  return {
+    result: `Found ${messages.length} message(s)${dateStr ? ` for ${dateStr}` : ""}:\n\n${formatted}`,
+    isError: false,
+  };
+}
+
+// --- Built-in: slack_list_channels ---
+
+async function executeSlackListChannels(
+  args: Record<string, unknown>,
+  ctx: ToolExecutionContext
+): Promise<{ result: string; isError: boolean }> {
+  if (!ctx.slackBotToken) {
+    return { result: "No Slack connection configured for this agent.", isError: true };
+  }
+
+  const limit = Math.min(Number(args.limit) || 100, 200);
+
+  const res = await fetch(
+    `https://slack.com/api/conversations.list?types=public_channel,private_channel&exclude_archived=true&limit=${limit}`,
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${ctx.slackBotToken}` },
+    }
+  );
+
+  const data = await res.json() as { ok: boolean; error?: string; channels?: { id: string; name: string; is_member: boolean; num_members: number; purpose?: { value: string } }[] };
+
+  if (!data.ok) {
+    return { result: `Slack API error: ${data.error}`, isError: true };
+  }
+
+  const channels = data.channels || [];
+  if (channels.length === 0) {
+    return { result: "No channels found. The bot may not have access to any channels.", isError: false };
+  }
+
+  const formatted = channels
+    .map((ch) => {
+      const member = ch.is_member ? "✓ member" : "✗ not joined";
+      const purpose = ch.purpose?.value ? ` — ${ch.purpose.value.slice(0, 80)}` : "";
+      return `#${ch.name} (${ch.id}) [${member}, ${ch.num_members} members]${purpose}`;
+    })
+    .join("\n");
+
+  return {
+    result: `Found ${channels.length} channel(s):\n\n${formatted}`,
     isError: false,
   };
 }

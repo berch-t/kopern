@@ -6,6 +6,7 @@ import { adminDb } from "@/lib/firebase/admin";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { logAppError } from "@/lib/errors/logger";
+import { resolveProviderKey } from "@/lib/llm/resolve-key";
 
 interface ChatRequestBody {
   message: string;
@@ -123,6 +124,9 @@ You MUST maintain a task list for this session. Before executing any action:
 
       send("status", { status: "thinking" });
 
+      // Resolve API key from user Firestore settings
+      const apiKey = userId ? await resolveProviderKey(userId, agentConfig.modelProvider) : undefined;
+
       // Track events for session history
       let assistantOutput = "";
       const toolEvents: { type: string; data: Record<string, unknown> }[] = [];
@@ -143,6 +147,7 @@ You MUST maintain a task list for this session. Before executing any action:
           userId,
           agentId,
           connectedRepos,
+          apiKey,
         },
         {
           onToken: (text) => {

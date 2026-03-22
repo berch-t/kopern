@@ -3,8 +3,8 @@
 import type { AgentDoc } from "@/lib/firebase/firestore";
 import type { MutationDimension, MutationStrategy, AutoResearchIteration } from "./types";
 import { proposeMutation } from "./analyzer";
-import { providers } from "@/lib/pi-mono/providers";
 import { thinkingLevels } from "@/lib/pi-mono/providers";
+import type { AvailableModel } from "./available-models";
 
 export interface MutationResult {
   newConfig: Partial<AgentDoc>;
@@ -24,17 +24,19 @@ export async function applyMutation(
   dimensions: MutationDimension[],
   provider: string,
   model: string,
-  userScript?: string
+  availableModels: AvailableModel[],
+  userScript?: string,
+  apiKey?: string
 ): Promise<MutationResult> {
   switch (strategy) {
     case "llm_guided":
-      return llmGuidedMutation(currentConfig, gradingResults, history, dimensions, provider, model);
+      return llmGuidedMutation(currentConfig, gradingResults, history, dimensions, provider, model, availableModels, apiKey);
     case "rule_based":
-      return ruleBased(currentConfig, gradingResults, history, dimensions);
+      return ruleBased(currentConfig, gradingResults, history, dimensions, availableModels);
     case "user_script":
       return userScriptMutation(currentConfig, gradingResults, userScript);
     default:
-      return llmGuidedMutation(currentConfig, gradingResults, history, dimensions, provider, model);
+      return llmGuidedMutation(currentConfig, gradingResults, history, dimensions, provider, model, availableModels, apiKey);
   }
 }
 
@@ -48,7 +50,9 @@ async function llmGuidedMutation(
   history: AutoResearchIteration[],
   dimensions: MutationDimension[],
   provider: string,
-  model: string
+  model: string,
+  availableModels: AvailableModel[],
+  apiKey?: string
 ): Promise<MutationResult> {
   const newConfig = { ...currentConfig };
 
@@ -59,14 +63,15 @@ async function llmGuidedMutation(
       gradingResults,
       history,
       provider,
-      model
+      model,
+      apiKey
     );
     newConfig.systemPrompt = newPrompt;
     return { newConfig, description, tokensUsed };
   }
 
   // Fallback: rule-based for non-prompt dimensions
-  return ruleBased(currentConfig, gradingResults, history, dimensions);
+  return ruleBased(currentConfig, gradingResults, history, dimensions, availableModels);
 }
 
 // ---------------------------------------------------------------------------
@@ -77,7 +82,8 @@ function ruleBased(
   currentConfig: Partial<AgentDoc>,
   gradingResults: { caseName: string; score: number; passed: boolean; criteriaResults: { criterionType: string; score: number; message: string }[] }[],
   history: AutoResearchIteration[],
-  dimensions: MutationDimension[]
+  dimensions: MutationDimension[],
+  availableModels: AvailableModel[]
 ): MutationResult {
   const newConfig = { ...currentConfig };
   const mutations: string[] = [];
@@ -95,17 +101,14 @@ function ruleBased(
     }
   }
 
-  // Try model upgrade/downgrade
+  // Try model upgrade/downgrade (only from available models)
   if (dimensions.includes("model") && mutations.length === 0) {
-    const currentProvider = providers.find((p) => p.id === currentConfig.modelProvider);
-    if (currentProvider) {
-      const currentModelIndex = currentProvider.models.findIndex((m) => m.id === currentConfig.modelId);
-      // Try upgrading to a more capable model
-      if (currentModelIndex > 0) {
-        const betterModel = currentProvider.models[currentModelIndex - 1];
-        newConfig.modelId = betterModel.id;
-        mutations.push(`Upgraded model to ${betterModel.name}`);
-      }
+    const sameProviderModels = availableModels.filter((m) => m.provider === currentConfig.modelProvider && m.model !== currentConfig.modelId);
+    if (sameProviderModels.length > 0) {
+      const picked = sameProviderModels[0];
+      newConfig.modelId = picked.model;
+      newConfig.modelProvider = picked.provider;
+      mutations.push(`Switched model to ${picked.name}`);
     }
   }
 
@@ -163,21 +166,20 @@ async function userScriptMutation(
 
 export function generateTournamentCandidates(
   baseConfig: Partial<AgentDoc>,
-  dimensions: MutationDimension[]
+  dimensions: MutationDimension[],
+  availableModels: AvailableModel[]
 ): Partial<AgentDoc>[] {
   const candidates: Partial<AgentDoc>[] = [baseConfig];
 
-  // Generate model variants
+  // Generate model variants (only models with configured API keys)
   if (dimensions.includes("model")) {
-    for (const provider of providers) {
-      for (const model of provider.models) {
-        if (model.id !== baseConfig.modelId) {
-          candidates.push({
-            ...baseConfig,
-            modelProvider: provider.id,
-            modelId: model.id,
-          });
-        }
+    for (const m of availableModels) {
+      if (m.model !== baseConfig.modelId || m.provider !== baseConfig.modelProvider) {
+        candidates.push({
+          ...baseConfig,
+          modelProvider: m.provider,
+          modelId: m.model,
+        });
       }
     }
   }

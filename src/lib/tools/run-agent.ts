@@ -7,6 +7,7 @@ import { logAppError } from "@/lib/errors/logger";
 import { trackUsageServer } from "@/lib/billing/track-usage-server";
 import {
   getGithubTools,
+  getSlackTools,
   getCustomToolDefinitions,
   executeTool,
   type ToolExecutionContext,
@@ -26,6 +27,8 @@ export interface AgentRunConfig {
   userId?: string;
   agentId?: string;
   connectedRepos?: string[];
+  /** Override API key (from user Firestore settings). Falls back to process.env if not provided. */
+  apiKey?: string;
 }
 
 export interface AgentRunCallbacks {
@@ -122,10 +125,28 @@ export async function runAgentWithTools(
     tools.push(...getBugTools());
   }
 
+  // Slack tools (loaded when agent has a Slack connection with valid bot token)
+  let slackBotToken: string | undefined;
+  if (config.userId && config.agentId) {
+    try {
+      const slackSnap = await adminDb
+        .doc(`users/${config.userId}/agents/${config.agentId}/connectors/slackConnection`)
+        .get();
+      const token = slackSnap.data()?.botToken as string | undefined;
+      if (token && slackSnap.data()?.enabled !== false) {
+        slackBotToken = token;
+        tools.push(...getSlackTools());
+      }
+    } catch {
+      // Skip — Slack tools are optional
+    }
+  }
+
   const toolCtx: ToolExecutionContext = {
     userId: config.userId || "",
     connectedRepos,
     customTools: customToolDocs,
+    slackBotToken,
   };
 
   // Load extensions from Firestore
@@ -180,6 +201,7 @@ export async function runAgentWithTools(
           systemPrompt: config.systemPrompt,
           messages,
           tools: tools.length > 0 ? tools : undefined,
+          apiKey: config.apiKey,
         },
         {
           onToken: (text) => {

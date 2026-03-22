@@ -2,6 +2,7 @@
 
 import { use, useState } from "react";
 import { useDictionary } from "@/providers/LocaleProvider";
+import { useLocale } from "@/providers/LocaleProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { useDocument } from "@/hooks/useFirestore";
 import { agentDoc, widgetConfigDoc, slackConnectionDoc, type AgentDoc, type WidgetConfigDoc, type SlackConnectionDoc } from "@/lib/firebase/firestore";
@@ -11,9 +12,14 @@ import { ConnectorCard } from "@/components/connectors/ConnectorCard";
 import { WidgetConfigurator } from "@/components/connectors/WidgetConfigurator";
 import { WebhookManager } from "@/components/connectors/WebhookManager";
 import { SlackConnector } from "@/components/connectors/SlackConnector";
-import { MessageSquare, Webhook, MessageCircle } from "lucide-react";
+import { MarkdownRenderer } from "@/components/shared/MarkdownRenderer";
+import { connectorTutorials } from "@/data/connector-tutorials";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { MessageSquare, Webhook, MessageCircle, X } from "lucide-react";
 
 type ActivePanel = "widget" | "webhooks" | "slack" | null;
+type ActiveTutorial = "widget" | "webhooks" | "slack" | null;
 
 export default function ConnectorsPage({
   params,
@@ -23,7 +29,9 @@ export default function ConnectorsPage({
   const { agentId } = use(params);
   const { user } = useAuth();
   const t = useDictionary();
+  const locale = useLocale();
   const [activePanel, setActivePanel] = useState<ActivePanel>(null);
+  const [activeTutorial, setActiveTutorial] = useState<ActiveTutorial>(null);
 
   const { data: agent, loading } = useDocument<AgentDoc>(
     user ? agentDoc(user.uid, agentId) : null
@@ -74,6 +82,12 @@ export default function ConnectorsPage({
     );
   }
 
+  const toggleTutorial = (key: ActiveTutorial) => {
+    setActiveTutorial((prev) => (prev === key ? null : key));
+  };
+
+  const tutorials = locale === "fr" ? connectorTutorials.fr : connectorTutorials.en;
+
   return (
     <div className="space-y-6">
       <SlideUp>
@@ -95,6 +109,9 @@ export default function ConnectorsPage({
             bg="bg-blue-500/10"
             actionLabel={t.connectors.widget.configure}
             onAction={() => setActivePanel("widget")}
+            tutorialLabel={t.connectors.tutorial}
+            tutorialActive={activeTutorial === "widget"}
+            onTutorial={() => toggleTutorial("widget")}
           />
 
           <ConnectorCard
@@ -105,6 +122,9 @@ export default function ConnectorsPage({
             bg="bg-amber-500/10"
             actionLabel={t.connectors.webhooks.create}
             onAction={() => setActivePanel("webhooks")}
+            tutorialLabel={t.connectors.tutorial}
+            tutorialActive={activeTutorial === "webhooks"}
+            onTutorial={() => toggleTutorial("webhooks")}
           />
 
           <ConnectorCard
@@ -117,9 +137,49 @@ export default function ConnectorsPage({
             bg="bg-purple-500/10"
             actionLabel={slackConnection ? t.connectors.slack.reconnect : t.connectors.slack.connect}
             onAction={() => setActivePanel("slack")}
+            tutorialLabel={t.connectors.tutorial}
+            tutorialActive={activeTutorial === "slack"}
+            onTutorial={() => toggleTutorial("slack")}
           />
         </div>
       </FadeIn>
+
+      {/* Tutorial section — expands below the cards */}
+      {activeTutorial && (
+        <FadeIn>
+          <Card className="border-primary/20">
+            <CardContent className="p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {activeTutorial === "widget" && <MessageSquare className="h-5 w-5 text-blue-500" />}
+                  {activeTutorial === "webhooks" && <Webhook className="h-5 w-5 text-amber-500" />}
+                  {activeTutorial === "slack" && <MessageCircle className="h-5 w-5 text-purple-500" />}
+                  <h2 className="text-lg font-semibold">
+                    {t.connectors.tutorial} — {
+                      activeTutorial === "widget" ? t.connectors.widget.title :
+                      activeTutorial === "webhooks" ? t.connectors.webhooks.title :
+                      t.connectors.slack.title
+                    }
+                  </h2>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setActiveTutorial(null)}
+                  className="text-muted-foreground"
+                >
+                  <X className="mr-1 h-4 w-4" />
+                  {t.connectors.closeTutorial}
+                </Button>
+              </div>
+              <MarkdownRenderer
+                content={tutorials[activeTutorial]}
+                headingIds
+              />
+            </CardContent>
+          </Card>
+        </FadeIn>
+      )}
     </div>
   );
 }

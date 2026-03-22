@@ -5,17 +5,9 @@ import { runAgentWithTools } from "@/lib/tools/run-agent";
 import { createEventCollector } from "@/lib/pi-mono/event-collector";
 import { evaluateAllCriteria } from "@/lib/grading/criteria";
 import { calculateTokenCost } from "@/lib/billing/pricing";
-import { providers } from "@/lib/pi-mono/providers";
+import { getAvailableStudentModels, checkOllamaReachable, resolveProviderKey } from "./available-models";
 import { createRun, completeRun, trackAutoresearchUsage, logIteration, failRun } from "./history";
 import type { DistillationResult, AutoResearchRun } from "./types";
-
-// Target models for distillation (cheaper/faster models)
-const STUDENT_MODELS = [
-  { provider: "mistral", model: "mistral-small-latest", label: "Mistral Small" },
-  { provider: "openai", model: "gpt-4o-mini", label: "GPT-4o Mini" },
-  { provider: "google", model: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
-  { provider: "mistral", model: "mistral-nemo-latest", label: "Mistral Nemo" },
-];
 
 export interface DistillationConfig {
   userId: string;
@@ -37,9 +29,11 @@ export async function runDistillation(
 ): Promise<DistillationResult | null> {
   const { userId, agentId, suiteId } = config;
   let runId: string | null = null;
-  const studentModels = config.studentModels || STUDENT_MODELS;
 
   try {
+    // Pre-check Ollama connectivity before resolving available models
+    await checkOllamaReachable();
+
     // Load agent (teacher)
     const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
     if (!agentSnap.exists) throw new Error("Agent not found");
@@ -47,6 +41,11 @@ export async function runDistillation(
     const teacherProvider = agentData.modelProvider || "anthropic";
     const teacherModel = agentData.modelId || "claude-sonnet-4-6";
     const systemPrompt = agentData.systemPrompt || "";
+    const studentModels = config.studentModels || await getAvailableStudentModels(userId, teacherProvider, teacherModel);
+
+    if (studentModels.length === 0) {
+      throw new Error("No student models available. Configure additional API keys to use distillation.");
+    }
 
     // Load skills
     let fullPrompt = systemPrompt;
@@ -83,8 +82,9 @@ export async function runDistillation(
     // --- PHASE 1: TEACHER evaluation ---
     callbacks.onStatus("evaluating_teacher");
 
+    const teacherKey = await resolveProviderKey(userId, teacherProvider);
     const teacherResult = await evaluateModel(
-      fullPrompt, casesSnap, teacherProvider, teacherModel, userId, agentId
+      fullPrompt, casesSnap, teacherProvider, teacherModel, userId, agentId, teacherKey
     );
     totalInputTokens += teacherResult.inputTokens;
     totalOutputTokens += teacherResult.outputTokens;
@@ -110,8 +110,9 @@ export async function runDistillation(
       callbacks.onStatus(`evaluating_${student.label.replace(/\s/g, "_").toLowerCase()}`);
 
       try {
+        const studentKey = await resolveProviderKey(userId, student.provider);
         const studentResult = await evaluateModel(
-          fullPrompt, casesSnap, student.provider, student.model, userId, agentId
+          fullPrompt, casesSnap, student.provider, student.model, userId, agentId, studentKey
         );
         totalInputTokens += studentResult.inputTokens;
         totalOutputTokens += studentResult.outputTokens;
@@ -196,7 +197,14 @@ export async function runDistillation(
       startedAt: Date.now(),
       completedAt: Date.now(),
     };
-    await completeRun(userId, agentId, runId, run);
+    await completeRun(userId, agentId, runId, run, {
+      distillationResult: {
+        teacherScore: result.teacherScore,
+        teacherCostPerRequest: result.teacherCostPerRequest,
+        students: result.students,
+        bestROI: result.bestROI,
+      },
+    });
     await trackAutoresearchUsage(userId, agentId, teacherProvider, totalInputTokens, totalOutputTokens, 1 + studentModels.length);
 
     callbacks.onResult(result);
@@ -220,7 +228,8 @@ async function evaluateModel(
   provider: string,
   model: string,
   userId: string,
-  agentId: string
+  agentId: string,
+  apiKey?: string
 ): Promise<{ score: number; costPerRequest: number; inputTokens: number; outputTokens: number; durationMs: number }> {
   const startTime = Date.now();
   let totalScore = 0;
@@ -239,6 +248,7 @@ async function evaluateModel(
         messages: [{ role: "user", content: testCase.inputPrompt }],
         userId,
         agentId,
+        apiKey,
       },
       {
         onToken: (text) => collector.addToken(text),
@@ -255,7 +265,7 @@ async function evaluateModel(
     );
 
     collector.finalize();
-    const { score } = await evaluateAllCriteria(testCase.criteria || [], collector);
+    const { score } = await evaluateAllCriteria(testCase.criteria || [], collector, undefined, apiKey);
     totalScore += score;
   }
 

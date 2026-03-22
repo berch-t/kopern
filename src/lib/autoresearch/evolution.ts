@@ -4,7 +4,8 @@ import { adminDb } from "@/lib/firebase/admin";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
 import { createEventCollector } from "@/lib/pi-mono/event-collector";
 import { evaluateAllCriteria } from "@/lib/grading/criteria";
-import { providers, thinkingLevels } from "@/lib/pi-mono/providers";
+import { thinkingLevels } from "@/lib/pi-mono/providers";
+import { getAvailableModelsForUser, checkOllamaReachable, resolveProviderKey, type AvailableModel } from "./available-models";
 import { proposeMutation } from "./analyzer";
 import { createRun, completeRun, trackAutoresearchUsage, logIteration, failRun } from "./history";
 import type {
@@ -32,15 +33,22 @@ export async function runEvolution(
 ): Promise<EvolutionResult | null> {
   const { userId, agentId, suiteId, maxIterations, mutationDimensions } = config;
   let runId: string | null = null;
-  const maxGenerations = Math.ceil(maxIterations / POPULATION_SIZE);
+  // maxIterations = number of generations (not divided by population)
+  const maxGenerations = Math.max(maxIterations, 1);
 
   try {
+    // Pre-check Ollama connectivity before resolving available models
+    await checkOllamaReachable();
+
     // Load agent
     const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
     if (!agentSnap.exists) throw new Error("Agent not found");
     const agentData = agentSnap.data()!;
     const provider = agentData.modelProvider || "anthropic";
     const model = agentData.modelId || "claude-sonnet-4-6";
+
+    // Resolve API key from user Firestore settings
+    const apiKey = await resolveProviderKey(userId, provider);
 
     // Load skills
     let skillsXml = "";
@@ -107,12 +115,27 @@ export async function runEvolution(
     generations.push(gen0);
     callbacks.onGeneration(gen0);
 
+    // Available models for model mutation
+    const availableModels = await getAvailableModelsForUser(userId);
+
     // --- EVOLUTION LOOP ---
     for (let gen = 1; gen <= maxGenerations; gen++) {
       callbacks.onStatus(`generation_${gen}`);
 
       // 1. MUTATION — generate variants from best candidates
       const newCandidates: EvolutionCandidate[] = [];
+
+      // Build grading context from last evaluation for better prompt mutations
+      const lastEvalResults = population
+        .filter((c) => c.score > 0)
+        .map((c) => ({
+          caseName: c.mutationDescription,
+          score: c.score,
+          passed: c.score >= 0.7,
+          criteriaResults: Object.entries(c.criteriaScores)
+            .filter(([k]) => !k.startsWith("_"))
+            .map(([k, v]) => ({ criterionType: k, score: v, message: `Score: ${v.toFixed(2)}` })),
+        }));
 
       for (let i = 0; i < Math.min(population.length, 2); i++) {
         const parent = population[i];
@@ -124,9 +147,23 @@ export async function runEvolution(
             dimension,
             gen,
             newCandidates.length,
-            casesSnap,
+            lastEvalResults,
+            generations.map((g) => ({
+              index: g.index,
+              timestamp: Date.now(),
+              configSnapshot: {},
+              gradingScore: g.bestScore,
+              criteriaBreakdown: {},
+              delta: g.index > 0 ? g.bestScore - generations[g.index - 1].bestScore : 0,
+              status: "keep" as const,
+              description: `Gen ${g.index}`,
+              tokensUsed: { input: 0, output: 0 },
+              durationMs: 0,
+            })),
             provider,
-            model
+            model,
+            availableModels,
+            apiKey
           );
 
           if (candidate) {
@@ -187,9 +224,10 @@ export async function runEvolution(
         durationMs: 0,
       });
 
-      // Check convergence
+      // Check convergence (only after 3+ generations of stagnation)
       if (config.targetScore && bestScore >= config.targetScore) break;
-      if (gen >= 3 && generations[gen].bestScore === generations[gen - 2].bestScore) break;
+      if (gen >= 4 && generations[gen].bestScore === generations[gen - 2].bestScore &&
+          generations[gen].bestScore === generations[gen - 3].bestScore) break;
     }
 
     // --- RESULT ---
@@ -219,7 +257,13 @@ export async function runEvolution(
       startedAt: Date.now(),
       completedAt: Date.now(),
     };
-    await completeRun(userId, agentId, runId, run);
+    await completeRun(userId, agentId, runId, run, {
+      evolutionResult: {
+        generations: result.generations,
+        champion: result.champion,
+        totalGenerations: result.totalGenerations,
+      },
+    });
     await trackAutoresearchUsage(userId, agentId, provider, totalInputTokens, totalOutputTokens, generations.length * POPULATION_SIZE);
 
     callbacks.onResult(result);
@@ -247,6 +291,7 @@ async function evaluateCandidate(
   const provider = candidate.config.modelProvider || "anthropic";
   const model = candidate.config.modelId || "claude-sonnet-4-6";
   const prompt = (candidate.config.systemPrompt || "") + skillsXml;
+  const apiKey = await resolveProviderKey(userId, provider);
 
   let totalScore = 0;
   let totalInputTokens = 0;
@@ -266,6 +311,7 @@ async function evaluateCandidate(
         messages: [{ role: "user", content: testCase.inputPrompt }],
         userId,
         agentId,
+        apiKey,
       },
       {
         onToken: (text) => collector.addToken(text),
@@ -284,7 +330,9 @@ async function evaluateCandidate(
     collector.finalize();
     const { results: criteriaResults, score } = await evaluateAllCriteria(
       testCase.criteria || [],
-      collector
+      collector,
+      undefined,
+      apiKey
     );
 
     totalScore += score;
@@ -319,22 +367,26 @@ async function mutateCandidate(
   dimension: MutationDimension,
   generation: number,
   index: number,
-  casesSnap: FirebaseFirestore.QuerySnapshot,
+  gradingResults: { caseName: string; score: number; passed: boolean; criteriaResults: { criterionType: string; score: number; message: string }[] }[],
+  history: { index: number; timestamp: number; configSnapshot: Record<string, unknown>; gradingScore: number; criteriaBreakdown: Record<string, number>; delta: number; status: "keep" | "discard" | "crash" | "baseline"; description: string; tokensUsed: { input: number; output: number }; durationMs: number }[],
   provider: string,
-  model: string
+  model: string,
+  availableModels: AvailableModel[],
+  apiKey?: string
 ): Promise<EvolutionCandidate | null> {
   const id = `gen${generation}-${index}`;
   const newConfig = { ...parent.config };
 
   switch (dimension) {
     case "system_prompt": {
-      // Use LLM to propose prompt mutation
+      // Use LLM to propose prompt mutation with context
       const { newPrompt, description, tokensUsed } = await proposeMutation(
         parent.config.systemPrompt || "",
-        [], // No grading results needed for evolution
-        [],
+        gradingResults,
+        history,
         provider,
-        model
+        model,
+        apiKey
       );
       newConfig.systemPrompt = newPrompt;
       return {
@@ -352,11 +404,8 @@ async function mutateCandidate(
     }
 
     case "model": {
-      // Pick a random different model
-      const allModels = providers.flatMap((p) =>
-        p.models.map((m) => ({ provider: p.id, model: m.id, name: m.name }))
-      );
-      const others = allModels.filter((m) =>
+      // Only pick from models with configured API keys
+      const others = availableModels.filter((m) =>
         m.model !== parent.config.modelId || m.provider !== parent.config.modelProvider
       );
       if (others.length === 0) return null;

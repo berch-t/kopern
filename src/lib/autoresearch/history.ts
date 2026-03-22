@@ -98,7 +98,8 @@ export async function completeRun(
   userId: string,
   agentId: string,
   runId: string,
-  run: AutoResearchRun
+  run: AutoResearchRun,
+  modeResult?: Record<string, unknown>
 ): Promise<void> {
   const runRef = adminDb.doc(
     `users/${userId}/agents/${agentId}/autoresearchRuns/${runId}`
@@ -112,6 +113,7 @@ export async function completeRun(
     totalTokensOutput: run.totalTokensUsed.output,
     totalCost: run.totalCost,
     completedAt: FieldValue.serverTimestamp(),
+    ...(modeResult || {}),
   });
 }
 

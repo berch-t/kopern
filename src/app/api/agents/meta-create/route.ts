@@ -3,6 +3,7 @@ import { createSSEStream, sseResponse } from "@/lib/utils/sse";
 import { streamLLM, type LLMMessage } from "@/lib/llm/client";
 import { META_AGENT_SYSTEM_PROMPT } from "@/data/meta-agent-template";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
+import { resolveProviderKey } from "@/lib/llm/resolve-key";
 import type { AgentSpec } from "@/lib/meta-agent/types";
 
 interface MetaCreateBody {
@@ -40,6 +41,9 @@ export async function POST(request: NextRequest) {
     try {
       send("status", { status: "analyzing" });
 
+      // Resolve API key from user Firestore settings (if userId available)
+      const apiKey = userId ? await resolveProviderKey(userId, modelProvider || "anthropic") : undefined;
+
       const messages: LLMMessage[] = [
         {
           role: "user",
@@ -55,6 +59,7 @@ export async function POST(request: NextRequest) {
           model: modelId || "claude-sonnet-4-6",
           systemPrompt: META_AGENT_SYSTEM_PROMPT,
           messages,
+          apiKey,
         },
         {
           onToken: (text) => {

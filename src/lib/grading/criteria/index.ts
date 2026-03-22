@@ -52,16 +52,18 @@ export async function evaluateCriterion(
 export async function evaluateAllCriteria(
   criteria: CriterionConfig[],
   events: CollectedEvents,
-  locale?: string
+  locale?: string,
+  apiKey?: string
 ): Promise<{ results: CriterionResult[]; score: number; passed: boolean }> {
   const results: CriterionResult[] = [];
 
   for (const criterion of criteria) {
-    // Inject locale into config for llm_judge to use
-    const localizedCriterion = locale
-      ? { ...criterion, config: { ...criterion.config, _locale: locale } }
-      : criterion;
-    const result = await evaluateCriterion(localizedCriterion, events);
+    // Inject locale and apiKey into config for llm_judge to use
+    const enrichedConfig = { ...criterion.config };
+    if (locale) enrichedConfig._locale = locale;
+    if (apiKey) enrichedConfig._apiKey = apiKey;
+    const enrichedCriterion = { ...criterion, config: enrichedConfig };
+    const result = await evaluateCriterion(enrichedCriterion, events);
     results.push(result);
   }
 

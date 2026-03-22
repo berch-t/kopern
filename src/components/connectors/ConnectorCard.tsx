@@ -3,6 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BookOpen } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface ConnectorCardProps {
@@ -16,6 +17,9 @@ interface ConnectorCardProps {
   actionLabel: string;
   onAction: () => void;
   disabled?: boolean;
+  tutorialLabel?: string;
+  tutorialActive?: boolean;
+  onTutorial?: () => void;
 }
 
 export function ConnectorCard({
@@ -29,9 +33,12 @@ export function ConnectorCard({
   actionLabel,
   onAction,
   disabled,
+  tutorialLabel,
+  tutorialActive,
+  onTutorial,
 }: ConnectorCardProps) {
   return (
-    <Card>
+    <Card className={tutorialActive ? "ring-2 ring-primary/50" : undefined}>
       <CardContent className="flex flex-col gap-4 p-6">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
@@ -49,9 +56,22 @@ export function ConnectorCard({
           </div>
         </div>
         <p className="text-sm text-muted-foreground">{description}</p>
-        <Button onClick={onAction} disabled={disabled} className="w-full">
-          {actionLabel}
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={onAction} disabled={disabled} className="flex-1">
+            {actionLabel}
+          </Button>
+          {onTutorial && tutorialLabel && (
+            <Button
+              variant={tutorialActive ? "default" : "outline"}
+              size="icon"
+              onClick={onTutorial}
+              title={tutorialLabel}
+              className="shrink-0"
+            >
+              <BookOpen className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

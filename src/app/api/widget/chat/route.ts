@@ -5,6 +5,7 @@ import { adminDb } from "@/lib/firebase/admin";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
 import { calculateTokenCost } from "@/lib/billing/pricing";
+import { resolveProviderKey } from "@/lib/llm/resolve-key";
 
 interface WidgetChatRequest {
   message: string;
@@ -196,6 +197,9 @@ export async function POST(request: NextRequest) {
     try {
       send("status", { status: "thinking" });
 
+      // Resolve API key from user Firestore settings
+      const apiKey = await resolveProviderKey(userId, agentData.modelProvider || "anthropic");
+
       await runAgentWithTools(
         {
           provider: agentData.modelProvider || "anthropic",
@@ -205,6 +209,7 @@ export async function POST(request: NextRequest) {
           userId,
           agentId,
           connectedRepos: agentData.connectedRepos || [],
+          apiKey,
         },
         {
           onToken: (text) => {

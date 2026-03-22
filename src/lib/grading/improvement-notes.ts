@@ -29,7 +29,8 @@ export async function generateImprovementNotes(
   agentSystemPrompt: string,
   finalScore: number,
   caseResults: CaseResultForAnalysis[],
-  locale: string = "en"
+  locale: string = "en",
+  apiKey?: string
 ): Promise<ImprovementAnalysis> {
   const isFr = locale === "fr";
   // If perfect score, no improvements needed
@@ -120,6 +121,7 @@ Respond ONLY with valid JSON:
           model: "claude-sonnet-4-6",
           systemPrompt: "You are a strict JSON-only evaluator. Always respond with valid JSON only.",
           messages: [{ role: "user", content: prompt }],
+          apiKey,
         },
         {
           onToken: (text: string) => {

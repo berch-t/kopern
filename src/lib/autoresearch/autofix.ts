@@ -7,6 +7,7 @@ import { createEventCollector } from "@/lib/pi-mono/event-collector";
 import { evaluateAllCriteria } from "@/lib/grading/criteria";
 import { analyzeFailures, type GradingFailure } from "./analyzer";
 import { createRun, logIteration, completeRun, trackAutoresearchUsage, failRun } from "./history";
+import { resolveProviderKey } from "@/lib/llm/resolve-key";
 import type { AutoFixResult, AutoResearchRun, AutoResearchIteration } from "./types";
 
 export interface AutoFixConfig {
@@ -40,6 +41,9 @@ export async function runAutoFix(
     const originalPrompt = agentData.systemPrompt || "";
     const provider = agentData.modelProvider || "anthropic";
     const model = agentData.modelId || "claude-sonnet-4-6";
+
+    // Resolve API key from user Firestore settings
+    const apiKey = await resolveProviderKey(userId, provider);
 
     // 2. Load grading run results (failed cases)
     const resultsSnap = await adminDb
@@ -107,7 +111,8 @@ export async function runAutoFix(
       originalPrompt,
       provider,
       model,
-      []
+      [],
+      apiKey
     );
 
     // Send diagnostics to UI
@@ -173,6 +178,7 @@ export async function runAutoFix(
           messages: [{ role: "user", content: testCase.inputPrompt }],
           userId,
           agentId,
+          apiKey,
         },
         {
           onToken: (text) => collector.addToken(text),
@@ -197,7 +203,9 @@ export async function runAutoFix(
 
       const { results: criteriaResults, score, passed } = await evaluateAllCriteria(
         testCase.criteria || [],
-        collector
+        collector,
+        undefined,
+        apiKey
       );
 
       newTotalScore += score;
@@ -251,11 +259,6 @@ export async function runAutoFix(
       startedAt: baselineIteration.timestamp,
       completedAt: Date.now(),
     };
-    await completeRun(userId, agentId, arRunId, run);
-
-    // Track usage
-    await trackAutoresearchUsage(userId, agentId, provider, totalTokens.input, totalTokens.output, 2);
-
     const result: AutoFixResult = {
       diagnostics,
       originalPrompt,
@@ -265,6 +268,20 @@ export async function runAutoFix(
       newScore,
       tokensUsed: totalTokens,
     };
+
+    await completeRun(userId, agentId, arRunId, run, {
+      autofixResult: {
+        diagnostics: result.diagnostics,
+        originalPrompt: result.originalPrompt,
+        patchedPrompt: result.patchedPrompt,
+        promptDiff: result.promptDiff,
+        originalScore: result.originalScore,
+        newScore: result.newScore,
+      },
+    });
+
+    // Track usage
+    await trackAutoresearchUsage(userId, agentId, provider, totalTokens.input, totalTokens.output, 2);
 
     callbacks.onResult(result);
     return result;

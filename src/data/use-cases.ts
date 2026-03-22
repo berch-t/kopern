@@ -473,24 +473,11 @@ Standup message patterns to detect:
 </skill>`,
       },
     ],
-    tools: [
-      {
-        name: "fetch_slack_messages",
-        description: "Retrieves messages from a Slack channel for a given date range",
-        params: `{ "channelId": { "type": "string" }, "date": { "type": "string", "format": "date" } }`,
-        executeCode: "const channelId = args.channelId;\nconst date = args.date;\nresult = JSON.stringify({\n  status: 'external_data_required',\n  channelId: channelId,\n  date: date,\n  instruction: 'This tool requires Slack API access. Provide message data directly as an array of {user, text, timestamp, thread_ts?, reactions?} objects.',\n  slackApiCall: {\n    method: 'conversations.history',\n    params: { channel: channelId, oldest: new Date(date + 'T00:00:00Z').getTime() / 1000, latest: new Date(date + 'T23:59:59Z').getTime() / 1000 },\n    requiredScopes: ['channels:history', 'groups:history']\n  }\n});",
-      },
-      {
-        name: "get_previous_standups",
-        description: "Retrieves historical standups for stale item detection",
-        params: `{ "userId": { "type": "string" }, "days": { "type": "number" } }`,
-        executeCode: "const userId = args.userId;\nconst days = args.days || 7;\nresult = JSON.stringify({\n  status: 'external_data_required',\n  userId: userId,\n  days: days,\n  instruction: 'Provide standup data as an array of {date, items: [{text, status, category}]} objects. Status: done/in_progress/blocked. Category: feature/bugfix/review/meeting/other.',\n  analysisCapabilities: [\n    'Stale item detection (in_progress > 3 days)',\n    'Blocked item tracking',\n    'Velocity trends',\n    'Category distribution'\n  ],\n  dateRange: { from: new Date(Date.now() - days * 86400000).toISOString().split('T')[0], to: new Date().toISOString().split('T')[0] }\n});",
-      },
-    ],
-    mcpIntegration: `Scheduled daily at 10:30 AM (after standup window).
-Reads Slack channel via API, POST to /api/mcp.
-Returns team summary, posted to #engineering-leads channel.
-Stale items auto-create follow-up Slack DMs.`,
+    tools: [],
+    mcpIntegration: `Connect this agent to Slack via the Connectors tab.
+Built-in tools (slack_read_messages, slack_list_channels) are automatically available when connected.
+Mention @agent in a channel with a date to get standup analysis.
+No custom tool configuration needed — just connect and go.`,
     gradingSuite: [
       {
         caseName: "Parse standup with blocker",

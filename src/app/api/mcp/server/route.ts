@@ -5,6 +5,7 @@ import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { streamLLM, type LLMMessage } from "@/lib/llm/client";
 import { countTokens, trackUsage } from "@/lib/mcp/token-counter";
 import { logAppError } from "@/lib/errors/logger";
+import { resolveProviderKey } from "@/lib/llm/resolve-key";
 
 // ─── MCP Protocol Types ──────────────────────────────────────────────
 
@@ -135,6 +136,9 @@ async function executeChat(
 
   const inputTokens = countTokens(systemPrompt + messages.map((m) => m.content).join(""));
 
+  // Resolve API key from user Firestore settings
+  const apiKey = await resolveProviderKey(userId, agent.modelProvider as string);
+
   let fullResponse = "";
   try {
     await new Promise<void>((resolve, reject) => {
@@ -144,6 +148,7 @@ async function executeChat(
           model: agent.modelId as string,
           systemPrompt,
           messages,
+          apiKey,
         },
         {
           onToken: (text) => { fullResponse += text; },

@@ -4,6 +4,7 @@ import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
 import type { LLMMessage } from "@/lib/llm/client";
 import { logAppError } from "@/lib/errors/logger";
+import { resolveProviderKey } from "@/lib/llm/resolve-key";
 import {
   verifySlackSignature,
   lookupSlackTeam,
@@ -255,8 +256,14 @@ async function processSlackEvent(body: SlackEventPayload): Promise<void> {
     content: doc.data().content as string,
   }));
 
-  // Build system prompt with skills
+  // Build system prompt with skills + current date context
   let systemPrompt = agentData.systemPrompt as string || "";
+
+  // Inject current date to prevent hallucination
+  const now = new Date();
+  const dateContext = `\n\n<context>\nCurrent date: ${now.toISOString().slice(0, 10)} (${now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })})\nCurrent time (UTC): ${now.toISOString().slice(11, 16)}\nSlack channel: <#${event.channel}>\n</context>`;
+  systemPrompt += dateContext;
+
   if (skills.length > 0) {
     const skillsXml = skills
       .map((s) => `<skill name="${s.name}">\n${s.content}\n</skill>`)
@@ -306,6 +313,9 @@ async function processSlackEvent(body: SlackEventPayload): Promise<void> {
     content: messageText,
   });
 
+  // Resolve API key from user Firestore settings
+  const apiKey = await resolveProviderKey(userId, agentData.modelProvider as string || "anthropic");
+
   // Run agent (synchronous — collect full response)
   let fullResponse = "";
 
@@ -319,6 +329,7 @@ async function processSlackEvent(body: SlackEventPayload): Promise<void> {
         userId,
         agentId,
         connectedRepos: (agentData.connectedRepos as string[]) || [],
+        apiKey,
       },
       {
         onToken: (text: string) => {

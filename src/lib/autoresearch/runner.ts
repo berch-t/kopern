@@ -7,6 +7,8 @@ import { createEventCollector } from "@/lib/pi-mono/event-collector";
 import { evaluateAllCriteria } from "@/lib/grading/criteria";
 import { PLAN_LIMITS, type PlanTier } from "@/lib/billing/pricing";
 import { applyMutation } from "./strategies";
+import { getAvailableModelsForUser, checkOllamaReachable } from "./available-models";
+import { resolveProviderKey } from "@/lib/llm/resolve-key";
 import {
   createRun,
   logIteration,
@@ -65,6 +67,10 @@ export async function runAutoTune(
 ): Promise<AutoResearchRun> {
   const { userId, agentId, suiteId } = config;
 
+  // Pre-check Ollama + load available models
+  await checkOllamaReachable();
+  const availableModels = await getAvailableModelsForUser(userId);
+
   // Load agent config
   const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
   if (!agentSnap.exists) throw new Error("Agent not found");
@@ -72,6 +78,9 @@ export async function runAutoTune(
 
   const provider = agentData.modelProvider || "anthropic";
   const model = agentData.modelId || "claude-sonnet-4-6";
+
+  // Resolve API key from user Firestore settings
+  const apiKey = await resolveProviderKey(userId, provider);
 
   // Load cases
   const casesSnap = await adminDb
@@ -129,7 +138,8 @@ export async function runAutoTune(
       provider,
       model,
       userId,
-      agentId
+      agentId,
+      apiKey
     );
 
     const baselineIteration: AutoResearchIteration = {
@@ -178,7 +188,9 @@ export async function runAutoTune(
         config.mutationDimensions,
         provider,
         model,
-        config.userScript
+        availableModels,
+        config.userScript,
+        apiKey
       );
 
       run.totalTokensUsed.input += mutation.tokensUsed.input;
@@ -193,7 +205,8 @@ export async function runAutoTune(
         provider,
         model,
         userId,
-        agentId
+        agentId,
+        apiKey
       );
 
       run.totalTokensUsed.input += result.tokensUsed.input;
@@ -247,7 +260,9 @@ export async function runAutoTune(
     // --- COMPLETE ---
     run.status = "completed";
     run.completedAt = Date.now();
-    await completeRun(userId, agentId, runId, run);
+    await completeRun(userId, agentId, runId, run, {
+      autotuneResult: { bestPrompt },
+    });
 
     // Track usage
     await trackAutoresearchUsage(
@@ -279,7 +294,8 @@ async function runGradingSuiteOnPrompt(
   provider: string,
   model: string,
   userId: string,
-  agentId: string
+  agentId: string,
+  apiKey?: string
 ): Promise<{
   score: number;
   criteriaBreakdown: Record<string, number>;
@@ -306,6 +322,7 @@ async function runGradingSuiteOnPrompt(
         messages: [{ role: "user", content: testCase.inputPrompt }],
         userId,
         agentId,
+        apiKey,
       },
       {
         onToken: (text) => collector.addToken(text),
@@ -330,7 +347,9 @@ async function runGradingSuiteOnPrompt(
 
     const { results: criteriaResults, score, passed } = await evaluateAllCriteria(
       testCase.criteria || [],
-      collector
+      collector,
+      undefined,
+      apiKey
     );
 
     totalScore += score;
@@ -369,8 +388,9 @@ async function getLatestGradingResults(
   provider: string,
   model: string,
   userId: string,
-  agentId: string
+  agentId: string,
+  apiKey?: string
 ) {
-  const result = await runGradingSuiteOnPrompt(systemPrompt, casesSnap, provider, model, userId, agentId);
+  const result = await runGradingSuiteOnPrompt(systemPrompt, casesSnap, provider, model, userId, agentId, apiKey);
   return result.gradingResults;
 }

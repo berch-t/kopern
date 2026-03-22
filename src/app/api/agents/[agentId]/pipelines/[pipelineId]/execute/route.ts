@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSSEStream, sseResponse } from "@/lib/utils/sse";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
+import { resolveProviderKey } from "@/lib/llm/resolve-key";
 
 interface PipelineStepConfig {
   agentId: string;
@@ -104,6 +105,9 @@ export async function POST(
         let stepResult = "";
         let stepFailed = false;
 
+        // Resolve API key per step's provider
+        const apiKey = userId ? await resolveProviderKey(userId, step.modelProvider) : undefined;
+
         try {
           await runAgentWithTools(
             {
@@ -113,6 +117,7 @@ export async function POST(
               messages: [{ role: "user", content: stepInput }],
               userId,
               agentId: step.agentId,
+              apiKey,
             },
             {
               onToken: (text) => {

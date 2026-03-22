@@ -8,6 +8,8 @@ import { calculateTokenCost } from "@/lib/billing/pricing";
 import { providers } from "@/lib/pi-mono/providers";
 import { createRun, completeRun, trackAutoresearchUsage, logIteration, failRun } from "./history";
 import { generateTournamentCandidates } from "./strategies";
+import { getAvailableModelsForUser, checkOllamaReachable } from "./available-models";
+import { resolveProviderKey } from "@/lib/llm/resolve-key";
 import type {
   TournamentCandidate,
   TournamentResult,
@@ -39,6 +41,9 @@ export async function runTournament(
   let runId: string | null = null;
 
   try {
+    // Pre-check Ollama connectivity before resolving available models
+    await checkOllamaReachable();
+
     // Load agent
     const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
     if (!agentSnap.exists) throw new Error("Agent not found");
@@ -90,7 +95,8 @@ export async function runTournament(
       thinkingLevel: agentData.thinkingLevel,
     };
 
-    const candidateConfigs = generateTournamentCandidates(baseConfig, dimensions);
+    const availableModels = await getAvailableModelsForUser(userId);
+    const candidateConfigs = generateTournamentCandidates(baseConfig, dimensions, availableModels);
     const limitedConfigs = candidateConfigs.slice(0, maxCandidates);
 
     let candidates: TournamentCandidate[] = limitedConfigs.map((cfg, i) => {
@@ -118,6 +124,9 @@ export async function runTournament(
         const model = candidate.config.modelId || "claude-sonnet-4-6";
         const prompt = (candidate.config.systemPrompt || "") + skillsXml;
 
+        // Resolve API key per candidate's provider
+        const apiKey = await resolveProviderKey(userId, provider);
+
         let caseScore = 0;
         let caseInputTokens = 0;
         let caseOutputTokens = 0;
@@ -135,6 +144,7 @@ export async function runTournament(
               messages: [{ role: "user", content: testCase.inputPrompt }],
               userId,
               agentId,
+              apiKey,
             },
             {
               onToken: (text) => collector.addToken(text),
@@ -151,7 +161,7 @@ export async function runTournament(
           );
 
           collector.finalize();
-          const { score } = await evaluateAllCriteria(testCase.criteria || [], collector);
+          const { score } = await evaluateAllCriteria(testCase.criteria || [], collector, undefined, apiKey);
           caseScore += score;
         }
 
@@ -225,7 +235,13 @@ export async function runTournament(
       startedAt: Date.now(),
       completedAt: Date.now(),
     };
-    await completeRun(userId, agentId, runId, run);
+    await completeRun(userId, agentId, runId, run, {
+      tournamentResult: {
+        candidates: result.candidates,
+        rounds: result.rounds,
+        champion: result.champion,
+      },
+    });
     await trackAutoresearchUsage(userId, agentId, champion.config.modelProvider || "anthropic", totalInputTokens, totalOutputTokens, candidates.length * rounds);
 
     callbacks.onResult(result);

@@ -305,6 +305,43 @@ export interface AutoResearchRunDoc {
   startedAt: Timestamp;
   completedAt: Timestamp | null;
   createdAt: Timestamp;
+  errorMessage?: string;
+
+  // Mode-specific results (only one populated per run)
+  autotuneResult?: {
+    bestPrompt: string;
+  };
+  autofixResult?: {
+    diagnostics: { caseId: string; caseName: string; rootCause: string; suggestedFix: string }[];
+    originalPrompt: string;
+    patchedPrompt: string;
+    promptDiff: string;
+    originalScore: number;
+    newScore: number | null;
+  };
+  stressLabResult?: {
+    totalCases: number;
+    passedCases: number;
+    robustnessScore: number;
+    vulnerabilities: Record<string, unknown>[];
+    hardenedPrompt: string | null;
+  };
+  tournamentResult?: {
+    candidates: Record<string, unknown>[];
+    rounds: number;
+    champion: Record<string, unknown>;
+  };
+  distillationResult?: {
+    teacherScore: number;
+    teacherCostPerRequest: number;
+    students: Record<string, unknown>[];
+    bestROI: Record<string, unknown> | null;
+  };
+  evolutionResult?: {
+    generations: Record<string, unknown>[];
+    champion: Record<string, unknown>;
+    totalGenerations: number;
+  };
 }
 
 export interface AutoResearchIterationDoc {

@@ -16,7 +16,7 @@ export const llmJudgeEvaluator: CriterionEvaluator = {
   type: "llm_judge",
 
   async evaluate(config: Record<string, unknown>, events: CollectedEvents): Promise<CriterionResult> {
-    const c = config as unknown as LlmJudgeConfig & { _locale?: string };
+    const c = config as unknown as LlmJudgeConfig & { _locale?: string; _apiKey?: string };
     const provider = c.judgeProvider || DEFAULT_PROVIDER;
     const model = c.judgeModel || DEFAULT_MODEL;
     const threshold = c.scoreThreshold ?? 0.7;
@@ -49,6 +49,7 @@ Respond ONLY with valid JSON in this exact format, no other text:
             model,
             systemPrompt: "You are a strict evaluation judge. Always respond with valid JSON only.",
             messages: [{ role: "user", content: userPrompt }],
+            apiKey: c._apiKey,
           },
           {
             onToken: (text: string) => {

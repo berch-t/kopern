@@ -96,6 +96,18 @@ service cloud.firestore {
           allow read: if request.auth != null && request.auth.uid == userId;
           allow write: if false;
         }
+
+        // AutoResearch Runs (read-only for owner, writes via admin SDK)
+        match /autoresearchRuns/{runId} {
+          allow read: if request.auth != null && request.auth.uid == userId;
+          allow write: if false;
+
+          // Iterations
+          match /iterations/{iterationId} {
+            allow read: if request.auth != null && request.auth.uid == userId;
+            allow write: if false;
+          }
+        }
       }
 
       // Agent Teams (user-level)

@@ -43,6 +43,8 @@ export interface LLMConfig {
   systemPrompt: string;
   messages: LLMMessage[];
   tools?: ToolDefinition[];
+  /** Override API key (from user Firestore settings). Falls back to process.env if not provided. */
+  apiKey?: string;
 }
 
 /** Resolve tool name from tool_use_id by scanning assistant messages */
@@ -80,9 +82,9 @@ export async function streamLLM(config: LLMConfig, callbacks: LLMStreamCallbacks
 // --- Anthropic (native tool calling) ---
 
 async function streamAnthropic(config: LLMConfig, callbacks: LLMStreamCallbacks) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = config.apiKey || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    callbacks.onError(new Error("ANTHROPIC_API_KEY not configured in .env.local"));
+    callbacks.onError(new Error("ANTHROPIC_API_KEY not configured"));
     return;
   }
 
@@ -222,9 +224,9 @@ async function streamAnthropic(config: LLMConfig, callbacks: LLMStreamCallbacks)
 // --- OpenAI (function calling) ---
 
 async function streamOpenAI(config: LLMConfig, callbacks: LLMStreamCallbacks) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = config.apiKey || process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    callbacks.onError(new Error("OPENAI_API_KEY not configured in .env.local"));
+    callbacks.onError(new Error("OPENAI_API_KEY not configured"));
     return;
   }
 
@@ -367,9 +369,9 @@ async function streamOpenAI(config: LLMConfig, callbacks: LLMStreamCallbacks) {
 // --- Google Gemini (function calling) ---
 
 async function streamGoogle(config: LLMConfig, callbacks: LLMStreamCallbacks) {
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  const apiKey = config.apiKey || process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) {
-    callbacks.onError(new Error("GOOGLE_AI_API_KEY not configured in .env.local"));
+    callbacks.onError(new Error("GOOGLE_AI_API_KEY not configured"));
     return;
   }
 
@@ -498,9 +500,9 @@ async function streamGoogle(config: LLMConfig, callbacks: LLMStreamCallbacks) {
 // --- Mistral AI (OpenAI-compatible format with tool calling) ---
 
 async function streamMistral(config: LLMConfig, callbacks: LLMStreamCallbacks) {
-  const apiKey = process.env.MISTRAL_API_KEY;
+  const apiKey = config.apiKey || process.env.MISTRAL_API_KEY;
   if (!apiKey) {
-    callbacks.onError(new Error("MISTRAL_API_KEY not configured in .env.local"));
+    callbacks.onError(new Error("MISTRAL_API_KEY not configured"));
     return;
   }
 

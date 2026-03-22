@@ -27,7 +27,8 @@ export async function analyzeFailures(
   currentPrompt: string,
   provider: string,
   model: string,
-  history: AutoResearchIteration[]
+  history: AutoResearchIteration[],
+  apiKey?: string
 ): Promise<{ diagnostics: AutoFixDiagnostic[]; patchedPrompt: string; tokensUsed: { input: number; output: number } }> {
   const failureSummary = failures
     .map((f) => {
@@ -100,7 +101,7 @@ Before the patched prompt, output your diagnostics in this format:
 
   await new Promise<void>((resolve, reject) => {
     streamLLM(
-      { provider, model, systemPrompt, messages: [{ role: "user", content: userMessage }] },
+      { provider, model, systemPrompt, messages: [{ role: "user", content: userMessage }], apiKey },
       {
         onToken: (text) => {
           fullResponse += text;
@@ -134,7 +135,8 @@ export async function proposeMutation(
   gradingResults: { caseName: string; score: number; passed: boolean; criteriaResults: { criterionType: string; score: number; message: string }[] }[],
   history: AutoResearchIteration[],
   provider: string,
-  model: string
+  model: string,
+  apiKey?: string
 ): Promise<{ newPrompt: string; description: string; tokensUsed: { input: number; output: number } }> {
   const resultsXml = gradingResults
     .map(
@@ -191,7 +193,7 @@ Explain your reasoning in ONE sentence between <description> tags.
 
   await new Promise<void>((resolve, reject) => {
     streamLLM(
-      { provider, model, systemPrompt, messages: [{ role: "user", content: userMessage }] },
+      { provider, model, systemPrompt, messages: [{ role: "user", content: userMessage }], apiKey },
       {
         onToken: (text) => {
           fullResponse += text;
@@ -222,7 +224,8 @@ export async function generateAdversarialCases(
   domain: string,
   count: number,
   provider: string,
-  model: string
+  model: string,
+  apiKey?: string
 ): Promise<{ cases: { category: string; prompt: string; expectedBehavior: string; severity: string }[]; tokensUsed: { input: number; output: number } }> {
   const sysMsg = `You are a red-team security expert specializing in LLM agent vulnerabilities. Generate adversarial test cases to probe weaknesses.
 
@@ -252,7 +255,7 @@ Generate ${count} diverse adversarial test cases targeting this agent's potentia
 
   await new Promise<void>((resolve, reject) => {
     streamLLM(
-      { provider, model, systemPrompt: sysMsg, messages: [{ role: "user", content: userMessage }] },
+      { provider, model, systemPrompt: sysMsg, messages: [{ role: "user", content: userMessage }], apiKey },
       {
         onToken: (text) => {
           fullResponse += text;
@@ -277,7 +280,8 @@ export async function hardenPrompt(
   currentPrompt: string,
   vulnerabilities: { category: string; severity: string; description: string }[],
   provider: string,
-  model: string
+  model: string,
+  apiKey?: string
 ): Promise<{ hardenedPrompt: string; patches: string[]; tokensUsed: { input: number; output: number } }> {
   const vulnXml = vulnerabilities
     .map((v) => `<vulnerability category="${v.category}" severity="${v.severity}">${v.description}</vulnerability>`)
@@ -301,7 +305,7 @@ List each patch between <patches> tags (one <patch> per fix).`;
 
   await new Promise<void>((resolve, reject) => {
     streamLLM(
-      { provider, model, systemPrompt: sysMsg, messages: [{ role: "user", content: userMessage }] },
+      { provider, model, systemPrompt: sysMsg, messages: [{ role: "user", content: userMessage }], apiKey },
       {
         onToken: (text) => {
           fullResponse += text;
