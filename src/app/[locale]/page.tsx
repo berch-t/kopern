@@ -18,6 +18,7 @@ import { createGradingSuite } from "@/actions/grading-suites";
 import { createGradingCase } from "@/actions/grading-cases";
 import { toast } from "sonner";
 import type { AgentSpec } from "@/lib/meta-agent/types";
+import { buildCriterionConfig } from "@/lib/grading/build-criterion-config";
 import BorderGlow from "@/components/motion/BorderGlow";
 import {
   ArrowRight,
@@ -343,7 +344,7 @@ export default function LandingPage() {
                   id: crypto.randomUUID(),
                   type: c.criterionType as "output_match" | "schema_validation" | "tool_usage" | "safety_check" | "custom_script" | "llm_judge",
                   name: c.name,
-                  config: {},
+                  config: buildCriterionConfig(c.criterionType, c.expected),
                   weight: 1,
                 },
               ],

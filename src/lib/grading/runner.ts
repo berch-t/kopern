@@ -1,6 +1,7 @@
 import { type GradingCaseDoc } from "@/lib/firebase/firestore";
 import { createEventCollector, type CollectedEvents } from "@/lib/pi-mono/event-collector";
 import { evaluateAllCriteria } from "./criteria";
+import { buildCriterionConfig } from "./build-criterion-config";
 import { type CriterionResult, type GradingProgress } from "./types";
 
 export interface CaseResult {
@@ -44,9 +45,14 @@ export async function runGradingSuite(
       // Execute agent with the case input
       const events = await executeCase(testCase.inputPrompt);
 
-      // Evaluate all criteria
+      // Evaluate all criteria — backfill empty configs from expectedBehavior
+      const enrichedCriteria = testCase.criteria.map((cr) => {
+        const hasConfig = cr.config && Object.keys(cr.config).length > 0;
+        if (hasConfig) return cr;
+        return { ...cr, config: buildCriterionConfig(cr.type, testCase.expectedBehavior || "") };
+      });
       const { results: criteriaResults, score, passed } = await evaluateAllCriteria(
-        testCase.criteria,
+        enrichedCriteria,
         events
       );
 

@@ -21,7 +21,17 @@ export async function evaluateCriterion(
   criterion: CriterionConfig,
   events: CollectedEvents
 ): Promise<CriterionResult> {
-  const evaluator = evaluators[criterion.type];
+  // If buildCriterionConfig flagged this as a behavioral description,
+  // redirect output_match to llm_judge for semantic evaluation
+  let effectiveType = criterion.type;
+  let effectiveConfig = criterion.config;
+  if (criterion.config?._fallbackToJudge) {
+    effectiveType = "llm_judge";
+    const { _fallbackToJudge, ...rest } = criterion.config;
+    effectiveConfig = rest;
+  }
+
+  const evaluator = evaluators[effectiveType];
   if (!evaluator) {
     return {
       criterionId: criterion.id,
@@ -32,7 +42,7 @@ export async function evaluateCriterion(
     };
   }
 
-  const result = await evaluator.evaluate(criterion.config, events);
+  const result = await evaluator.evaluate(effectiveConfig, events);
   return {
     ...result,
     criterionId: criterion.id,
@@ -41,12 +51,17 @@ export async function evaluateCriterion(
 
 export async function evaluateAllCriteria(
   criteria: CriterionConfig[],
-  events: CollectedEvents
+  events: CollectedEvents,
+  locale?: string
 ): Promise<{ results: CriterionResult[]; score: number; passed: boolean }> {
   const results: CriterionResult[] = [];
 
   for (const criterion of criteria) {
-    const result = await evaluateCriterion(criterion, events);
+    // Inject locale into config for llm_judge to use
+    const localizedCriterion = locale
+      ? { ...criterion, config: { ...criterion.config, _locale: locale } }
+      : criterion;
+    const result = await evaluateCriterion(localizedCriterion, events);
     results.push(result);
   }
 

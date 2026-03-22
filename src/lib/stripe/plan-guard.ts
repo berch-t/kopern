@@ -16,6 +16,12 @@ export async function checkPlanLimits(
   check: "agents" | "tokens" | "grading" | "teams" | "pipelines" | "mcp" | "meta_agent" | "sub_agents" | "autoresearch" | "github" | "version_history" | "model" | "connectors",
   options?: { modelId?: string }
 ): Promise<PlanCheck> {
+  // Admin users bypass all plan limits
+  const ADMIN_UIDS = (process.env.NEXT_PUBLIC_ADMIN_UID ?? "").split(",").filter(Boolean);
+  if (ADMIN_UIDS.includes(userId)) {
+    return { allowed: true, plan: "enterprise" };
+  }
+
   const userSnap = await adminDb.doc(`users/${userId}`).get();
   const userData = userSnap.data();
   const plan: PlanTier = userData?.subscription?.plan || "starter";

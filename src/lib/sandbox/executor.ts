@@ -49,6 +49,7 @@ export async function executeSandboxed(
     // Wait for async completion
     await sandbox.result;
     const output = sandbox.result;
+    if (output === undefined || output === null) return "null";
     return typeof output === "string" ? output : JSON.stringify(output);
   } catch (err) {
     throw new Error(`Sandbox execution failed: ${(err as Error).message}`);

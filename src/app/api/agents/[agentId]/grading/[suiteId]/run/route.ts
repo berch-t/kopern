@@ -7,13 +7,16 @@ import { runAgentWithTools, type AgentRunMetrics } from "@/lib/tools/run-agent";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { reportUsageToStripe } from "@/lib/stripe/server";
 import { logAppError } from "@/lib/errors/logger";
+import { buildCriterionConfig } from "@/lib/grading/build-criterion-config";
+import { generateImprovementNotes } from "@/lib/grading/improvement-notes";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ agentId: string; suiteId: string }> }
 ) {
   const { agentId, suiteId } = await params;
-  const { cases, userId } = await request.json();
+  const { cases, userId, locale } = await request.json();
+  const uiLocale: string = locale || "en";
 
   // Enforce plan grading limits
   if (userId) {
@@ -108,6 +111,7 @@ export async function POST(
       let totalScore = 0;
       let passedCases = 0;
       const pendingToolArgs: Record<string, Record<string, unknown>> = {};
+      const caseResultsForAnalysis: { caseName: string; passed: boolean; score: number; expectedBehavior: string; agentOutput: string; criteriaResults: { criterionType: string; passed: boolean; score: number; message: string }[] }[] = [];
 
       for (let i = 0; i < cases.length; i++) {
         const testCase = cases[i];
@@ -158,6 +162,7 @@ export async function POST(
               };
             },
             onError: (error) => {
+              console.error("[GRADING] Agent error on case", i, ":", error.message);
               collector.addToken(`\nError: ${error.message}`);
             },
           }
@@ -165,16 +170,36 @@ export async function POST(
 
         collector.finalize();
 
-        // Run criteria evaluation
+        // Run criteria evaluation — backfill empty configs from expectedBehavior
         const { evaluateAllCriteria } = await import("@/lib/grading/criteria");
+        const enrichedCriteria = (testCase.criteria || []).map((cr: { id: string; type: string; name: string; config: Record<string, unknown>; weight: number }) => {
+          const hasConfig = cr.config && Object.keys(cr.config).length > 0;
+          if (hasConfig) return cr;
+          return { ...cr, config: buildCriterionConfig(cr.type, testCase.expectedBehavior || "") };
+        });
         const {
           results: criteriaResults,
           score,
           passed,
-        } = await evaluateAllCriteria(testCase.criteria || [], collector);
+        } = await evaluateAllCriteria(enrichedCriteria, collector, uiLocale);
 
         totalScore += score;
         if (passed) passedCases++;
+
+        // Track for improvement analysis
+        caseResultsForAnalysis.push({
+          caseName: testCase.name,
+          passed,
+          score,
+          expectedBehavior: testCase.expectedBehavior || "",
+          agentOutput: collector.assistantOutput.slice(0, 1000),
+          criteriaResults: criteriaResults.map((cr: { criterionType: string; passed: boolean; score: number; message: string }) => ({
+            criterionType: cr.criterionType,
+            passed: cr.passed,
+            score: cr.score,
+            message: cr.message,
+          })),
+        });
 
         const durationMs = Date.now() - caseStartTime;
 
@@ -240,6 +265,36 @@ export async function POST(
       }
 
       send("done", { suiteId, agentId, runId, metrics: totalMetrics, score: finalScore, passedCases });
+
+      // Generate improvement notes (async, after done — SSE still open)
+      if (finalScore < 0.99 && caseResultsForAnalysis.length > 0) {
+        try {
+          send("improvement_status", { status: "analyzing" });
+          const analysis = await generateImprovementNotes(
+            systemPrompt,
+            finalScore,
+            caseResultsForAnalysis,
+            uiLocale
+          );
+          send("improvement_notes", {
+            summary: analysis.summary,
+            notes: analysis.notes,
+          });
+
+          // Persist to Firestore
+          if (userId && runId) {
+            adminDb
+              .doc(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs/${runId}`)
+              .update({
+                improvementSummary: analysis.summary,
+                improvementNotes: analysis.notes,
+              })
+              .catch((err) => logAppError({ code: "GRADING_WRITE_FAILED", message: (err as Error).message, source: "grading", userId, agentId }));
+          }
+        } catch (err) {
+          console.error("[GRADING] Improvement notes failed:", (err as Error).message);
+        }
+      }
     } catch (err) {
       // Mark run as failed if it was created
       if (userId && runId) {
@@ -248,6 +303,7 @@ export async function POST(
           .update({ status: "failed", completedAt: FieldValue.serverTimestamp() })
           .catch((err) => logAppError({ code: "GRADING_WRITE_FAILED", message: (err as Error).message, source: "grading", userId, agentId }));
       }
+      console.error("[GRADING] Run failed:", (err as Error).message, (err as Error).stack);
       send("error", { message: (err as Error).message });
     } finally {
       close();

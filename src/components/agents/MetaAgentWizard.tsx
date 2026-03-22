@@ -22,6 +22,7 @@ import { createGradingSuite } from "@/actions/grading-suites";
 import { createGradingCase } from "@/actions/grading-cases";
 import { toast } from "sonner";
 import type { AgentSpec } from "@/lib/meta-agent/types";
+import { buildCriterionConfig } from "@/lib/grading/build-criterion-config";
 
 interface MetaAgentWizardProps {
   userId: string;
@@ -226,7 +227,7 @@ export function MetaAgentWizard({ userId, onCreated }: MetaAgentWizardProps) {
                   id: crypto.randomUUID(),
                   type: c.criterionType as "output_match" | "schema_validation" | "tool_usage" | "safety_check" | "custom_script" | "llm_judge",
                   name: c.name,
-                  config: {},
+                  config: buildCriterionConfig(c.criterionType, c.expected),
                   weight: 1,
                 },
               ],

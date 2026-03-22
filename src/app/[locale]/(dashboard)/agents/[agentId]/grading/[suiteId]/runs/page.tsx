@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Play, AlertTriangle } from "lucide-react";
+import { Play, AlertTriangle, Lightbulb, Loader2 } from "lucide-react";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { RunProgress } from "@/components/grading/RunProgress";
 import { ResultsTable } from "@/components/grading/ResultsTable";
@@ -21,7 +21,10 @@ import { TrendChart } from "@/components/grading/TrendChart";
 import { useSSE } from "@/hooks/useSSE";
 import { LocalizedLink } from "@/components/LocalizedLink";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { useDictionary } from "@/providers/LocaleProvider";
+import { useLocale } from "@/providers/LocaleProvider";
+import { MarkdownRenderer } from "@/components/shared/MarkdownRenderer";
 
 interface CaseProgress {
   caseName: string;
@@ -52,6 +55,7 @@ export default function RunsPage({
   const { agentId, suiteId } = use(params);
   const { user } = useAuth();
   const t = useDictionary();
+  const locale = useLocale();
   const { data: runs } = useCollection<GradingRunDoc>(
     user ? gradingRunsCollection(user.uid, agentId, suiteId) : null,
     "createdAt"
@@ -67,6 +71,8 @@ export default function RunsPage({
   const [results, setResults] = useState<CaseResultData[]>([]);
   const [overallScore, setOverallScore] = useState<number | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
+  const [improvementAnalyzing, setImprovementAnalyzing] = useState(false);
+  const [improvementNotes, setImprovementNotes] = useState<{ summary: string; notes: { category: string; severity: string; title: string; detail: string }[] } | null>(null);
 
   const { start } = useSSE({
     onMessage: (msg) => {
@@ -114,6 +120,15 @@ export default function RunsPage({
         case "done":
           setIsRunning(false);
           break;
+        case "improvement_status":
+          setImprovementAnalyzing(true);
+          break;
+        case "improvement_notes": {
+          const notesData = msg.data as { summary: string; notes: { category: string; severity: string; title: string; detail: string }[] };
+          setImprovementNotes(notesData);
+          setImprovementAnalyzing(false);
+          break;
+        }
       }
     },
     onComplete: () => setIsRunning(false),
@@ -134,16 +149,20 @@ export default function RunsPage({
     setResults([]);
     setOverallScore(null);
     setPlanError(null);
+    setImprovementNotes(null);
+    setImprovementAnalyzing(false);
     setCaseProgress(
       cases.map((c) => ({ caseName: c.name, status: "pending" as const }))
     );
 
     start(`/api/agents/${agentId}/grading/${suiteId}/run`, {
       userId: user!.uid,
+      locale,
       cases: cases.map((c) => ({
         id: c.id,
         name: c.name,
         inputPrompt: c.inputPrompt,
+        expectedBehavior: c.expectedBehavior,
         criteria: c.criteria,
       })),
     });
@@ -226,6 +245,60 @@ export default function RunsPage({
           </CardHeader>
           <CardContent>
             <ResultsTable results={results} overallScore={computedScore ?? 0} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Improvement Notes */}
+      {improvementAnalyzing && (
+        <Card className="border-blue-500/30 bg-blue-500/5">
+          <CardContent className="flex items-center gap-3 p-4">
+            <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+            <span className="text-sm text-muted-foreground">Analyzing results and generating improvement suggestions...</span>
+          </CardContent>
+        </Card>
+      )}
+      {improvementNotes && (
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Lightbulb className="h-4 w-4 text-amber-500" />
+              Improvement Notes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="text-sm text-muted-foreground prose prose-sm dark:prose-invert max-w-none">
+              <MarkdownRenderer content={improvementNotes.summary} />
+            </div>
+            {improvementNotes.notes.length > 0 && (
+              <div className="space-y-3">
+                {improvementNotes.notes.map((note, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "rounded-lg border p-3",
+                      note.severity === "critical" ? "border-destructive/30 bg-destructive/5" : "border-border"
+                    )}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge
+                        variant={note.severity === "critical" ? "destructive" : "outline"}
+                        className="text-xs"
+                      >
+                        {note.severity}
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        {note.category === "system_prompt" ? "System Prompt" : note.category === "skill" ? "Skill" : note.category === "tool" ? "Tool" : "General"}
+                      </Badge>
+                      <span className="text-sm font-medium">{note.title}</span>
+                    </div>
+                    <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
+                      <MarkdownRenderer content={note.detail} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

@@ -13,9 +13,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { ScoreBadge } from "@/components/grading/ScoreBadge";
-import { CheckCircle2, XCircle, ChevronDown } from "lucide-react";
+import { CheckCircle2, XCircle, ChevronDown, Lightbulb } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import type { ImprovementNote } from "@/lib/firebase/firestore";
+import { MarkdownRenderer } from "@/components/shared/MarkdownRenderer";
 
 export default function RunDetailPage({
   params,
@@ -105,6 +107,52 @@ export default function RunDetailPage({
             {results.map((result) => (
               <ResultRow key={result.id} result={result} />
             ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Improvement Notes */}
+      {run.improvementNotes && run.improvementNotes.length > 0 && (
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Lightbulb className="h-4 w-4 text-amber-500" />
+              Improvement Notes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {run.improvementSummary && (
+              <div className="text-sm text-muted-foreground prose prose-sm dark:prose-invert max-w-none">
+                <MarkdownRenderer content={run.improvementSummary} />
+              </div>
+            )}
+            <div className="space-y-3">
+              {run.improvementNotes.map((note: ImprovementNote, i: number) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "rounded-lg border p-3",
+                    note.severity === "critical" ? "border-destructive/30 bg-destructive/5" : "border-border"
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge
+                      variant={note.severity === "critical" ? "destructive" : "outline"}
+                      className="text-xs"
+                    >
+                      {note.severity}
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {note.category === "system_prompt" ? "System Prompt" : note.category === "skill" ? "Skill" : note.category === "tool" ? "Tool" : "General"}
+                    </Badge>
+                    <span className="text-sm font-medium">{note.title}</span>
+                  </div>
+                  <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
+                    <MarkdownRenderer content={note.detail} />
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}

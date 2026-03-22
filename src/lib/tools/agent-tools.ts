@@ -104,6 +104,33 @@ function sanitizeToolName(name: string): string {
   return name.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 64);
 }
 
+function sanitizeKey(key: string): string {
+  return key.replace(/[^a-zA-Z0-9_.-]/g, "_").slice(0, 64);
+}
+
+/** Recursively sanitize all property keys in a JSON Schema to match Anthropic's pattern */
+function sanitizeSchemaKeys(obj: unknown): unknown {
+  if (obj === null || obj === undefined || typeof obj !== "object") return obj;
+  if (Array.isArray(obj)) return obj.map(sanitizeSchemaKeys);
+
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+    const safeKey = sanitizeKey(key);
+    if (key === "properties" && value && typeof value === "object" && !Array.isArray(value)) {
+      const sanitizedProps: Record<string, unknown> = {};
+      for (const [propKey, propValue] of Object.entries(value as Record<string, unknown>)) {
+        sanitizedProps[sanitizeKey(propKey)] = sanitizeSchemaKeys(propValue);
+      }
+      result[safeKey] = sanitizedProps;
+    } else if (key === "required" && Array.isArray(value)) {
+      result[safeKey] = (value as string[]).map((k) => typeof k === "string" ? sanitizeKey(k) : k);
+    } else {
+      result[safeKey] = sanitizeSchemaKeys(value);
+    }
+  }
+  return result;
+}
+
 export function getCustomToolDefinitions(
   tools: { name: string; description: string; parametersSchema: string }[]
 ): ToolDefinition[] {
@@ -121,6 +148,8 @@ export function getCustomToolDefinitions(
     if (!schema.properties) {
       schema.properties = {};
     }
+    // Sanitize all property keys to match Anthropic's pattern ^[a-zA-Z0-9_.-]{1,64}$
+    schema = sanitizeSchemaKeys(schema) as Record<string, unknown>;
     return {
       name: sanitizeToolName(t.name),
       description: t.description || "Custom tool",

@@ -135,6 +135,13 @@ export interface GradingCaseDoc {
   createdAt: Timestamp;
 }
 
+export interface ImprovementNote {
+  category: "system_prompt" | "skill" | "tool" | "general";
+  severity: "critical" | "suggestion";
+  title: string;
+  detail: string;
+}
+
 export interface GradingRunDoc {
   agentVersion: number;
   status: "pending" | "running" | "completed" | "failed";
@@ -144,6 +151,8 @@ export interface GradingRunDoc {
   startedAt: Timestamp | null;
   completedAt: Timestamp | null;
   createdAt: Timestamp;
+  improvementSummary?: string;
+  improvementNotes?: ImprovementNote[];
 }
 
 export interface ToolCallRecord {

@@ -16,10 +16,14 @@ export const llmJudgeEvaluator: CriterionEvaluator = {
   type: "llm_judge",
 
   async evaluate(config: Record<string, unknown>, events: CollectedEvents): Promise<CriterionResult> {
-    const c = config as unknown as LlmJudgeConfig;
+    const c = config as unknown as LlmJudgeConfig & { _locale?: string };
     const provider = c.judgeProvider || DEFAULT_PROVIDER;
     const model = c.judgeModel || DEFAULT_MODEL;
     const threshold = c.scoreThreshold ?? 0.7;
+    const locale = (config._locale as string) || "en";
+    const langInstruction = locale === "fr"
+      ? "IMPORTANT: Rédige le champ 'reasoning' en français."
+      : "";
 
     const userPrompt = `You are an evaluation judge. Score the following agent output on a scale of 0.0 to 1.0 based on this rubric:
 
@@ -31,6 +35,7 @@ ${events.assistantOutput}
 Tool Calls Made:
 ${events.toolCalls.map((tc) => `- ${tc.name}(${JSON.stringify(tc.args)}) → ${tc.result}`).join("\n")}
 
+${langInstruction}
 Respond ONLY with valid JSON in this exact format, no other text:
 { "score": <number between 0.0 and 1.0>, "reasoning": "<explanation>" }`;
 
