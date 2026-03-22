@@ -73,6 +73,13 @@ export async function POST(request: NextRequest) {
 
   // For event callbacks, return 200 immediately then process async
   if (body.type === "event_callback") {
+    logAppError({
+      code: "SLACK_EVENT_RECEIVED",
+      message: `Received Slack event: ${body.event?.type ?? "unknown"} from team ${body.team_id}`,
+      source: "slack_events",
+      severity: "warning",
+      metadata: { eventType: body.event?.type, channelType: body.event?.channel_type, teamId: body.team_id, channel: body.event?.channel, text: body.event?.text?.slice(0, 100) },
+    });
     processSlackEvent(body).catch((err) => {
       logAppError({
         code: "SLACK_PROCESSING_FAILED",
@@ -94,15 +101,42 @@ export async function POST(request: NextRequest) {
 
 async function processSlackEvent(body: SlackEventPayload): Promise<void> {
   const event = body.event;
-  if (!event) return;
+  if (!event) {
+    logAppError({
+      code: "SLACK_NO_EVENT",
+      message: "Slack event payload has no event field",
+      source: "slack_events",
+      severity: "warning",
+      metadata: { type: body.type, teamId: body.team_id },
+    });
+    return;
+  }
 
   // Only handle app_mention and direct message events
   const isAppMention = event.type === "app_mention";
   const isDirectMessage = event.type === "message" && event.channel_type === "im";
-  if (!isAppMention && !isDirectMessage) return;
+  if (!isAppMention && !isDirectMessage) {
+    logAppError({
+      code: "SLACK_EVENT_IGNORED",
+      message: `Ignoring Slack event type: ${event.type} (channel_type: ${event.channel_type ?? "none"})`,
+      source: "slack_events",
+      severity: "warning",
+      metadata: { eventType: event.type, channelType: event.channel_type, teamId: body.team_id },
+    });
+    return;
+  }
 
   // Skip bot messages to prevent loops
-  if (event.bot_id) return;
+  if (event.bot_id) {
+    logAppError({
+      code: "SLACK_BOT_MESSAGE_SKIPPED",
+      message: `Skipping bot message (bot_id: ${event.bot_id})`,
+      source: "slack_events",
+      severity: "warning",
+      metadata: { botId: event.bot_id, teamId: body.team_id, channel: event.channel },
+    });
+    return;
+  }
 
   // Lookup which agent handles this Slack team
   const teamLookup = await lookupSlackTeam(body.team_id);
