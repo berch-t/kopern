@@ -8,6 +8,7 @@ import {
   verifyHmacSignature,
   logWebhookExecution,
 } from "@/lib/connectors/webhook";
+import { logAppError } from "@/lib/errors/logger";
 
 // ─── Auth helper ─────────────────────────────────────────────────────
 
@@ -196,7 +197,7 @@ export async function POST(
       requestBody: JSON.stringify(body),
       responseBody: response,
       durationMs: Date.now() - start,
-    }).catch(() => {});
+    }).catch((err) => logAppError({ code: "WEBHOOK_LOG_FAILED", message: (err as Error).message, source: "webhook_inbound", agentId }));
 
     // 11. Do NOT fire outbound webhooks from inbound to prevent infinite loops
     //     (inbound → outbound → external service → inbound → ...)
@@ -221,7 +222,7 @@ export async function POST(
       requestBody: JSON.stringify(body),
       responseBody: errorMessage,
       durationMs: Date.now() - start,
-    }).catch(() => {});
+    }).catch((err) => logAppError({ code: "WEBHOOK_LOG_FAILED", message: (err as Error).message, source: "webhook_inbound", agentId }));
 
     // Do NOT fire outbound webhooks from inbound (anti-loop)
 

@@ -3,6 +3,7 @@
 import { streamLLM, type LLMMessage, type ContentBlock, type ToolCallResult, type ToolDefinition } from "@/lib/llm/client";
 import { adminDb } from "@/lib/firebase/admin";
 import { estimateTokens } from "@/lib/billing/pricing";
+import { logAppError } from "@/lib/errors/logger";
 import { trackUsageServer } from "@/lib/billing/track-usage-server";
 import {
   getGithubTools,
@@ -189,7 +190,7 @@ export async function runAgentWithTools(
             pendingToolCalls.push(toolCall);
             totalToolCalls++;
             callbacks.onToolStart?.({ name: toolCall.name, args: toolCall.input });
-            fireExtension("tool_call_start", { toolName: toolCall.name, args: toolCall.input }).catch(() => {});
+            fireExtension("tool_call_start", { toolName: toolCall.name, args: toolCall.input }).catch((err) => logAppError({ code: "EXTENSION_FIRE_FAILED", message: (err as Error).message, source: "chat", userId: config.userId, agentId: config.agentId }));
           },
           onDone: async (stopReason) => {
             try {
@@ -220,7 +221,7 @@ export async function runAgentWithTools(
                     toolName: tc.name,
                     result: result.result.slice(0, 1000),
                     isError: result.isError,
-                  }).catch(() => {});
+                  }).catch((err) => logAppError({ code: "EXTENSION_FIRE_FAILED", message: (err as Error).message, source: "chat", userId: config.userId, agentId: config.agentId }));
                   toolResults.push({
                     type: "tool_result",
                     tool_use_id: tc.id,
@@ -240,7 +241,7 @@ export async function runAgentWithTools(
                     config.provider,
                     inputTokens,
                     outputTokens
-                  ).catch(() => {}); // Don't block on tracking errors
+                  ).catch((err) => logAppError({ code: "USAGE_TRACK_FAILED", message: (err as Error).message, source: "billing", userId: config.userId, agentId: config.agentId }));
 
                   // Fire outbound webhooks (fire-and-forget)
                   fireOutboundWebhooks(
@@ -248,7 +249,7 @@ export async function runAgentWithTools(
                     config.agentId,
                     "message_sent",
                     { inputTokens, outputTokens, toolCallCount: totalToolCalls }
-                  ).catch(() => {});
+                  ).catch((err) => logAppError({ code: "OUTBOUND_WEBHOOK_FAILED", message: (err as Error).message, source: "webhook_outbound", userId: config.userId, agentId: config.agentId }));
                 }
 
                 const metrics: AgentRunMetrics = {
@@ -273,7 +274,7 @@ export async function runAgentWithTools(
                 config.provider,
                 inputTokens,
                 outputTokens
-              ).catch(() => {});
+              ).catch((trackErr) => logAppError({ code: "USAGE_TRACK_FAILED", message: (trackErr as Error).message, source: "billing", userId: config.userId, agentId: config.agentId }));
             }
             callbacks.onError(error);
             resolve();

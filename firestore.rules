@@ -119,5 +119,11 @@ service cloud.firestore {
     match /slackTeams/{teamId} {
       allow read, write: if false;
     }
+
+    // Error Logs (admin read via client SDK, writes via admin SDK only)
+    match /errorLogs/{logId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
   }
 }

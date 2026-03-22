@@ -50,7 +50,7 @@ export const PLAN_LIMITS = {
     autoresearchMaxIterations: 0,
     githubIntegration: false,
     versionHistory: false,
-    connectors: 0,
+    connectors: 1,
     widgetRemoveBranding: false,
     allowedModels: ["claude-sonnet-4-5-20250514", "claude-haiku-4-5-20251001"] as readonly string[],
   },

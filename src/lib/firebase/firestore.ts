@@ -603,6 +603,51 @@ export interface SlackTeamIndexDoc {
   agentId: string;
 }
 
+// --- Error Log types ---
+
+export type ErrorSeverity = "warning" | "error" | "critical";
+export type ErrorSource =
+  | "slack_events"
+  | "webhook_inbound"
+  | "webhook_outbound"
+  | "widget_chat"
+  | "chat"
+  | "grading"
+  | "mcp"
+  | "billing"
+  | "session"
+  | "autoresearch"
+  | "pipeline"
+  | "team"
+  | "meta_agent"
+  | "plan_guard"
+  | "system";
+
+export interface ErrorLogDoc {
+  /** Error name / code (e.g. "PLAN_LIMIT_EXCEEDED", "SLACK_TOKEN_INVALID") */
+  code: string;
+  /** Human-readable message */
+  message: string;
+  /** Where the error occurred */
+  source: ErrorSource;
+  /** Severity level */
+  severity: ErrorSeverity;
+  /** User who triggered the error (if known) */
+  userId: string | null;
+  /** Agent involved (if applicable) */
+  agentId: string | null;
+  /** Additional context (stack trace, request data, etc.) */
+  metadata: Record<string, unknown>;
+  /** Whether the user was notified about this error */
+  userNotified: boolean;
+  /** Timestamp */
+  createdAt: Timestamp;
+}
+
+export function errorLogsCollection() {
+  return typedCollection<ErrorLogDoc>("errorLogs");
+}
+
 // --- Connector collection helpers ---
 
 export function widgetConfigDoc(userId: string, agentId: string) {

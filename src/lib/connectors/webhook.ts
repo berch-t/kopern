@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
 import type { WebhookEventType, WebhookLogDoc } from "@/lib/firebase/firestore";
+import { logAppError } from "@/lib/errors/logger";
 
 // ─── HMAC Signature ──────────────────────────────────────────────────
 
@@ -136,7 +137,7 @@ export async function fireOutboundWebhooks(
           requestBody: JSON.stringify(payload),
           responseBody: err instanceof Error ? err.message : "Unknown error",
           durationMs: 0,
-        }).catch(() => {});
+        }).catch((logErr) => logAppError({ code: "WEBHOOK_OUTBOUND_LOG_FAILED", message: (logErr as Error).message, source: "webhook_outbound", userId, agentId }));
       }
     })
   );

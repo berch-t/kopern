@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   Bot,
   BookOpen,
+  AlertTriangle,
   Bug,
   Cable,
   CreditCard,
@@ -49,6 +50,7 @@ function useNavItems() {
 
   if (isAdmin) {
     items.push({ href: "/bugs", label: t.nav.bugs, icon: Bug });
+    items.push({ href: "/errors", label: "Error Logs", icon: AlertTriangle });
   }
 
   return {

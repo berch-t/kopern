@@ -4,6 +4,7 @@ import { resolveApiKey } from "@/lib/mcp/auth";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { streamLLM, type LLMMessage } from "@/lib/llm/client";
 import { countTokens, trackUsage } from "@/lib/mcp/token-counter";
+import { logAppError } from "@/lib/errors/logger";
 
 // ─── MCP Protocol Types ──────────────────────────────────────────────
 
@@ -158,7 +159,7 @@ async function executeChat(
   const outputTokens = countTokens(fullResponse);
 
   // Fire-and-forget usage tracking
-  trackUsage(userId, agentId, mcpServerId, inputTokens, outputTokens).catch(() => {});
+  trackUsage(userId, agentId, mcpServerId, inputTokens, outputTokens).catch((err) => logAppError({ code: "MCP_USAGE_TRACK_FAILED", message: (err as Error).message, source: "mcp", userId, agentId }));
 
   return {
     content: [

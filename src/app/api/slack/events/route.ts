@@ -3,6 +3,7 @@ import { adminDb } from "@/lib/firebase/admin";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
 import type { LLMMessage } from "@/lib/llm/client";
+import { logAppError } from "@/lib/errors/logger";
 import {
   verifySlackSignature,
   lookupSlackTeam,
@@ -40,6 +41,12 @@ export async function POST(request: NextRequest) {
   // Verify Slack request signature
   const signingSecret = process.env.SLACK_SIGNING_SECRET;
   if (!signingSecret) {
+    logAppError({
+      code: "SLACK_NOT_CONFIGURED",
+      message: "SLACK_SIGNING_SECRET env var is missing",
+      source: "slack_events",
+      severity: "critical",
+    });
     return NextResponse.json({ error: "Not configured" }, { status: 500 });
   }
 
@@ -47,6 +54,13 @@ export async function POST(request: NextRequest) {
   const signature = request.headers.get("X-Slack-Signature") || "";
 
   if (!verifySlackSignature(signingSecret, timestamp, rawBody, signature)) {
+    logAppError({
+      code: "SLACK_SIGNATURE_INVALID",
+      message: "Slack request signature verification failed",
+      source: "slack_events",
+      severity: "warning",
+      metadata: { timestamp },
+    });
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
@@ -60,7 +74,14 @@ export async function POST(request: NextRequest) {
   // For event callbacks, return 200 immediately then process async
   if (body.type === "event_callback") {
     processSlackEvent(body).catch((err) => {
-      console.error("[Slack Events] Async processing error:", err);
+      logAppError({
+        code: "SLACK_PROCESSING_FAILED",
+        message: (err as Error).message,
+        source: "slack_events",
+        severity: "critical",
+        metadata: { teamId: body.team_id, error: err },
+        userNotified: false,
+      });
     });
 
     return NextResponse.json({ ok: true });
@@ -86,7 +107,14 @@ async function processSlackEvent(body: SlackEventPayload): Promise<void> {
   // Lookup which agent handles this Slack team
   const teamLookup = await lookupSlackTeam(body.team_id);
   if (!teamLookup) {
-    console.error(`[Slack Events] No agent mapped for team ${body.team_id}`);
+    logAppError({
+      code: "SLACK_NO_AGENT_MAPPED",
+      message: `No agent mapped for Slack team ${body.team_id}. The workspace may need to be reconnected.`,
+      source: "slack_events",
+      severity: "error",
+      metadata: { teamId: body.team_id, channel: event.channel },
+      userNotified: false,
+    });
     return;
   }
 
@@ -96,23 +124,66 @@ async function processSlackEvent(body: SlackEventPayload): Promise<void> {
   const ADMIN_UIDS = (process.env.NEXT_PUBLIC_ADMIN_UID ?? "").split(",").filter(Boolean);
   const isAdmin = ADMIN_UIDS.includes(userId);
 
+  // Get bot token early — needed for all error messages
+  const botToken = await getBotToken(userId, agentId);
+
   if (!isAdmin) {
     const planCheck = await checkPlanLimits(userId, "connectors");
     if (!planCheck.allowed) {
-      await postSlackMessage(
-        await getBotToken(userId, agentId),
-        event.channel,
-        `Sorry, this agent's plan limit has been reached: ${planCheck.reason}`,
-        event.thread_ts || event.ts
-      );
+      logAppError({
+        code: "PLAN_LIMIT_EXCEEDED",
+        message: `Slack connector blocked: ${planCheck.reason}`,
+        source: "plan_guard",
+        userId,
+        agentId,
+        metadata: { plan: planCheck.plan, check: "connectors" },
+        userNotified: true,
+      });
+      if (botToken) {
+        await postSlackMessage(
+          botToken,
+          event.channel,
+          `⚠️ **Plan limit reached** — ${planCheck.reason}\n\nUpgrade your Kopern plan to continue using this agent via Slack.`,
+          event.thread_ts || event.ts
+        );
+      }
+      return;
+    }
+
+    // Also check token limits
+    const tokenCheck = await checkPlanLimits(userId, "tokens");
+    if (!tokenCheck.allowed) {
+      logAppError({
+        code: "PLAN_LIMIT_EXCEEDED",
+        message: `Slack connector blocked: ${tokenCheck.reason}`,
+        source: "plan_guard",
+        userId,
+        agentId,
+        metadata: { plan: tokenCheck.plan, check: "tokens" },
+        userNotified: true,
+      });
+      if (botToken) {
+        await postSlackMessage(
+          botToken,
+          event.channel,
+          `⚠️ **Token limit reached** — ${tokenCheck.reason}\n\nUpgrade your Kopern plan or wait for the next billing cycle.`,
+          event.thread_ts || event.ts
+        );
+      }
       return;
     }
   }
 
-  // Get bot token from Firestore
-  const botToken = await getBotToken(userId, agentId);
   if (!botToken) {
-    console.error(`[Slack Events] No bot token for ${userId}/${agentId}`);
+    logAppError({
+      code: "SLACK_NO_BOT_TOKEN",
+      message: `No bot token found for user ${userId} / agent ${agentId}. The Slack connection may need to be re-established.`,
+      source: "slack_events",
+      severity: "error",
+      userId,
+      agentId,
+      userNotified: false,
+    });
     return;
   }
 
@@ -124,10 +195,18 @@ async function processSlackEvent(body: SlackEventPayload): Promise<void> {
     .doc(`users/${userId}/agents/${agentId}`)
     .get();
   if (!agentSnap.exists) {
+    logAppError({
+      code: "SLACK_AGENT_NOT_FOUND",
+      message: `Agent ${agentId} not found for user ${userId}. It may have been deleted.`,
+      source: "slack_events",
+      userId,
+      agentId,
+      userNotified: true,
+    });
     await postSlackMessage(
       botToken,
       event.channel,
-      "Sorry, this agent could not be found.",
+      "⚠️ **Agent not found** — The agent connected to this Slack workspace may have been deleted. Please reconnect a different agent from the Kopern dashboard.",
       event.thread_ts || event.ts
     );
     return;
@@ -217,24 +296,52 @@ async function processSlackEvent(body: SlackEventPayload): Promise<void> {
           // Agent finished — response collected in fullResponse
         },
         onError: (error: Error) => {
-          console.error("[Slack Events] Agent error:", error.message);
-          fullResponse = "Sorry, I encountered an error processing your request.";
+          logAppError({
+            code: "SLACK_AGENT_ERROR",
+            message: error.message,
+            source: "slack_events",
+            userId,
+            agentId,
+            metadata: { channel: event.channel },
+            userNotified: true,
+          });
+          fullResponse = `⚠️ **Agent error** — ${error.message}\n\nPlease try again or check the agent configuration in the Kopern dashboard.`;
         },
       }
     );
   } catch (err) {
-    console.error("[Slack Events] runAgentWithTools threw:", err);
-    fullResponse = "Sorry, I encountered an error processing your request.";
+    logAppError({
+      code: "SLACK_AGENT_CRASH",
+      message: (err as Error).message,
+      source: "slack_events",
+      severity: "critical",
+      userId,
+      agentId,
+      metadata: { channel: event.channel, error: err },
+      userNotified: true,
+    });
+    fullResponse = `⚠️ **Unexpected error** — Something went wrong while processing your message. The Kopern team has been notified.\n\nError: ${(err as Error).message}`;
   }
 
   // Post response as threaded reply
   if (fullResponse) {
-    await postSlackMessage(
+    const postResult = await postSlackMessage(
       botToken,
       event.channel,
       fullResponse,
       event.thread_ts || event.ts
     );
+    if (!postResult.ok) {
+      logAppError({
+        code: "SLACK_POST_FAILED",
+        message: `Failed to post Slack message: ${postResult.error}`,
+        source: "slack_events",
+        userId,
+        agentId,
+        metadata: { channel: event.channel, slackError: postResult.error },
+        userNotified: false,
+      });
+    }
   }
 
   // Add checkmark reaction to indicate completion

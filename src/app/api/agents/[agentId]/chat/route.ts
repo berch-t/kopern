@@ -5,6 +5,7 @@ import { createSessionServer, endSessionServer, updateSessionMetrics, appendSess
 import { adminDb } from "@/lib/firebase/admin";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
+import { logAppError } from "@/lib/errors/logger";
 
 interface ChatRequestBody {
   message: string;
@@ -130,7 +131,7 @@ You MUST maintain a task list for this session. Before executing any action:
       if (userId && sessionId) {
         appendSessionEvents(userId, agentId, sessionId, [
           { type: "message", data: { role: "user", content: message } },
-        ]).catch(() => {});
+        ]).catch((err) => logAppError({ code: "SESSION_EVENT_WRITE_FAILED", message: (err as Error).message, source: "session", userId, agentId }));
       }
 
       await runAgentWithTools(
@@ -169,14 +170,14 @@ You MUST maintain a task list for this session. Before executing any action:
                 ...toolEvents,
                 { type: "message", data: { role: "assistant", content: assistantOutput.slice(0, 10000) } },
               ];
-              appendSessionEvents(userId, agentId, sessionId, events).catch(() => {});
+              appendSessionEvents(userId, agentId, sessionId, events).catch((err) => logAppError({ code: "SESSION_EVENT_WRITE_FAILED", message: (err as Error).message, source: "session", userId, agentId }));
               updateSessionMetrics(userId, agentId, sessionId, {
                 inputTokens: metrics.inputTokens,
                 outputTokens: metrics.outputTokens,
                 cost,
                 toolCallCount: metrics.toolCallCount,
                 messageCount: 2,
-              }).catch(() => {});
+              }).catch((err) => logAppError({ code: "SESSION_METRICS_WRITE_FAILED", message: (err as Error).message, source: "session", userId, agentId }));
             }
 
             send("done", {
@@ -195,7 +196,7 @@ You MUST maintain a task list for this session. Before executing any action:
           onError: (error) => {
             // End session on error
             if (userId && sessionId) {
-              endSessionServer(userId, agentId, sessionId).catch(() => {});
+              endSessionServer(userId, agentId, sessionId).catch((err) => logAppError({ code: "SESSION_END_FAILED", message: (err as Error).message, source: "session", userId, agentId }));
             }
             send("error", { message: error.message });
             close();

@@ -80,7 +80,7 @@ export async function addReaction(
     },
     body: JSON.stringify({ channel, timestamp, name: reaction }),
   }).catch(() => {
-    // Fire-and-forget — reaction failures are non-critical
+    // Reaction failures are non-critical — no logging needed
   });
 }
 

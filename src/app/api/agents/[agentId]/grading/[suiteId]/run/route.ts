@@ -6,6 +6,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { runAgentWithTools, type AgentRunMetrics } from "@/lib/tools/run-agent";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { reportUsageToStripe } from "@/lib/stripe/server";
+import { logAppError } from "@/lib/errors/logger";
 
 export async function POST(
   request: NextRequest,
@@ -191,7 +192,7 @@ export async function POST(
               durationMs,
               createdAt: FieldValue.serverTimestamp(),
             })
-            .catch(() => {});
+            .catch((err) => logAppError({ code: "GRADING_WRITE_FAILED", message: (err as Error).message, source: "grading", userId, agentId }));
         }
 
         send("case_end", {
@@ -218,13 +219,13 @@ export async function POST(
             passedCases,
             completedAt: FieldValue.serverTimestamp(),
           })
-          .catch(() => {});
+          .catch((err) => logAppError({ code: "GRADING_WRITE_FAILED", message: (err as Error).message, source: "grading", userId, agentId }));
 
         // Update agent's latestGradingScore
         adminDb
           .doc(`users/${userId}/agents/${agentId}`)
           .update({ latestGradingScore: finalScore })
-          .catch(() => {});
+          .catch((err) => logAppError({ code: "GRADING_WRITE_FAILED", message: (err as Error).message, source: "grading", userId, agentId }));
       }
 
       // Track grading run count in usage doc (fire-and-forget)
@@ -233,9 +234,9 @@ export async function POST(
         adminDb.doc(`users/${userId}/usage/${yearMonth}`).set(
           { gradingRuns: FieldValue.increment(1) },
           { merge: true }
-        ).catch(() => {});
+        ).catch((err) => logAppError({ code: "GRADING_WRITE_FAILED", message: (err as Error).message, source: "grading", userId, agentId }));
 
-        reportUsageToStripe(userId, 0, 0, 1).catch(() => {});
+        reportUsageToStripe(userId, 0, 0, 1).catch((err) => logAppError({ code: "GRADING_WRITE_FAILED", message: (err as Error).message, source: "grading", userId, agentId }));
       }
 
       send("done", { suiteId, agentId, runId, metrics: totalMetrics, score: finalScore, passedCases });
@@ -245,7 +246,7 @@ export async function POST(
         adminDb
           .doc(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs/${runId}`)
           .update({ status: "failed", completedAt: FieldValue.serverTimestamp() })
-          .catch(() => {});
+          .catch((err) => logAppError({ code: "GRADING_WRITE_FAILED", message: (err as Error).message, source: "grading", userId, agentId }));
       }
       send("error", { message: (err as Error).message });
     } finally {

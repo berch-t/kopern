@@ -148,8 +148,20 @@ export async function checkPlanLimits(
 
     case "connectors": {
       if (limits.connectors === Infinity) return { allowed: true, plan };
-      if (limits.connectors === 0) {
-        return { allowed: false, reason: "Connectors not available on this plan. Upgrade to Pro or higher.", plan };
+      // Count active connectors across all user's agents
+      const agentsSnap = await adminDb.collection(`users/${userId}/agents`).get();
+      let connectorCount = 0;
+      for (const agentDoc of agentsSnap.docs) {
+        const basePath = `users/${userId}/agents/${agentDoc.id}/connectors`;
+        const widgetSnap = await adminDb.doc(`${basePath}/widget`).get();
+        if (widgetSnap.exists && widgetSnap.data()?.enabled) connectorCount++;
+        const slackSnap = await adminDb.doc(`${basePath}/slackConnection`).get();
+        if (slackSnap.exists && slackSnap.data()?.enabled) connectorCount++;
+        const webhooksSnap = await adminDb.collection(`users/${userId}/agents/${agentDoc.id}/webhooks`).where("enabled", "==", true).count().get();
+        connectorCount += webhooksSnap.data().count;
+      }
+      if (connectorCount > limits.connectors) {
+        return { allowed: false, reason: `Connector limit reached (${limits.connectors}). Upgrade to Pro for up to 3 connectors.`, plan };
       }
       return { allowed: true, plan };
     }
