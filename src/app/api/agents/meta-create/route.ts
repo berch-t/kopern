@@ -319,7 +319,7 @@ function parseTools(sections: { key: string; inline: string; body: string }[]): 
       const codeBlocks = [...block.matchAll(/```(\w*)\s*\n([\s\S]*?)\n```/g)];
 
       let parametersSchema = '{"type":"object","properties":{}}';
-      let executeCode = "return { result: 'Not implemented' };";
+      let executeCode = "result = JSON.stringify({ error: 'Tool code was not generated. Please edit this tool and add working JavaScript code.', tool: '" + name.replace(/'/g, "") + "' });";
 
       for (const cb of codeBlocks) {
         const lang = cb[1].toLowerCase();

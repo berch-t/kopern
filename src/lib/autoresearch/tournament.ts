@@ -6,7 +6,7 @@ import { createEventCollector } from "@/lib/pi-mono/event-collector";
 import { evaluateAllCriteria } from "@/lib/grading/criteria";
 import { calculateTokenCost } from "@/lib/billing/pricing";
 import { providers } from "@/lib/pi-mono/providers";
-import { createRun, completeRun, trackAutoresearchUsage, logIteration } from "./history";
+import { createRun, completeRun, trackAutoresearchUsage, logIteration, failRun } from "./history";
 import { generateTournamentCandidates } from "./strategies";
 import type {
   TournamentCandidate,
@@ -36,6 +36,7 @@ export async function runTournament(
   callbacks: TournamentCallbacks
 ): Promise<TournamentResult | null> {
   const { userId, agentId, suiteId, dimensions, maxCandidates, rounds } = config;
+  let runId: string | null = null;
 
   try {
     // Load agent
@@ -66,7 +67,7 @@ export async function runTournament(
     if (casesSnap.empty) throw new Error("No grading cases found");
 
     // Create run record
-    const runId = await createRun({
+    runId = await createRun({
       agentId,
       userId,
       suiteId,
@@ -230,6 +231,9 @@ export async function runTournament(
     callbacks.onResult(result);
     return result;
   } catch (err) {
+    if (runId) {
+      await failRun(userId, agentId, runId, (err as Error).message).catch(() => {});
+    }
     callbacks.onError(err as Error);
     return null;
   }

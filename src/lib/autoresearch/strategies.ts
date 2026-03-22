@@ -87,7 +87,7 @@ function ruleBased(
     const currentLevel = currentConfig.thinkingLevel || "off";
     const levels = thinkingLevels.map((l) => l.value);
     const currentIndex = levels.indexOf(currentLevel);
-    const avgScore = gradingResults.reduce((sum, r) => sum + r.score, 0) / gradingResults.length;
+    const avgScore = gradingResults.length > 0 ? gradingResults.reduce((sum, r) => sum + r.score, 0) / gradingResults.length : 0;
 
     if (avgScore < 0.5 && currentIndex < levels.length - 1) {
       newConfig.thinkingLevel = levels[currentIndex + 1] as AgentDoc["thinkingLevel"];

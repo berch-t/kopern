@@ -172,6 +172,7 @@ export async function failRun(
   );
   await runRef.update({
     status: "error",
+    errorMessage: error,
     completedAt: FieldValue.serverTimestamp(),
   });
 }

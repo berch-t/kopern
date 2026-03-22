@@ -35,6 +35,7 @@ export async function runStressLab(
   callbacks: StressLabCallbacks
 ): Promise<StressLabReport | null> {
   const { userId, agentId, suiteId, casesCount, autoHarden } = config;
+  let runId: string | null = null;
 
   try {
     // Load agent
@@ -47,7 +48,7 @@ export async function runStressLab(
     const domain = agentData.domain || agentData.description || "";
 
     // Create run record
-    const runId = await createRun({
+    runId = await createRun({
       agentId,
       userId,
       suiteId,
@@ -285,6 +286,9 @@ export async function runStressLab(
     callbacks.onReport(report);
     return report;
   } catch (err) {
+    if (runId) {
+      await failRun(userId, agentId, runId, (err as Error).message).catch(() => {});
+    }
     callbacks.onError(err as Error);
     return null;
   }

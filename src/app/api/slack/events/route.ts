@@ -73,14 +73,6 @@ export async function POST(request: NextRequest) {
 
   // For event callbacks, return 200 immediately then process async
   if (body.type === "event_callback") {
-    logAppError({
-      code: "SLACK_EVENT_RECEIVED",
-      message: `Received Slack event: ${body.event?.type ?? "unknown"} from team ${body.team_id}`,
-      source: "slack_events",
-      severity: "warning",
-      metadata: { eventType: body.event?.type, channelType: body.event?.channel_type, teamId: body.team_id, channel: body.event?.channel, text: body.event?.text?.slice(0, 100) },
-    });
-
     // Use after() to keep the serverless function alive after responding 200
     after(async () => {
       try {

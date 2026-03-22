@@ -6,7 +6,7 @@ import { createEventCollector } from "@/lib/pi-mono/event-collector";
 import { evaluateAllCriteria } from "@/lib/grading/criteria";
 import { calculateTokenCost } from "@/lib/billing/pricing";
 import { providers } from "@/lib/pi-mono/providers";
-import { createRun, completeRun, trackAutoresearchUsage, logIteration } from "./history";
+import { createRun, completeRun, trackAutoresearchUsage, logIteration, failRun } from "./history";
 import type { DistillationResult, AutoResearchRun } from "./types";
 
 // Target models for distillation (cheaper/faster models)
@@ -36,6 +36,7 @@ export async function runDistillation(
   callbacks: DistillationCallbacks
 ): Promise<DistillationResult | null> {
   const { userId, agentId, suiteId } = config;
+  let runId: string | null = null;
   const studentModels = config.studentModels || STUDENT_MODELS;
 
   try {
@@ -66,7 +67,7 @@ export async function runDistillation(
     if (casesSnap.empty) throw new Error("No grading cases found");
 
     // Create run
-    const runId = await createRun({
+    runId = await createRun({
       agentId,
       userId,
       suiteId,
@@ -201,6 +202,9 @@ export async function runDistillation(
     callbacks.onResult(result);
     return result;
   } catch (err) {
+    if (runId) {
+      await failRun(userId, agentId, runId, (err as Error).message).catch(() => {});
+    }
     callbacks.onError(err as Error);
     return null;
   }

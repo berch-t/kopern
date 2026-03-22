@@ -28,6 +28,7 @@ export async function runAutoFix(
   callbacks: AutoFixCallbacks
 ): Promise<AutoFixResult | null> {
   const { userId, agentId, suiteId, runId } = config;
+  let arRunId: string | null = null;
 
   try {
     callbacks.onStatus("loading");
@@ -90,7 +91,7 @@ export async function runAutoFix(
     callbacks.onStatus("analyzing");
 
     // 3. Create autoresearch run record
-    const arRunId = await createRun({
+    arRunId = await createRun({
       agentId,
       userId,
       suiteId,
@@ -268,6 +269,9 @@ export async function runAutoFix(
     callbacks.onResult(result);
     return result;
   } catch (err) {
+    if (arRunId) {
+      await failRun(userId, agentId, arRunId, (err as Error).message).catch(() => {});
+    }
     callbacks.onError(err as Error);
     return null;
   }

@@ -46,11 +46,13 @@ interface SlackMessage {
 /**
  * Convert standard Markdown to Slack mrkdwn format.
  * - **bold** → *bold*
- * - *italic* / _italic_ → _italic_
+ * - *italic* → _italic_
  * - [text](url) → <url|text>
  * - `code` stays `code`
  * - ```block``` stays ```block```
  * - # headers → *header* (bold)
+ * - | tables | → formatted text rows
+ * - --- (hr) → ———
  */
 function markdownToSlackMrkdwn(text: string): string {
   let result = text;
@@ -69,6 +71,35 @@ function markdownToSlackMrkdwn(text: string): string {
     return `__INLINE_${inlineCodes.length - 1}__`;
   });
 
+  // Tables: convert markdown tables to aligned text
+  result = result.replace(
+    /(?:^|\n)((?:\|.+\|(?:\n|$))+)/g,
+    (tableBlock) => {
+      const lines = tableBlock.trim().split("\n");
+      const dataRows = lines.filter((line) => !/^\|[\s\-:|]+\|$/.test(line));
+      if (dataRows.length === 0) return tableBlock;
+
+      const parsed = dataRows.map((row) =>
+        row.split("|").slice(1, -1).map((cell) => cell.trim())
+      );
+
+      // First row is header
+      const header = parsed[0];
+      const body = parsed.slice(1);
+
+      if (header.length === 0) return tableBlock;
+
+      const rows = body.map((row) =>
+        row.map((cell, i) => `*${header[i]}*: ${cell}`).join("  ·  ")
+      );
+
+      return "\n" + rows.join("\n") + "\n";
+    }
+  );
+
+  // Horizontal rules: --- or *** or ___ → ———
+  result = result.replace(/^(-{3,}|\*{3,}|_{3,})$/gm, "———");
+
   // Headers: # Title → *Title*
   result = result.replace(/^#{1,6}\s+(.+)$/gm, "*$1*");
 
@@ -76,7 +107,6 @@ function markdownToSlackMrkdwn(text: string): string {
   result = result.replace(/\*\*(.+?)\*\*/g, "*$1*");
 
   // Italic: single *text* that isn't already bold → _text_
-  // Match *text* only when not preceded/followed by another *
   result = result.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, "_$1_");
 
   // Links: [text](url) → <url|text>

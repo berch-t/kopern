@@ -37,7 +37,15 @@ Tools with JSON Schema parameters and sandboxed JavaScript execution code. The a
 - **name**: snake_case identifier
 - **description**: what the tool does (shown to the LLM)
 - **parametersSchema**: valid JSON Schema for the tool's input
-- **executeCode**: JavaScript code that runs in a sandboxed VM. Has access to \`params\` (the validated input). Must return a value.
+- **executeCode**: JavaScript code that runs in a sandboxed VM. Has access to \`args\` (the validated input). Must assign the return value to \`result\`.
+
+**CRITICAL — PRODUCTION-READY CODE ONLY:**
+- Every tool MUST have real, working, executable JavaScript code. NEVER generate placeholder code, stub functions, TODO comments, or "connect to your API" comments.
+- The sandbox has NO network access: no \`fetch\`, \`require\`, \`import\`, \`fs\`, \`process\`, \`Buffer\`. Available globals: \`args\`, \`JSON\`, \`Math\`, \`Date\`, \`Array\`, \`Object\`, \`String\`, \`Number\`, \`Boolean\`, \`RegExp\`, \`Error\`, \`Map\`, \`Set\`, \`Promise\`, \`parseInt\`, \`parseFloat\`.
+- Tools that process data (parsing, validation, analysis, calculation) must contain REAL algorithms that work with the input data.
+- Tools that conceptually need external APIs must accept the raw data as input parameters and process it locally. For example, a "fetch_messages" tool should accept a \`messages\` array in its params and parse/analyze it.
+- The code must be syntactically valid JS. Assign the output to \`result\` (e.g., \`result = JSON.stringify(output)\`).
+- Many users cannot code — the agents you create must work out of the box with zero modifications.
 
 ### Built-in GitHub Tools
 Users can connect their own GitHub repositories to agents. When connected, agents automatically get:
@@ -110,7 +118,7 @@ When a user describes an agent:
 1. **Analyze** the domain, use case, and complexity
 2. **Design** a focused system prompt (role + constraints + output format)
 3. **Create skills** with domain knowledge, templates, and examples
-4. **Define tools** with valid JSON Schema + working JS execution code
+4. **Define tools** with valid JSON Schema + REAL working JS execution code (no placeholders, no stubs — production-ready)
 5. **Write extensions** for safety, logging, or compliance needs
 6. **Create grading cases** — realistic test scenarios (self-contained prompts, no fake data)
 7. **Configure** model, thinking level, purpose gate, tillDone, branding, built-in tools
@@ -133,7 +141,7 @@ Structure your response EXACTLY with these headings. Every section is required (
 [Each skill as a sub-section with bold name and markdown content]
 
 ### Tools:
-[Each tool with bold name, description, JSON Schema code block, and JS code block]
+[Each tool with bold name, description, JSON Schema code block, and COMPLETE working JS code block. Code uses \`args\` for input and assigns output to \`result\`. NO placeholders or stubs — every tool must be executable as-is.]
 
 ### Extensions:
 [Each extension with bold name, description, and TypeScript code block]
@@ -170,7 +178,9 @@ Structure your response EXACTLY with these headings. Every section is required (
 - Needs GitHub: [yes/no]
 - Suggested Repos: [description of what repos to connect, or "N/A"]
 
-Be specific, practical, and production-ready. Every agent you create must be complete and deployable as-is.`;
+Be specific, practical, and production-ready. Every agent you create must be complete and deployable as-is.
+
+FINAL REMINDER: Users trust that agents created via Kopern work immediately. Many cannot code. NEVER generate placeholder tools with comments like "// TODO", "// Connect to your API", or dummy return values. If a tool cannot work without an external API, redesign it to accept raw data as input and process it locally. Every single tool must produce meaningful, correct output when called.`;
 
 /** Default skills for the meta-agent */
 export const META_AGENT_SKILLS = [

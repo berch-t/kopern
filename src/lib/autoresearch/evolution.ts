@@ -6,7 +6,7 @@ import { createEventCollector } from "@/lib/pi-mono/event-collector";
 import { evaluateAllCriteria } from "@/lib/grading/criteria";
 import { providers, thinkingLevels } from "@/lib/pi-mono/providers";
 import { proposeMutation } from "./analyzer";
-import { createRun, completeRun, trackAutoresearchUsage, logIteration } from "./history";
+import { createRun, completeRun, trackAutoresearchUsage, logIteration, failRun } from "./history";
 import type {
   EvolutionCandidate,
   EvolutionGeneration,
@@ -31,6 +31,7 @@ export async function runEvolution(
   callbacks: EvolutionCallbacks
 ): Promise<EvolutionResult | null> {
   const { userId, agentId, suiteId, maxIterations, mutationDimensions } = config;
+  let runId: string | null = null;
   const maxGenerations = Math.ceil(maxIterations / POPULATION_SIZE);
 
   try {
@@ -60,7 +61,7 @@ export async function runEvolution(
     if (casesSnap.empty) throw new Error("No grading cases found");
 
     // Create run
-    const runId = await createRun(config);
+    runId = await createRun(config);
 
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
@@ -224,6 +225,9 @@ export async function runEvolution(
     callbacks.onResult(result);
     return result;
   } catch (err) {
+    if (runId) {
+      await failRun(userId, agentId, runId, (err as Error).message).catch(() => {});
+    }
     callbacks.onError(err as Error);
     return null;
   }

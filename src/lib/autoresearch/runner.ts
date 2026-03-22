@@ -152,6 +152,9 @@ export async function runAutoTune(
     run.totalTokensUsed.input += baselineResult.tokensUsed.input;
     run.totalTokensUsed.output += baselineResult.tokensUsed.output;
 
+    // Keep latest grading results to feed into mutation analysis (avoids re-running grading)
+    let lastGradingResults = baselineResult.gradingResults;
+
     await logIteration(userId, agentId, runId, baselineIteration);
     callbacks.onIterationEnd(baselineIteration);
 
@@ -166,13 +169,11 @@ export async function runAutoTune(
       callbacks.onIterationStart(i, `Iteration ${i}: analyzing and proposing mutation`);
       const iterStart = Date.now();
 
-      // Phase: ANALYZE + MUTATE
+      // Phase: ANALYZE + MUTATE (use cached grading results from previous iteration)
       const mutation = await applyMutation(
         config.strategy,
         { ...agentData, systemPrompt: currentPrompt },
-        run.iterations[run.iterations.length - 1]
-          ? await getLatestGradingResults(currentPrompt + baseSkillsXml, casesSnap, provider, model, userId, agentId)
-          : [],
+        lastGradingResults,
         run.iterations,
         config.mutationDimensions,
         provider,
@@ -197,6 +198,7 @@ export async function runAutoTune(
 
       run.totalTokensUsed.input += result.tokensUsed.input;
       run.totalTokensUsed.output += result.tokensUsed.output;
+      lastGradingResults = result.gradingResults;
 
       // Phase: DECIDE
       const delta = result.score - bestScore;

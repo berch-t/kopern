@@ -144,7 +144,7 @@ export default function ExampleDetailPage({
             label: tool.name,
             description: tool.description,
             parametersSchema: tool.params,
-            executeCode: generateToolStub(tool.name, tool.description, tool.params),
+            executeCode: tool.executeCode || generateToolStub(tool.name, tool.description, tool.params),
           })
         )
       );
