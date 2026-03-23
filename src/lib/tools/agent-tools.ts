@@ -4,6 +4,13 @@
 import { adminDb } from "@/lib/firebase/admin";
 import { type ToolDefinition, type ToolCallResult } from "@/lib/llm/client";
 
+// --- Helpers ---
+
+/** Encode each path segment for GitHub API URLs (handles [locale], (public), etc.) */
+function encodeGitHubPath(path: string): string {
+  return path.split("/").map((seg) => encodeURIComponent(seg)).join("/");
+}
+
 // --- Slack Tool Definitions ---
 
 export function getSlackTools(): ToolDefinition[] {
@@ -246,7 +253,7 @@ async function executeReadFile(
   const githubToken = await getGitHubToken(ctx.userId);
 
   const fileRes = await fetch(
-    `https://api.github.com/repos/${repo}/contents/${path}?ref=${branch}`,
+    `https://api.github.com/repos/${repo}/contents/${encodeGitHubPath(path)}?ref=${branch}`,
     {
       headers: {
         Authorization: `Bearer ${githubToken}`,
@@ -260,8 +267,8 @@ async function executeReadFile(
   }
 
   let content = await fileRes.text();
-  if (content.length > 50000) {
-    content = content.slice(0, 50000) + "\n\n[... truncated at 50KB]";
+  if (content.length > 100000) {
+    content = content.slice(0, 100000) + "\n\n[... truncated at 100KB]";
   }
 
   return { result: content, isError: false };

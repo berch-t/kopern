@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { resolveApiKey } from "@/lib/mcp/auth";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
-import { streamLLM, type LLMMessage } from "@/lib/llm/client";
-import { countTokens, trackUsage } from "@/lib/mcp/token-counter";
+import { trackUsage } from "@/lib/mcp/token-counter";
 import { logAppError } from "@/lib/errors/logger";
 import { resolveProviderKey } from "@/lib/llm/resolve-key";
+import { runAgentWithTools, type AgentRunMetrics } from "@/lib/tools/run-agent";
+import type { LLMMessage } from "@/lib/llm/client";
 
 // ─── MCP Protocol Types ──────────────────────────────────────────────
 
@@ -134,43 +135,64 @@ async function executeChat(
     { role: "user" as const, content: message },
   ];
 
-  const inputTokens = countTokens(systemPrompt + messages.map((m) => m.content).join(""));
-
   // Resolve API key from user Firestore settings
   const apiKey = await resolveProviderKey(userId, agent.modelProvider as string);
 
+  // Use the full agentic loop with tools (GitHub, Slack, custom, bug management)
   let fullResponse = "";
+  const toolCalls: { name: string; args: Record<string, unknown>; result: string; isError: boolean }[] = [];
+
   try {
-    await new Promise<void>((resolve, reject) => {
-      streamLLM(
+    const metrics = await new Promise<AgentRunMetrics>((resolve, reject) => {
+      runAgentWithTools(
         {
           provider: agent.modelProvider as string,
           model: agent.modelId as string,
           systemPrompt,
           messages,
+          userId,
+          agentId,
+          connectedRepos: (agent.connectedRepos as string[]) || [],
           apiKey,
         },
         {
           onToken: (text) => { fullResponse += text; },
-          onDone: () => resolve(),
+          onToolStart: (tc) => {
+            toolCalls.push({ name: tc.name, args: tc.args, result: "", isError: false });
+          },
+          onToolEnd: (result) => {
+            const last = toolCalls.find((t) => t.name === result.name && !t.result);
+            if (last) {
+              last.result = result.result;
+              last.isError = result.isError;
+            }
+          },
+          onDone: (m) => resolve(m),
           onError: (err) => reject(err),
         }
       );
     });
+
+    // Track MCP-specific usage (in addition to runAgentWithTools' own tracking)
+    trackUsage(userId, agentId, mcpServerId, metrics.inputTokens, metrics.outputTokens).catch((err) =>
+      logAppError({ code: "MCP_USAGE_TRACK_FAILED", message: (err as Error).message, source: "mcp", userId, agentId })
+    );
+
+    // Build response with tool call summary if any tools were used
+    let responseText = fullResponse;
+    if (toolCalls.length > 0) {
+      const toolSummary = toolCalls
+        .map((tc) => `[Tool: ${tc.name}${tc.isError ? " (error)" : ""}]`)
+        .join(", ");
+      responseText += `\n\n---\n_Tools used: ${toolSummary} | ${metrics.toolCallCount} calls across ${metrics.toolIterations} iterations_`;
+    }
+
+    return {
+      content: [{ type: "text", text: responseText }],
+    };
   } catch (err) {
-    return { isError: true, content: [{ type: "text", text: `LLM error: ${(err as Error).message}` }] };
+    return { isError: true, content: [{ type: "text", text: `Agent error: ${(err as Error).message}` }] };
   }
-
-  const outputTokens = countTokens(fullResponse);
-
-  // Fire-and-forget usage tracking
-  trackUsage(userId, agentId, mcpServerId, inputTokens, outputTokens).catch((err) => logAppError({ code: "MCP_USAGE_TRACK_FAILED", message: (err as Error).message, source: "mcp", userId, agentId }));
-
-  return {
-    content: [
-      { type: "text", text: fullResponse },
-    ],
-  };
 }
 
 // ─── POST handler (MCP Streamable HTTP) ──────────────────────────────

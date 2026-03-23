@@ -273,7 +273,7 @@ async function fetchRepoContext(
       if (readmeEntry) {
         try {
           const readmeRes = await fetch(
-            `https://api.github.com/repos/${repo}/contents/${readmeEntry.path}`,
+            `https://api.github.com/repos/${repo}/contents/${readmeEntry.path.split("/").map((s: string) => encodeURIComponent(s)).join("/")}`,
             {
               headers: {
                 Authorization: `Bearer ${githubToken}`,

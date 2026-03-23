@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 
+/** Encode each path segment for GitHub API URLs (handles [locale], (public), etc.) */
+function encodeGitHubPath(path: string): string {
+  return path.split("/").map((seg) => encodeURIComponent(seg)).join("/");
+}
+
 async function getGithubToken(req: NextRequest): Promise<{ token: string; uid: string } | NextResponse> {
   const authHeader = req.headers.get("authorization");
   if (!authHeader?.startsWith("Bearer ")) {
@@ -101,7 +106,7 @@ export async function GET(req: NextRequest) {
     if (readmeEntry) {
       try {
         const readmeRes = await fetch(
-          `https://api.github.com/repos/${repo}/contents/${readmeEntry.path}?ref=${branch}`,
+          `https://api.github.com/repos/${repo}/contents/${encodeGitHubPath(readmeEntry.path)}?ref=${branch}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -147,7 +152,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const fileRes = await fetch(
-      `https://api.github.com/repos/${repo}/contents/${path}?ref=${branch}`,
+      `https://api.github.com/repos/${repo}/contents/${encodeGitHubPath(path)}?ref=${branch}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -166,8 +171,8 @@ export async function POST(req: NextRequest) {
     let content = await fileRes.text();
 
     // Truncate very large files
-    if (content.length > 50000) {
-      content = content.slice(0, 50000) + "\n\n[... truncated at 50KB]";
+    if (content.length > 100000) {
+      content = content.slice(0, 100000) + "\n\n[... truncated at 100KB]";
     }
 
     return NextResponse.json({ repo, path, branch, content });
