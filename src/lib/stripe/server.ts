@@ -143,8 +143,7 @@ export async function reportUsageToStripe(
   userId: string,
   inputTokens: number,
   outputTokens: number,
-  gradingRuns: number,
-  autoresearchIterations: number = 0
+  gradingRuns: number
 ): Promise<void> {
   const sub = await getUserPlan(userId);
 
@@ -190,17 +189,12 @@ export async function reportUsageToStripe(
     );
   }
 
-  if (autoresearchIterations > 0) {
-    reports.push(
-      stripe.billing.meterEvents.create({
-        event_name: "kopern_autoresearch_iterations",
-        payload: {
-          stripe_customer_id: sub.stripeCustomerId,
-          value: String(autoresearchIterations),
-        },
-      })
+  const results = await Promise.allSettled(reports);
+  const failures = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+  if (failures.length > 0) {
+    console.error(
+      `[Stripe Meters] ${failures.length}/${results.length} meter events failed for user ${userId}:`,
+      failures.map((f) => f.reason?.message || f.reason)
     );
   }
-
-  await Promise.allSettled(reports);
 }

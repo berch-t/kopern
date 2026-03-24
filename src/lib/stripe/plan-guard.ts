@@ -27,9 +27,15 @@ export async function checkPlanLimits(
   const plan: PlanTier = userData?.subscription?.plan || "starter";
   const status = userData?.subscription?.status || "active";
 
-  // Allow active and trialing subscriptions only
-  if (status !== "active" && status !== "trialing" && plan !== "starter") {
-    return { allowed: false, reason: "Subscription inactive", plan };
+  // Block past_due, canceled, unpaid, incomplete subscriptions (starter is always allowed)
+  if (plan !== "starter" && status !== "active" && status !== "trialing") {
+    const reasonMap: Record<string, string> = {
+      past_due: "Payment past due — please update your payment method in billing settings",
+      canceled: "Subscription canceled",
+      unpaid: "Subscription unpaid — please update your payment method",
+      incomplete: "Subscription setup incomplete",
+    };
+    return { allowed: false, reason: reasonMap[status] || "Subscription inactive", plan };
   }
 
   const limits = PLAN_LIMITS[plan];
@@ -163,6 +169,10 @@ export async function checkPlanLimits(
         if (widgetSnap.exists && widgetSnap.data()?.enabled) connectorCount++;
         const slackSnap = await adminDb.doc(`${basePath}/slackConnection`).get();
         if (slackSnap.exists && slackSnap.data()?.enabled) connectorCount++;
+        const telegramSnap = await adminDb.doc(`${basePath}/telegram`).get();
+        if (telegramSnap.exists && telegramSnap.data()?.enabled) connectorCount++;
+        const whatsappSnap = await adminDb.doc(`${basePath}/whatsapp`).get();
+        if (whatsappSnap.exists && whatsappSnap.data()?.enabled) connectorCount++;
         const webhooksSnap = await adminDb.collection(`users/${userId}/agents/${agentDoc.id}/webhooks`).where("enabled", "==", true).count().get();
         connectorCount += webhooksSnap.data().count;
       }

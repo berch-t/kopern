@@ -19,6 +19,10 @@ export async function POST(
   if (!planCheck.allowed) {
     return NextResponse.json({ error: planCheck.reason, plan: planCheck.plan }, { status: 403 });
   }
+  const tokenCheck = await checkPlanLimits(userId, "tokens");
+  if (!tokenCheck.allowed) {
+    return NextResponse.json({ error: tokenCheck.reason, plan: tokenCheck.plan }, { status: 403 });
+  }
 
   const { stream, send, close } = createSSEStream();
 

@@ -6,6 +6,17 @@ import { FieldValue } from "firebase-admin/firestore";
 import { calculateTokenCost } from "./pricing";
 import { reportUsageToStripe } from "@/lib/stripe/server";
 
+/** Check if user has given functional consent (server-side, Admin SDK) */
+async function checkFunctionalConsentServer(userId: string): Promise<boolean> {
+  try {
+    const snap = await adminDb.doc(`users/${userId}/consent/preferences`).get();
+    if (!snap.exists) return false;
+    return snap.data()?.functional === true;
+  } catch {
+    return false;
+  }
+}
+
 function getCurrentYearMonth(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -22,12 +33,13 @@ export async function trackUsageServer(
   provider: string,
   inputTokens: number,
   outputTokens: number,
-  gradingRuns: number = 0
+  gradingRuns: number = 0,
+  modelId?: string
 ): Promise<void> {
   if (!userId || !agentId) return;
 
   const yearMonth = getCurrentYearMonth();
-  const cost = calculateTokenCost(provider, inputTokens, outputTokens);
+  const cost = calculateTokenCost(provider, inputTokens, outputTokens, modelId);
   const ref = adminDb.doc(`users/${userId}/usage/${yearMonth}`);
 
   // First ensure the doc exists with top-level counters
@@ -91,6 +103,8 @@ export async function updateSessionMetrics(
 /**
  * Create a new session record. Returns the session ID.
  */
+export type SessionSource = "playground" | "widget" | "webhook" | "slack" | "mcp" | "grading" | "autoresearch" | "pipeline" | "team";
+
 export async function createSessionServer(
   userId: string,
   agentId: string,
@@ -98,12 +112,14 @@ export async function createSessionServer(
     purpose?: string | null;
     modelUsed: string;
     providerUsed: string;
+    source?: SessionSource;
   }
 ): Promise<string> {
   const ref = await adminDb
     .collection(`users/${userId}/agents/${agentId}/sessions`)
     .add({
       purpose: data.purpose ?? null,
+      source: data.source ?? "playground",
       startedAt: FieldValue.serverTimestamp(),
       endedAt: null,
       totalTokensIn: 0,
@@ -121,6 +137,7 @@ export async function createSessionServer(
 
 /**
  * Append events to session (messages, tool calls, etc.)
+ * Gated behind functional consent — session event details are optional analytics.
  */
 export async function appendSessionEvents(
   userId: string,
@@ -129,6 +146,10 @@ export async function appendSessionEvents(
   events: { type: string; data: Record<string, unknown> }[]
 ): Promise<void> {
   if (!userId || !agentId || !sessionId || events.length === 0) return;
+
+  // Check functional consent — session events are detailed analytics
+  const hasConsent = await checkFunctionalConsentServer(userId);
+  if (!hasConsent) return;
 
   const ref = adminDb.doc(`users/${userId}/agents/${agentId}/sessions/${sessionId}`);
   const now = new Date();

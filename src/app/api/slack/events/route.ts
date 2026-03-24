@@ -5,6 +5,9 @@ import { runAgentWithTools } from "@/lib/tools/run-agent";
 import type { LLMMessage } from "@/lib/llm/client";
 import { logAppError } from "@/lib/errors/logger";
 import { resolveProviderKey } from "@/lib/llm/resolve-key";
+import { createSessionServer, updateSessionMetrics, appendSessionEvents, endSessionServer } from "@/lib/billing/track-usage-server";
+import { calculateTokenCost } from "@/lib/billing/pricing";
+import type { AgentRunMetrics } from "@/lib/tools/run-agent";
 import {
   verifySlackSignature,
   lookupSlackTeam,
@@ -316,8 +319,21 @@ async function processSlackEvent(body: SlackEventPayload): Promise<void> {
   // Resolve API key from user Firestore settings
   const apiKey = await resolveProviderKey(userId, agentData.modelProvider as string || "anthropic");
 
+  // Create session for Slack tracking
+  let sessionId = "";
+  try {
+    sessionId = await createSessionServer(userId, agentId, {
+      purpose: messageText.slice(0, 120),
+      modelUsed: agentData.modelId as string || "claude-sonnet-4-20250514",
+      providerUsed: agentData.modelProvider as string || "anthropic",
+      source: "slack",
+    });
+  } catch { /* continue without session */ }
+
   // Run agent (synchronous — collect full response)
   let fullResponse = "";
+  const toolEvents: { type: string; data: Record<string, unknown> }[] = [];
+  let agentMetrics: AgentRunMetrics | null = null;
 
   try {
     await runAgentWithTools(
@@ -335,8 +351,14 @@ async function processSlackEvent(body: SlackEventPayload): Promise<void> {
         onToken: (text: string) => {
           fullResponse += text;
         },
-        onDone: () => {
-          // Agent finished — response collected in fullResponse
+        onToolStart: (tc) => {
+          toolEvents.push({ type: "tool_call", data: { name: tc.name, args: tc.args } });
+        },
+        onToolEnd: (result) => {
+          toolEvents.push({ type: "tool_result", data: { name: result.name, result: result.result, isError: result.isError } });
+        },
+        onDone: (metrics) => {
+          agentMetrics = metrics;
         },
         onError: (error: Error) => {
           logAppError({
@@ -364,6 +386,28 @@ async function processSlackEvent(body: SlackEventPayload): Promise<void> {
       userNotified: true,
     });
     fullResponse = `⚠️ **Unexpected error** — Something went wrong while processing your message. The Kopern team has been notified.\n\nError: ${(err as Error).message}`;
+  }
+
+  // Persist session (fire-and-forget)
+  if (sessionId) {
+    const modelId = agentData.modelId as string || "claude-sonnet-4-20250514";
+    const provider = agentData.modelProvider as string || "anthropic";
+    const m = agentMetrics || { inputTokens: 0, outputTokens: 0, toolCallCount: 0, toolIterations: 0 };
+    const cost = calculateTokenCost(provider, m.inputTokens, m.outputTokens, modelId);
+    const events = [
+      { type: "message", data: { role: "user", content: messageText } },
+      ...toolEvents,
+      { type: "message", data: { role: "assistant", content: fullResponse.slice(0, 10000) } },
+    ];
+    appendSessionEvents(userId, agentId, sessionId, events).catch((err) => logAppError({ code: "SESSION_EVENT_WRITE_FAILED", message: (err as Error).message, source: "slack", userId, agentId }));
+    updateSessionMetrics(userId, agentId, sessionId, {
+      inputTokens: m.inputTokens,
+      outputTokens: m.outputTokens,
+      cost,
+      toolCallCount: m.toolCallCount,
+      messageCount: 2,
+    }).catch((err) => logAppError({ code: "SESSION_METRICS_WRITE_FAILED", message: (err as Error).message, source: "slack", userId, agentId }));
+    endSessionServer(userId, agentId, sessionId).catch((err) => logAppError({ code: "SESSION_END_FAILED", message: (err as Error).message, source: "slack", userId, agentId }));
   }
 
   // Post response as threaded reply

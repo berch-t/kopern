@@ -242,8 +242,9 @@ function parseBuiltinTools(raw: string): string[] {
   const lower = raw.toLowerCase();
   if (lower === "none" || lower === "aucun" || lower === "[]" || !lower) return [];
   const tools: string[] = [];
-  if (lower.includes("read")) tools.push("read");
-  if (lower.includes("bash") || lower.includes("shell") || lower.includes("exec")) tools.push("bash");
+  if (lower.includes("github") || lower.includes("write") || lower.includes("pr") || lower.includes("branch")) tools.push("github_write");
+  if (lower.includes("bug") || lower.includes("issue")) tools.push("bug_management");
+  if (lower.includes("slack")) tools.push("slack_read");
   return tools;
 }
 

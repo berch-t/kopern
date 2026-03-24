@@ -11,13 +11,6 @@ export interface BuiltTool {
 }
 
 export const BUILTIN_TOOLS = [
-  { id: "read", name: "Read File", description: "Read file contents" },
-  { id: "write", name: "Write File", description: "Write content to a file" },
-  { id: "edit", name: "Edit File", description: "Edit file with find/replace" },
-  { id: "bash", name: "Bash", description: "Execute shell commands" },
-  { id: "grep", name: "Grep", description: "Search file contents" },
-  { id: "find", name: "Find", description: "Find files by pattern" },
-  { id: "ls", name: "List", description: "List directory contents" },
   { id: "github_write", name: "GitHub Write", description: "Create branches, commit files, and open PRs on connected repos" },
   { id: "bug_management", name: "Bug Management", description: "Track, update, and respond to bug reports (admin)", adminOnly: true },
   { id: "slack_read", name: "Slack Read", description: "Read messages and list channels from connected Slack workspace" },

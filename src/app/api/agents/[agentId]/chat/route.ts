@@ -166,7 +166,8 @@ You MUST maintain a task list for this session. Before executing any action:
             const cost = calculateTokenCost(
               agentConfig.modelProvider,
               metrics.inputTokens,
-              metrics.outputTokens
+              metrics.outputTokens,
+              agentConfig.modelId
             );
 
             // Persist session events + metrics (fire-and-forget)
@@ -183,6 +184,7 @@ You MUST maintain a task list for this session. Before executing any action:
                 toolCallCount: metrics.toolCallCount,
                 messageCount: 2,
               }).catch((err) => logAppError({ code: "SESSION_METRICS_WRITE_FAILED", message: (err as Error).message, source: "session", userId, agentId }));
+              endSessionServer(userId, agentId, sessionId).catch((err) => logAppError({ code: "SESSION_END_FAILED", message: (err as Error).message, source: "session", userId, agentId }));
             }
 
             send("done", {

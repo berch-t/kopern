@@ -115,8 +115,18 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       </AuthProvider>
 
       {/* Footer */}
-      <footer className="border-t py-6 text-center text-sm text-muted-foreground">
-        {t.landing.footer}
+      <footer className="border-t py-6">
+        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span className="text-sm text-muted-foreground">{t.landing.footer}</span>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <LocalizedLink href="/privacy" className="hover:text-foreground transition-colors">
+              {t.landing.footerPrivacy}
+            </LocalizedLink>
+            <LocalizedLink href="/terms" className="hover:text-foreground transition-colors">
+              {t.landing.footerTerms}
+            </LocalizedLink>
+          </div>
+        </div>
       </footer>
     </div>
   );

@@ -262,8 +262,11 @@ export interface SessionEvent {
   data: Record<string, unknown>;
 }
 
+export type SessionSource = "playground" | "widget" | "webhook" | "slack" | "mcp" | "grading" | "autoresearch" | "pipeline" | "team";
+
 export interface SessionDoc {
   purpose: string | null;
+  source: SessionSource;
   startedAt: Timestamp;
   endedAt: Timestamp | null;
   totalTokensIn: number;
@@ -284,6 +287,7 @@ export interface UsageDoc {
   outputTokens: number;
   totalCost: number;
   requestCount: number;
+  gradingRuns?: number;
   agentBreakdown: Record<string, { inputTokens: number; outputTokens: number; cost: number }>;
   autoresearchIterations?: number;
 }
@@ -649,14 +653,69 @@ export interface SlackTeamIndexDoc {
   agentId: string;
 }
 
+// --- Telegram Connector ---
+
+export interface TelegramConnectorDoc {
+  botToken: string;
+  botUsername: string;
+  botFirstName: string;
+  secretHash: string;
+  enabled: boolean;
+  installedBy: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface TelegramBotIndexDoc {
+  userId: string;
+  agentId: string;
+  botToken: string;
+}
+
+// --- WhatsApp Connector ---
+
+export interface WhatsAppConnectorDoc {
+  phoneNumberId: string;
+  accessToken: string;
+  verifyToken: string;
+  phoneNumber: string;
+  enabled: boolean;
+  installedBy: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface WhatsAppPhoneIndexDoc {
+  userId: string;
+  agentId: string;
+}
+
+// --- GDPR Consent ---
+
+export interface ConsentDoc {
+  /** Essential cookies — always true, cannot be disabled */
+  essential: true;
+  /** Functional analytics: detailed sessions, per-agent breakdowns, error logs */
+  functional: boolean;
+  /** ISO timestamp of initial consent */
+  consentedAt: Timestamp;
+  /** ISO timestamp of last update */
+  updatedAt: Timestamp;
+  /** User agent at time of consent (for audit trail) */
+  userAgent: string;
+}
+
 // --- Error Log types ---
 
 export type ErrorSeverity = "warning" | "error" | "critical";
 export type ErrorSource =
   | "slack_events"
+  | "slack"
   | "webhook_inbound"
   | "webhook_outbound"
+  | "webhook"
   | "widget_chat"
+  | "widget"
   | "chat"
   | "grading"
   | "mcp"
@@ -714,4 +773,18 @@ export function webhookLogsCollection(userId: string, agentId: string) {
 
 export function slackConnectionDoc(userId: string, agentId: string) {
   return doc(db, "users", userId, "agents", agentId, "connectors", "slackConnection");
+}
+
+export function telegramConnectorDoc(userId: string, agentId: string) {
+  return doc(db, "users", userId, "agents", agentId, "connectors", "telegram");
+}
+
+export function whatsappConnectorDoc(userId: string, agentId: string) {
+  return doc(db, "users", userId, "agents", agentId, "connectors", "whatsapp");
+}
+
+// --- GDPR Consent ---
+
+export function consentDoc(userId: string) {
+  return doc(db, "users", userId, "consent", "preferences");
 }

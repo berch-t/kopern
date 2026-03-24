@@ -6,10 +6,13 @@ import { useDocument } from "@/hooks/useFirestore";
 import { userDoc, type UserDoc } from "@/lib/firebase/firestore";
 import { setDoc, serverTimestamp } from "firebase/firestore";
 import { linkGithubToCurrentUser } from "@/lib/firebase/auth";
+import { useConsent } from "@/hooks/useConsent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -20,9 +23,11 @@ import {
 } from "@/components/ui/select";
 import { providers } from "@/lib/pi-mono/providers";
 import { SlideUp } from "@/components/motion/SlideUp";
+import { FadeIn } from "@/components/motion/FadeIn";
 import { toast } from "sonner";
-import { Eye, EyeOff, Github, Check } from "lucide-react";
+import { Eye, EyeOff, Github, Check, Shield, Download, Trash2 } from "lucide-react";
 import { useDictionary } from "@/providers/LocaleProvider";
+import { LocalizedLink } from "@/components/LocalizedLink";
 
 export default function SettingsPage() {
   const t = useDictionary();
@@ -201,6 +206,161 @@ export default function SettingsPage() {
       <Button onClick={handleSave} disabled={saving}>
         {saving ? t.common.saving : t.settings.saveSettings}
       </Button>
+
+      <Separator className="my-4" />
+
+      {/* GDPR — Data & Privacy */}
+      <GdprSection />
     </div>
+  );
+}
+
+function GdprSection() {
+  const t = useDictionary();
+  const { user } = useAuth();
+  const { consent, updateConsent, hasFunctionalConsent } = useConsent();
+  const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  async function handleExport() {
+    if (!user) return;
+    setExporting(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch("/api/gdpr/export", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `kopern-data-export.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(t.gdpr.exportSuccess);
+    } catch {
+      toast.error(t.gdpr.exportError);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch("/api/gdpr/delete", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Delete failed");
+      toast.success(t.gdpr.deleteSuccess);
+      // Redirect after deletion — auth state will clear
+      window.location.href = "/";
+    } catch {
+      toast.error(t.gdpr.deleteError);
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
+  }
+
+  return (
+    <FadeIn delay={0.2}>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            {t.gdpr.dataPrivacy}
+          </CardTitle>
+          <CardDescription>{t.gdpr.dataPrivacyDesc}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Consent preferences */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium">{t.gdpr.consentPreferences}</h3>
+            <p className="text-xs text-muted-foreground">{t.gdpr.consentPreferencesDesc}</p>
+
+            <div className="flex items-center justify-between gap-4 py-2">
+              <div>
+                <span className="text-sm font-medium">{t.consent.essential}</span>
+                <Badge variant="secondary" className="text-[10px] ml-2">{t.consent.alwaysActive}</Badge>
+                <p className="text-xs text-muted-foreground mt-0.5">{t.consent.essentialDesc}</p>
+              </div>
+              <Switch checked disabled className="opacity-50" />
+            </div>
+
+            <div className="flex items-center justify-between gap-4 py-2">
+              <div>
+                <span className="text-sm font-medium">{t.consent.functional}</span>
+                <p className="text-xs text-muted-foreground mt-0.5">{t.consent.functionalDesc}</p>
+              </div>
+              <Switch
+                checked={hasFunctionalConsent}
+                onCheckedChange={(checked) => {
+                  updateConsent({ essential: true, functional: checked });
+                  toast.success(t.consent.updatedToast);
+                }}
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Data export */}
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-medium">{t.gdpr.exportData}</h3>
+              <p className="text-xs text-muted-foreground">{t.gdpr.exportDataDesc}</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting}>
+              <Download className="h-4 w-4 mr-2" />
+              {exporting ? t.gdpr.exporting : t.gdpr.exportButton}
+            </Button>
+          </div>
+
+          <Separator />
+
+          {/* Account deletion */}
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-medium text-destructive">{t.gdpr.deleteAccount}</h3>
+              <p className="text-xs text-muted-foreground">{t.gdpr.deleteAccountDesc}</p>
+            </div>
+            {confirmDelete ? (
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
+                  {t.common.cancel}
+                </Button>
+                <Button variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {deleting ? t.gdpr.deleting : t.gdpr.deleteButton}
+                </Button>
+              </div>
+            ) : (
+              <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(true)}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                {t.gdpr.deleteButton}
+              </Button>
+            )}
+          </div>
+          {confirmDelete && (
+            <p className="text-xs text-destructive">{t.gdpr.deleteConfirm}</p>
+          )}
+
+          <Separator />
+
+          {/* Links */}
+          <div className="flex gap-4 text-xs text-muted-foreground">
+            <LocalizedLink href="/privacy" className="hover:text-foreground underline underline-offset-2">
+              {t.consent.privacyLink}
+            </LocalizedLink>
+          </div>
+        </CardContent>
+      </Card>
+    </FadeIn>
   );
 }

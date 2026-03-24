@@ -6,6 +6,8 @@ import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
 import { calculateTokenCost } from "@/lib/billing/pricing";
 import { resolveProviderKey } from "@/lib/llm/resolve-key";
+import { createSessionServer, updateSessionMetrics, appendSessionEvents, endSessionServer } from "@/lib/billing/track-usage-server";
+import { logAppError } from "@/lib/errors/logger";
 
 interface WidgetChatRequest {
   message: string;
@@ -194,11 +196,25 @@ export async function POST(request: NextRequest) {
   const { stream, send, close } = createSSEStream();
 
   (async () => {
+    let sessionId = "";
     try {
       send("status", { status: "thinking" });
 
+      // Create session for widget tracking
+      try {
+        sessionId = await createSessionServer(userId, agentId, {
+          purpose: body.message.slice(0, 120),
+          modelUsed: agentData.modelId || "claude-sonnet-4-5-20250514",
+          providerUsed: agentData.modelProvider || "anthropic",
+          source: "widget",
+        });
+      } catch { /* continue without session */ }
+
       // Resolve API key from user Firestore settings
       const apiKey = await resolveProviderKey(userId, agentData.modelProvider || "anthropic");
+
+      let assistantOutput = "";
+      const toolEvents: { type: string; data: Record<string, unknown> }[] = [];
 
       await runAgentWithTools(
         {
@@ -213,12 +229,15 @@ export async function POST(request: NextRequest) {
         },
         {
           onToken: (text) => {
+            assistantOutput += text;
             send("token", { text });
           },
           onToolStart: (tc) => {
+            toolEvents.push({ type: "tool_call", data: { name: tc.name, args: tc.args } });
             send("tool_start", { name: tc.name });
           },
           onToolEnd: (result) => {
+            toolEvents.push({ type: "tool_result", data: { name: result.name, result: result.result, isError: result.isError } });
             send("tool_end", {
               name: result.name,
               isError: result.isError,
@@ -228,8 +247,28 @@ export async function POST(request: NextRequest) {
             const cost = calculateTokenCost(
               agentData.modelProvider || "anthropic",
               metrics.inputTokens,
-              metrics.outputTokens
+              metrics.outputTokens,
+              agentData.modelId
             );
+
+            // Persist session (fire-and-forget)
+            if (sessionId) {
+              const events = [
+                { type: "message", data: { role: "user", content: body.message } },
+                ...toolEvents,
+                { type: "message", data: { role: "assistant", content: assistantOutput.slice(0, 10000) } },
+              ];
+              appendSessionEvents(userId, agentId, sessionId, events).catch((err) => logAppError({ code: "SESSION_EVENT_WRITE_FAILED", message: (err as Error).message, source: "widget", userId, agentId }));
+              updateSessionMetrics(userId, agentId, sessionId, {
+                inputTokens: metrics.inputTokens,
+                outputTokens: metrics.outputTokens,
+                cost,
+                toolCallCount: metrics.toolCallCount,
+                messageCount: 2,
+              }).catch((err) => logAppError({ code: "SESSION_METRICS_WRITE_FAILED", message: (err as Error).message, source: "widget", userId, agentId }));
+              endSessionServer(userId, agentId, sessionId).catch((err) => logAppError({ code: "SESSION_END_FAILED", message: (err as Error).message, source: "widget", userId, agentId }));
+            }
+
             send("done", {
               metrics: {
                 inputTokens: metrics.inputTokens,
@@ -240,6 +279,7 @@ export async function POST(request: NextRequest) {
             close();
           },
           onError: (error) => {
+            if (sessionId) endSessionServer(userId, agentId, sessionId).catch(() => {});
             send("error", { message: error.message });
             close();
           },

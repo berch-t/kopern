@@ -1,27 +1,25 @@
 import { getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { usageDoc, type UsageDoc } from "@/lib/firebase/firestore";
+import { MODEL_PRICING, PROVIDER_PRICING, calculateTokenCost } from "@/lib/billing/pricing";
 
 function getCurrentYearMonth(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-/** Token pricing per 1M tokens (USD) */
-export const TOKEN_PRICING: Record<string, { input: number; output: number }> = {
-  anthropic: { input: 3.0, output: 15.0 },
-  openai: { input: 2.5, output: 10.0 },
-  google: { input: 1.25, output: 5.0 },
-  mistral: { input: 0.5, output: 1.5 },
-  ollama: { input: 0, output: 0 },
-};
+/** Token pricing per 1M tokens (USD) — re-export for billing page */
+export const TOKEN_PRICING = PROVIDER_PRICING;
 
+/** Per-model pricing — re-export for billing page */
+export const PER_MODEL_PRICING = MODEL_PRICING;
+
+/** Calculate cost with 17% Kopern commission (delegates to pricing.ts) */
 export function calculateCost(
   provider: string,
   inputTokens: number,
   outputTokens: number
 ): number {
-  const pricing = TOKEN_PRICING[provider] ?? TOKEN_PRICING.anthropic;
-  return (inputTokens / 1_000_000) * pricing.input + (outputTokens / 1_000_000) * pricing.output;
+  return calculateTokenCost(provider, inputTokens, outputTokens);
 }
 
 export async function trackUsage(

@@ -7,6 +7,8 @@ import { logAppError } from "@/lib/errors/logger";
 import { resolveProviderKey } from "@/lib/llm/resolve-key";
 import { runAgentWithTools, type AgentRunMetrics } from "@/lib/tools/run-agent";
 import type { LLMMessage } from "@/lib/llm/client";
+import { createSessionServer, updateSessionMetrics, appendSessionEvents, endSessionServer } from "@/lib/billing/track-usage-server";
+import { calculateTokenCost } from "@/lib/billing/pricing";
 
 // ─── MCP Protocol Types ──────────────────────────────────────────────
 
@@ -138,9 +140,21 @@ async function executeChat(
   // Resolve API key from user Firestore settings
   const apiKey = await resolveProviderKey(userId, agent.modelProvider as string);
 
+  // Create session for MCP tracking
+  let sessionId = "";
+  try {
+    sessionId = await createSessionServer(userId, agentId, {
+      purpose: message.slice(0, 120),
+      modelUsed: agent.modelId as string,
+      providerUsed: agent.modelProvider as string,
+      source: "mcp",
+    });
+  } catch { /* continue without session */ }
+
   // Use the full agentic loop with tools (GitHub, Slack, custom, bug management)
   let fullResponse = "";
   const toolCalls: { name: string; args: Record<string, unknown>; result: string; isError: boolean }[] = [];
+  const toolEvents: { type: string; data: Record<string, unknown> }[] = [];
 
   try {
     const metrics = await new Promise<AgentRunMetrics>((resolve, reject) => {
@@ -159,6 +173,7 @@ async function executeChat(
           onToken: (text) => { fullResponse += text; },
           onToolStart: (tc) => {
             toolCalls.push({ name: tc.name, args: tc.args, result: "", isError: false });
+            toolEvents.push({ type: "tool_call", data: { name: tc.name, args: tc.args } });
           },
           onToolEnd: (result) => {
             const last = toolCalls.find((t) => t.name === result.name && !t.result);
@@ -166,6 +181,7 @@ async function executeChat(
               last.result = result.result;
               last.isError = result.isError;
             }
+            toolEvents.push({ type: "tool_result", data: { name: result.name, result: result.result, isError: result.isError } });
           },
           onDone: (m) => resolve(m),
           onError: (err) => reject(err),
@@ -173,10 +189,29 @@ async function executeChat(
       );
     });
 
-    // Track MCP-specific usage (in addition to runAgentWithTools' own tracking)
+    // Track MCP-specific usage (per-server breakdown)
     trackUsage(userId, agentId, mcpServerId, metrics.inputTokens, metrics.outputTokens).catch((err) =>
       logAppError({ code: "MCP_USAGE_TRACK_FAILED", message: (err as Error).message, source: "mcp", userId, agentId })
     );
+
+    // Persist session (fire-and-forget)
+    if (sessionId) {
+      const cost = calculateTokenCost(agent.modelProvider as string, metrics.inputTokens, metrics.outputTokens, agent.modelId as string);
+      const events = [
+        { type: "message", data: { role: "user", content: message } },
+        ...toolEvents,
+        { type: "message", data: { role: "assistant", content: fullResponse.slice(0, 10000) } },
+      ];
+      appendSessionEvents(userId, agentId, sessionId, events).catch((err) => logAppError({ code: "SESSION_EVENT_WRITE_FAILED", message: (err as Error).message, source: "mcp", userId, agentId }));
+      updateSessionMetrics(userId, agentId, sessionId, {
+        inputTokens: metrics.inputTokens,
+        outputTokens: metrics.outputTokens,
+        cost,
+        toolCallCount: metrics.toolCallCount,
+        messageCount: 2,
+      }).catch((err) => logAppError({ code: "SESSION_METRICS_WRITE_FAILED", message: (err as Error).message, source: "mcp", userId, agentId }));
+      endSessionServer(userId, agentId, sessionId).catch((err) => logAppError({ code: "SESSION_END_FAILED", message: (err as Error).message, source: "mcp", userId, agentId }));
+    }
 
     // Build response with tool call summary if any tools were used
     let responseText = fullResponse;
@@ -191,6 +226,7 @@ async function executeChat(
       content: [{ type: "text", text: responseText }],
     };
   } catch (err) {
+    if (sessionId) endSessionServer(userId, agentId, sessionId).catch(() => {});
     return { isError: true, content: [{ type: "text", text: `Agent error: ${(err as Error).message}` }] };
   }
 }

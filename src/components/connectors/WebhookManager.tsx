@@ -46,9 +46,11 @@ import {
   CheckCircle2,
   XCircle,
   Pencil,
+  Download,
 } from "lucide-react";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { toast } from "sonner";
+import { toCSV, downloadCSV } from "@/lib/utils/csv-export";
 
 const OUTBOUND_EVENTS: WebhookEventType[] = [
   "message_sent",
@@ -401,6 +403,32 @@ export function WebhookManager({ agentId, apiKeyPrefix, onBack }: WebhookManager
 
           {/* ─── Logs Tab ───────────────────────────────────────────── */}
           <TabsContent value="logs" className="space-y-4">
+            {logs.length > 0 && (
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => {
+                    const rows = logs.map((l) => ({
+                      id: l.id,
+                      webhookId: l.webhookId,
+                      direction: l.direction,
+                      status: l.status,
+                      statusCode: l.statusCode ?? "",
+                      durationMs: l.durationMs,
+                      requestBody: l.requestBody,
+                      responseBody: l.responseBody,
+                      createdAt: l.createdAt?.toDate ? l.createdAt.toDate().toISOString() : "",
+                    }));
+                    downloadCSV(toCSV(rows), `webhook-logs-${agentId}-${new Date().toISOString().slice(0, 10)}`);
+                  }}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Export CSV
+                </Button>
+              </div>
+            )}
             {logsLoading ? (
               <p className="text-muted-foreground text-sm">{wt.loadingLogs}</p>
             ) : logs.length === 0 ? (

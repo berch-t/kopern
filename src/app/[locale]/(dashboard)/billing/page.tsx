@@ -7,7 +7,8 @@ import { useDictionary } from "@/providers/LocaleProvider";
 import { useLocale } from "@/providers/LocaleProvider";
 import { useCollection } from "@/hooks/useFirestore";
 import { agentsCollection, type AgentDoc } from "@/lib/firebase/firestore";
-import { getUsage, getUsageHistory, TOKEN_PRICING } from "@/actions/billing";
+import { getUsage, getUsageHistory, TOKEN_PRICING, PER_MODEL_PRICING } from "@/actions/billing";
+import { KOPERN_COMMISSION_RATE } from "@/lib/stripe/config";
 import type { UsageDoc } from "@/lib/firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +32,9 @@ import {
   Shield,
   AlertTriangle,
   FlaskConical,
+  Download,
 } from "lucide-react";
+import { toCSV, downloadCSV, downloadJSON } from "@/lib/utils/csv-export";
 
 function formatTokens(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -110,12 +113,41 @@ export default function BillingPage() {
       ? [{ yearMonth: usage.yearMonth, totalCost: usage.totalCost ?? 0, inputTokens: usage.inputTokens ?? 0, outputTokens: usage.outputTokens ?? 0 }]
       : historyData;
 
-  const providerPricing = [
-    { name: "Anthropic", input: TOKEN_PRICING.anthropic.input, output: TOKEN_PRICING.anthropic.output, color: "text-orange-500" },
-    { name: "OpenAI", input: TOKEN_PRICING.openai.input, output: TOKEN_PRICING.openai.output, color: "text-emerald-500" },
-    { name: "Google", input: TOKEN_PRICING.google.input, output: TOKEN_PRICING.google.output, color: "text-blue-500" },
-    { name: "Mistral AI", input: TOKEN_PRICING.mistral.input, output: TOKEN_PRICING.mistral.output, color: "text-amber-500" },
-    { name: "Ollama", input: TOKEN_PRICING.ollama.input, output: TOKEN_PRICING.ollama.output, color: "text-gray-500" },
+  // Group per-model pricing by provider
+  const modelsByProvider: { provider: string; color: string; models: { name: string; input: number; output: number }[] }[] = [
+    {
+      provider: "Anthropic",
+      color: "text-orange-500",
+      models: Object.entries(PER_MODEL_PRICING)
+        .filter(([id]) => id.startsWith("claude-"))
+        .map(([, v]) => ({ name: v.name, input: v.input * (1 + KOPERN_COMMISSION_RATE), output: v.output * (1 + KOPERN_COMMISSION_RATE) })),
+    },
+    {
+      provider: "OpenAI",
+      color: "text-emerald-500",
+      models: Object.entries(PER_MODEL_PRICING)
+        .filter(([id]) => id.startsWith("gpt-") || id.startsWith("o3") || id.startsWith("o4"))
+        .map(([, v]) => ({ name: v.name, input: v.input * (1 + KOPERN_COMMISSION_RATE), output: v.output * (1 + KOPERN_COMMISSION_RATE) })),
+    },
+    {
+      provider: "Google",
+      color: "text-blue-500",
+      models: Object.entries(PER_MODEL_PRICING)
+        .filter(([id]) => id.startsWith("gemini-"))
+        .map(([, v]) => ({ name: v.name, input: v.input * (1 + KOPERN_COMMISSION_RATE), output: v.output * (1 + KOPERN_COMMISSION_RATE) })),
+    },
+    {
+      provider: "Mistral AI",
+      color: "text-amber-500",
+      models: Object.entries(PER_MODEL_PRICING)
+        .filter(([id]) => id.startsWith("mistral-") || id.startsWith("magistral") || id.startsWith("codestral") || id.startsWith("devstral"))
+        .map(([, v]) => ({ name: v.name, input: v.input * (1 + KOPERN_COMMISSION_RATE), output: v.output * (1 + KOPERN_COMMISSION_RATE) })),
+    },
+    {
+      provider: "Ollama (Local)",
+      color: "text-gray-500",
+      models: [{ name: "All local models", input: 0, output: 0 }],
+    },
   ];
 
   // Plan display
@@ -146,18 +178,83 @@ export default function BillingPage() {
     );
   }
 
+  function exportBillingCSV() {
+    if (!usage) return;
+    const rows = breakdownRows.map((row) => ({
+      agent: row.agentName,
+      agentId: row.agentId,
+      inputTokens: row.inputTokens,
+      outputTokens: row.outputTokens,
+      cost: row.cost,
+    }));
+    // Add summary row
+    rows.push({
+      agent: "TOTAL",
+      agentId: "",
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      cost: usage.totalCost,
+    });
+    const columns = [
+      { key: "agent", label: "Agent" },
+      { key: "agentId", label: "Agent ID" },
+      { key: "inputTokens", label: "Input Tokens" },
+      { key: "outputTokens", label: "Output Tokens" },
+      { key: "cost", label: "Cost (USD)" },
+    ];
+    const csv = toCSV(rows, columns);
+    downloadCSV(csv, `billing-${usage.yearMonth}`);
+  }
+
+  function exportBillingJSON() {
+    if (!usage) return;
+    downloadJSON({
+      yearMonth: usage.yearMonth,
+      plan: subscription.plan,
+      summary: {
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
+        totalCost: usage.totalCost,
+        requestCount: usage.requestCount,
+        gradingRuns: usage.gradingRuns ?? 0,
+      },
+      agentBreakdown: breakdownRows,
+      history: history.map((h) => ({
+        yearMonth: h.yearMonth,
+        inputTokens: h.inputTokens,
+        outputTokens: h.outputTokens,
+        totalCost: h.totalCost,
+      })),
+    }, `billing-${usage.yearMonth}`);
+  }
+
   const PlanIcon = planIcon[subscription.plan] || Zap;
 
   return (
     <div className="space-y-8">
       {/* Header */}
       <SlideUp>
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <CreditCard className="h-8 w-8" />
-            {t.billing.title}
-          </h1>
-          <p className="text-muted-foreground mt-1">{t.billing.subtitle}</p>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-3">
+              <CreditCard className="h-8 w-8" />
+              {t.billing.title}
+            </h1>
+            <p className="text-muted-foreground mt-1">{t.billing.subtitle}</p>
+          </div>
+
+          {usage && (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={exportBillingCSV} className="gap-1.5">
+                <Download className="h-3.5 w-3.5" />
+                CSV
+              </Button>
+              <Button variant="outline" size="sm" onClick={exportBillingJSON} className="gap-1.5">
+                <Download className="h-3.5 w-3.5" />
+                JSON
+              </Button>
+            </div>
+          )}
         </div>
       </SlideUp>
 
@@ -377,7 +474,7 @@ export default function BillingPage() {
         </>
       )}
 
-      {/* Token Pricing Info */}
+      {/* Token Pricing Info — Per-Model Detail */}
       <FadeIn delay={0.4}>
         <Card>
           <CardHeader>
@@ -386,34 +483,47 @@ export default function BillingPage() {
               {t.billing.costEstimate}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">{t.billing.usageCommission}</p>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {providerPricing.map((provider) => (
-                <div key={provider.name} className="rounded-lg border p-3 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm font-semibold ${provider.color}`}>{provider.name}</span>
-                    {provider.input === 0 && provider.output === 0 && (
-                      <Badge variant="secondary" className="text-xs">Free</Badge>
-                    )}
-                  </div>
-                  {provider.input > 0 || provider.output > 0 ? (
-                    <div className="space-y-1 text-xs text-muted-foreground">
-                      <p>
-                        <span className="font-mono font-medium text-foreground">${provider.input.toFixed(2)}</span>{" "}
-                        {t.billing.perMillionInput}
-                      </p>
-                      <p>
-                        <span className="font-mono font-medium text-foreground">${provider.output.toFixed(2)}</span>{" "}
-                        {t.billing.perMillionOutput}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">Local inference — no token costs</p>
+          <CardContent className="space-y-6">
+            <p className="text-sm text-muted-foreground">{t.billing.usageCommission}</p>
+
+            {modelsByProvider.map((group) => (
+              <div key={group.provider}>
+                <h3 className={`text-sm font-semibold mb-2 ${group.color}`}>
+                  {group.provider}
+                  {group.models[0]?.input === 0 && group.models[0]?.output === 0 && (
+                    <Badge variant="secondary" className="text-xs ml-2">Free</Badge>
                   )}
-                </div>
-              ))}
-            </div>
+                </h3>
+                {group.models[0]?.input === 0 && group.models[0]?.output === 0 ? (
+                  <p className="text-xs text-muted-foreground">Local inference — no token costs</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b text-muted-foreground">
+                          <th className="pb-1.5 text-left font-medium">Model</th>
+                          <th className="pb-1.5 text-right font-medium">{t.billing.perMillionInput}</th>
+                          <th className="pb-1.5 text-right font-medium">{t.billing.perMillionOutput}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {group.models.map((model) => (
+                          <tr key={model.name} className="border-b last:border-0">
+                            <td className="py-1.5 font-medium">{model.name}</td>
+                            <td className="py-1.5 text-right tabular-nums font-mono">
+                              ${model.input < 0.1 ? model.input.toFixed(3) : model.input.toFixed(2)}
+                            </td>
+                            <td className="py-1.5 text-right tabular-nums font-mono">
+                              ${model.output < 0.1 ? model.output.toFixed(3) : model.output.toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ))}
           </CardContent>
         </Card>
       </FadeIn>

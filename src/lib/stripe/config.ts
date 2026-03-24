@@ -1,17 +1,19 @@
 import type { PlanTier } from "@/lib/billing/pricing";
 
 // ---------------------------------------------------------------------------
-// Kopern commission: 20% markup on LLM provider costs
-// Provider avg cost: ~$3 input / ~$15 output per 1M tokens
-// Kopern price:      ~$3.60 input / ~$18 output → rounded to $4 / $20
+// Kopern commission: 17% markup on LLM provider costs
+// Covers: agentic tool execution & sandboxing, session observability & tracing,
+// grading engine (6 criteria), Optimization Lab (6 modes), multi-provider
+// abstraction, security (HMAC, CORS, API key encryption), connectors
+// (Widget/Webhook/Slack/MCP), CSV/JSON data export, real-time Firestore sync
 // ---------------------------------------------------------------------------
-export const KOPERN_COMMISSION_RATE = 0.20; // 20%
+export const KOPERN_COMMISSION_RATE = 0.17; // 17%
 
-// Kopern's billed price per 1M tokens (provider cost + 20% commission)
+// Kopern's billed price per 1M tokens (provider cost + 17% commission)
 export const KOPERN_USAGE_PRICING = {
-  inputTokensPer1M: 4.0,   // ~$3.33 provider avg + $0.67 commission
-  outputTokensPer1M: 20.0, // ~$16.67 provider avg + $3.33 commission
-  gradingRunPrice: 0.15,   // ~$0.12 cost + $0.03 commission
+  inputTokensPer1M: 3.90,   // ~$3.33 provider avg + $0.57 commission
+  outputTokensPer1M: 19.50, // ~$16.67 provider avg + $2.83 commission
+  gradingRunPrice: 0.14,    // ~$0.12 cost + $0.02 commission
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -26,7 +28,6 @@ export const STRIPE_PRICES = {
   usage_input_tokens: process.env.STRIPE_PRICE_USAGE_INPUT!,
   usage_output_tokens: process.env.STRIPE_PRICE_USAGE_OUTPUT!,
   usage_grading_runs: process.env.STRIPE_PRICE_USAGE_GRADING!,
-  usage_autoresearch: process.env.STRIPE_PRICE_USAGE_AUTORESEARCH!,
 } as const;
 
 // ---------------------------------------------------------------------------

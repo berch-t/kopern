@@ -16,6 +16,7 @@ import { getBugTools, executeBugTool, isBugTool } from "@/lib/tools/bug-tools";
 import { runExtensions } from "@/lib/extensions/extension-runner";
 import { fireOutboundWebhooks } from "@/lib/connectors/webhook";
 import type { ExtensionEventType } from "@/lib/firebase/firestore";
+import { truncateToolResults } from "@/lib/context/truncate";
 
 const MAX_TOOL_ITERATIONS = 10;
 
@@ -194,12 +195,15 @@ export async function runAgentWithTools(
     return new Promise((resolve, reject) => {
       const pendingToolCalls: ToolCallResult[] = [];
 
+      // Truncate verbose tool results before sending to LLM
+      const truncatedMessages = truncateToolResults(messages);
+
       streamLLM(
         {
           provider: config.provider,
           model: config.model,
           systemPrompt: config.systemPrompt,
-          messages,
+          messages: truncatedMessages,
           tools: tools.length > 0 ? tools : undefined,
           apiKey: config.apiKey,
         },
@@ -262,7 +266,9 @@ export async function runAgentWithTools(
                     config.agentId,
                     config.provider,
                     inputTokens,
-                    outputTokens
+                    outputTokens,
+                    0,
+                    config.model
                   ).catch((err) => logAppError({ code: "USAGE_TRACK_FAILED", message: (err as Error).message, source: "billing", userId: config.userId, agentId: config.agentId }));
 
                   // Fire outbound webhooks (fire-and-forget)

@@ -5,20 +5,22 @@ import { useDictionary } from "@/providers/LocaleProvider";
 import { useLocale } from "@/providers/LocaleProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { useDocument } from "@/hooks/useFirestore";
-import { agentDoc, widgetConfigDoc, slackConnectionDoc, type AgentDoc, type WidgetConfigDoc, type SlackConnectionDoc } from "@/lib/firebase/firestore";
+import { agentDoc, widgetConfigDoc, slackConnectionDoc, telegramConnectorDoc, whatsappConnectorDoc, type AgentDoc, type WidgetConfigDoc, type SlackConnectionDoc, type TelegramConnectorDoc, type WhatsAppConnectorDoc } from "@/lib/firebase/firestore";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { ConnectorCard } from "@/components/connectors/ConnectorCard";
 import { WidgetConfigurator } from "@/components/connectors/WidgetConfigurator";
 import { WebhookManager } from "@/components/connectors/WebhookManager";
 import { SlackConnector } from "@/components/connectors/SlackConnector";
+import { TelegramConnector } from "@/components/connectors/TelegramConnector";
+import { WhatsAppConnector } from "@/components/connectors/WhatsAppConnector";
 import { MarkdownRenderer } from "@/components/shared/MarkdownRenderer";
 import { connectorTutorials } from "@/data/connector-tutorials";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Webhook, MessageCircle, X } from "lucide-react";
+import { MessageSquare, Webhook, MessageCircle, Send, Phone, X } from "lucide-react";
 
-type ActivePanel = "widget" | "webhooks" | "slack" | null;
+type ActivePanel = "widget" | "webhooks" | "slack" | "telegram" | "whatsapp" | null;
 type ActiveTutorial = "widget" | "webhooks" | "slack" | null;
 
 export default function ConnectorsPage({
@@ -43,6 +45,14 @@ export default function ConnectorsPage({
 
   const { data: slackConnection } = useDocument<SlackConnectionDoc>(
     user ? slackConnectionDoc(user.uid, agentId) : null
+  );
+
+  const { data: telegramConnection } = useDocument<TelegramConnectorDoc>(
+    user ? telegramConnectorDoc(user.uid, agentId) : null
+  );
+
+  const { data: whatsappConnection } = useDocument<WhatsAppConnectorDoc>(
+    user ? whatsappConnectorDoc(user.uid, agentId) : null
   );
 
   if (loading) {
@@ -76,6 +86,24 @@ export default function ConnectorsPage({
   if (activePanel === "slack") {
     return (
       <SlackConnector
+        agentId={agentId}
+        onBack={() => setActivePanel(null)}
+      />
+    );
+  }
+
+  if (activePanel === "telegram") {
+    return (
+      <TelegramConnector
+        agentId={agentId}
+        onBack={() => setActivePanel(null)}
+      />
+    );
+  }
+
+  if (activePanel === "whatsapp") {
+    return (
+      <WhatsAppConnector
         agentId={agentId}
         onBack={() => setActivePanel(null)}
       />
@@ -140,6 +168,30 @@ export default function ConnectorsPage({
             tutorialLabel={t.connectors.tutorial}
             tutorialActive={activeTutorial === "slack"}
             onTutorial={() => toggleTutorial("slack")}
+          />
+
+          <ConnectorCard
+            icon={Send}
+            title={t.connectors.telegram.title}
+            description={t.connectors.telegram.description}
+            enabled={telegramConnection?.enabled}
+            statusLabel={telegramConnection?.enabled ? t.connectors.telegram.connected : undefined}
+            accent="text-sky-500"
+            bg="bg-sky-500/10"
+            actionLabel={telegramConnection ? t.connectors.telegram.disconnect : t.connectors.telegram.connect}
+            onAction={() => setActivePanel("telegram")}
+          />
+
+          <ConnectorCard
+            icon={Phone}
+            title={t.connectors.whatsapp.title}
+            description={t.connectors.whatsapp.description}
+            enabled={whatsappConnection?.enabled}
+            statusLabel={whatsappConnection?.enabled ? t.connectors.whatsapp.connected : undefined}
+            accent="text-green-500"
+            bg="bg-green-500/10"
+            actionLabel={whatsappConnection ? t.connectors.whatsapp.disconnect : t.connectors.whatsapp.connect}
+            onAction={() => setActivePanel("whatsapp")}
           />
         </div>
       </FadeIn>

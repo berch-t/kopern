@@ -8,6 +8,7 @@ import { locales, type Locale } from "@/i18n/config";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { OrganizationJsonLd, SoftwareApplicationJsonLd, FAQJsonLd } from "@/components/seo/JsonLd";
+import { CookieConsent } from "@/components/shared/CookieConsent";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopern.vercel.app";
 
@@ -80,6 +81,7 @@ export default async function LocaleLayout({
           <TooltipProvider>
             <LocaleProvider locale={locale as Locale} dictionary={dictionary}>
               {children}
+              <CookieConsent />
             </LocaleProvider>
           </TooltipProvider>
         </ThemeProvider>

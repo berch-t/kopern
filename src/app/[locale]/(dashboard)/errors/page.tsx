@@ -21,7 +21,9 @@ import {
   User,
   Bot,
   Filter,
+  Download,
 } from "lucide-react";
+import { toCSV, downloadCSV, downloadJSON } from "@/lib/utils/csv-export";
 
 const ADMIN_UIDS = (process.env.NEXT_PUBLIC_ADMIN_UID ?? "").split(",").filter(Boolean);
 
@@ -133,17 +135,68 @@ export default function ErrorLogsPage() {
     <SlideUp>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-2xl font-bold">Error Logs</h1>
             <p className="text-sm text-muted-foreground mt-1">
               {errors.length} errors logged
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={fetchErrors} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            {filtered.length > 0 && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const rows = filtered.map((e) => ({
+                      id: e.id,
+                      code: e.code,
+                      message: e.message,
+                      source: e.source,
+                      severity: e.severity,
+                      userId: e.userId || "",
+                      agentId: e.agentId || "",
+                      userNotified: e.userNotified ? "yes" : "no",
+                      createdAt: e.createdAt?.toDate ? e.createdAt.toDate().toISOString() : "",
+                    }));
+                    downloadCSV(toCSV(rows), `error-logs-${new Date().toISOString().slice(0, 10)}`);
+                  }}
+                  className="gap-1.5"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  CSV
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const data = filtered.map((e) => ({
+                      id: e.id,
+                      code: e.code,
+                      message: e.message,
+                      source: e.source,
+                      severity: e.severity,
+                      userId: e.userId,
+                      agentId: e.agentId,
+                      userNotified: e.userNotified,
+                      metadata: e.metadata,
+                      createdAt: e.createdAt?.toDate ? e.createdAt.toDate().toISOString() : null,
+                    }));
+                    downloadJSON(data, `error-logs-${new Date().toISOString().slice(0, 10)}`);
+                  }}
+                  className="gap-1.5"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  JSON
+                </Button>
+              </>
+            )}
+            <Button variant="outline" size="sm" onClick={fetchErrors} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* KPI Cards */}

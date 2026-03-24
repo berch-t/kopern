@@ -154,7 +154,7 @@ export async function trackAutoresearchUsage(
   });
 
   // Report to Stripe (fire-and-forget)
-  reportUsageToStripe(userId, inputTokens, outputTokens, 0, iterationsCount).catch((err) => {
+  reportUsageToStripe(userId, inputTokens, outputTokens, 0).catch((err) => {
     console.warn("Stripe autoresearch usage report failed:", err);
   });
 }
