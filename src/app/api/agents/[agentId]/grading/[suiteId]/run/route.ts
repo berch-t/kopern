@@ -140,6 +140,7 @@ export async function POST(
             agentId,
             connectedRepos,
             apiKey,
+            skipOutboundWebhooks: true,
           },
           {
             onToken: (text) => {

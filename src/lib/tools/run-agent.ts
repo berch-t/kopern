@@ -40,6 +40,8 @@ export interface AgentRunConfig {
   apiKey?: string;
   /** Tool approval policy — defaults to "auto" (no approval needed) */
   toolApprovalPolicy?: ApprovalPolicy;
+  /** Skip outbound webhooks — MUST be true for inbound webhook, Telegram, WhatsApp, Slack routes (anti-loop) */
+  skipOutboundWebhooks?: boolean;
 }
 
 export interface AgentRunCallbacks {
@@ -308,13 +310,15 @@ export async function runAgentWithTools(
                     config.model
                   ).catch((err) => logAppError({ code: "USAGE_TRACK_FAILED", message: (err as Error).message, source: "billing", userId: config.userId, agentId: config.agentId }));
 
-                  // Fire outbound webhooks (fire-and-forget)
-                  fireOutboundWebhooks(
-                    config.userId,
-                    config.agentId,
-                    "message_sent",
-                    { inputTokens, outputTokens, toolCallCount: totalToolCalls }
-                  ).catch((err) => logAppError({ code: "OUTBOUND_WEBHOOK_FAILED", message: (err as Error).message, source: "webhook_outbound", userId: config.userId, agentId: config.agentId }));
+                  // Fire outbound webhooks (fire-and-forget) — SKIP for inbound/connector routes (anti-loop)
+                  if (!config.skipOutboundWebhooks) {
+                    fireOutboundWebhooks(
+                      config.userId,
+                      config.agentId,
+                      "message_sent",
+                      { inputTokens, outputTokens, toolCallCount: totalToolCalls }
+                    ).catch((err) => logAppError({ code: "OUTBOUND_WEBHOOK_FAILED", message: (err as Error).message, source: "webhook_outbound", userId: config.userId, agentId: config.agentId }));
+                  }
                 }
 
                 const metrics: AgentRunMetrics = {

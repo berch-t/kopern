@@ -145,6 +145,7 @@ export async function runTournament(
               userId,
               agentId,
               apiKey,
+              skipOutboundWebhooks: true,
             },
             {
               onToken: (text) => collector.addToken(text),

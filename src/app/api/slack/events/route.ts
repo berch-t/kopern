@@ -346,6 +346,7 @@ async function processSlackEvent(body: SlackEventPayload): Promise<void> {
         agentId,
         connectedRepos: (agentData.connectedRepos as string[]) || [],
         apiKey,
+        skipOutboundWebhooks: true, // CRITICAL: anti-loop protection
       },
       {
         onToken: (text: string) => {

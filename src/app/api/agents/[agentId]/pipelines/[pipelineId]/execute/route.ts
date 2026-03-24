@@ -118,6 +118,7 @@ export async function POST(
               userId,
               agentId: step.agentId,
               apiKey,
+              skipOutboundWebhooks: true,
             },
             {
               onToken: (text) => {

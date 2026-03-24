@@ -312,6 +312,7 @@ async function evaluateCandidate(
         userId,
         agentId,
         apiKey,
+        skipOutboundWebhooks: true,
       },
       {
         onToken: (text) => collector.addToken(text),

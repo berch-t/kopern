@@ -163,6 +163,7 @@ You MUST maintain a task list for this session. Before executing any action:
           connectedRepos,
           apiKey,
           toolApprovalPolicy,
+          skipOutboundWebhooks: isInternalTrigger,
         },
         {
           onToken: (text) => {

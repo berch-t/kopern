@@ -168,6 +168,7 @@ async function executeChat(
           agentId,
           connectedRepos: (agent.connectedRepos as string[]) || [],
           apiKey,
+          skipOutboundWebhooks: true, // CRITICAL: anti-loop protection
         },
         {
           onToken: (text) => { fullResponse += text; },

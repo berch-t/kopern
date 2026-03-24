@@ -183,6 +183,7 @@ export async function POST(
           agentId,
           connectedRepos: (agent.connectedRepos as string[]) || [],
           apiKey,
+          skipOutboundWebhooks: true, // CRITICAL: anti-loop protection
         },
         {
           onToken: (text) => {

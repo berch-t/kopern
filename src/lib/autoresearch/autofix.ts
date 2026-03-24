@@ -179,6 +179,7 @@ export async function runAutoFix(
           userId,
           agentId,
           apiKey,
+          skipOutboundWebhooks: true,
         },
         {
           onToken: (text) => collector.addToken(text),

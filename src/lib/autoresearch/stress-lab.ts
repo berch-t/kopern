@@ -116,6 +116,7 @@ export async function runStressLab(
           userId,
           agentId,
           apiKey,
+          skipOutboundWebhooks: true,
         },
         {
           onToken: (text) => collector.addToken(text),

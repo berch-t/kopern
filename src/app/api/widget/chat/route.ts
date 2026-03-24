@@ -226,6 +226,7 @@ export async function POST(request: NextRequest) {
           agentId,
           connectedRepos: agentData.connectedRepos || [],
           apiKey,
+          skipOutboundWebhooks: true, // CRITICAL: anti-loop protection
         },
         {
           onToken: (text) => {

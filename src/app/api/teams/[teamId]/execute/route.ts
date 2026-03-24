@@ -87,6 +87,7 @@ export async function POST(
             userId,
             agentId: agent.agentId,
             apiKey,
+            skipOutboundWebhooks: true,
           },
           {
             onToken: (text) => {

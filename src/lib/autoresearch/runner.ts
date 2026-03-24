@@ -323,6 +323,7 @@ async function runGradingSuiteOnPrompt(
         userId,
         agentId,
         apiKey,
+        skipOutboundWebhooks: true,
       },
       {
         onToken: (text) => collector.addToken(text),

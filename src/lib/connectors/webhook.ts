@@ -79,6 +79,26 @@ export async function sendWebhook(
   }
 }
 
+// ─── Self-call Prevention ────────────────────────────────────────────
+
+const BLOCKED_DOMAINS = [
+  "kopern.vercel.app",
+  "kopern.com",
+  "www.kopern.com",
+  "localhost",
+  "127.0.0.1",
+];
+
+function isSelfCallUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    return BLOCKED_DOMAINS.some((d) => host === d || host.endsWith(`.${d}`));
+  } catch {
+    return false;
+  }
+}
+
 // ─── Fire Outbound Webhooks ──────────────────────────────────────────
 
 export async function fireOutboundWebhooks(
@@ -100,7 +120,8 @@ export async function fireOutboundWebhooks(
         Array.isArray(w.events) &&
         w.events.includes(event) &&
         typeof w.targetUrl === "string" &&
-        w.targetUrl.length > 0
+        w.targetUrl.length > 0 &&
+        !isSelfCallUrl(w.targetUrl)
     );
 
   const payload = {
