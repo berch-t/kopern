@@ -11,6 +11,7 @@ import {
   type TillDoneConfig,
   type AgentBranding,
   type ToolOverrideConfig,
+  type ToolApprovalPolicy,
 } from "@/lib/firebase/firestore";
 import { updateAgent } from "@/actions/agents";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ModelSelector } from "@/components/agents/ModelSelector";
 import { SystemPromptEditor } from "@/components/agents/SystemPromptEditor";
 import { PurposeGateConfig as PurposeGateEditor } from "@/components/agents/PurposeGateConfig";
@@ -51,6 +53,7 @@ export default function EditAgentPage({
   const [tillDone, setTillDone] = useState<TillDoneConfig | null>(null);
   const [branding, setBranding] = useState<AgentBranding | null>(null);
   const [toolOverrides, setToolOverrides] = useState<ToolOverrideConfig[]>([]);
+  const [toolApprovalPolicy, setToolApprovalPolicy] = useState<ToolApprovalPolicy>("auto");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -65,6 +68,7 @@ export default function EditAgentPage({
       setTillDone(agent.tillDone ?? null);
       setBranding(agent.branding ?? null);
       setToolOverrides(agent.toolOverrides ?? []);
+      setToolApprovalPolicy(agent.toolApprovalPolicy ?? "auto");
     }
   }, [agent]);
 
@@ -91,6 +95,7 @@ export default function EditAgentPage({
         tillDone,
         branding,
         toolOverrides,
+        toolApprovalPolicy,
       });
       toast.success("Agent updated");
       router.push(`/agents/${agentId}`);
@@ -144,6 +149,24 @@ export default function EditAgentPage({
 
         {/* Tool Overrides */}
         <ToolOverrideEditor overrides={toolOverrides} onChange={setToolOverrides} />
+
+        {/* Tool Approval Policy */}
+        <div className="space-y-2">
+          <Label>{t.approval?.policyLabel ?? "Tool Approval Policy"}</Label>
+          <Select value={toolApprovalPolicy} onValueChange={(v) => setToolApprovalPolicy(v as ToolApprovalPolicy)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">{t.approval?.policyAuto ?? "Automatic (no confirmation)"}</SelectItem>
+              <SelectItem value="confirm_destructive">{t.approval?.policyDestructive ?? "Confirm destructive actions"}</SelectItem>
+              <SelectItem value="confirm_all">{t.approval?.policyAll ?? "Confirm all tool calls"}</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            {t.approval?.policyDescription ?? "Controls whether tool calls require human approval before execution."}
+          </p>
+        </div>
 
         <Separator />
 

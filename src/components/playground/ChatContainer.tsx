@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Square, Bot, ArrowDownToLine, ArrowUpFromLine, DollarSign, Wrench, ExternalLink } from "lucide-react";
 import { MarkdownContent } from "./MarkdownContent";
+import { ApprovalDialog } from "./ApprovalDialog";
 import { LocalizedLink } from "@/components/LocalizedLink";
 
 interface ChatContainerProps {
@@ -29,6 +30,8 @@ export function ChatContainer({ agentId, agentConfig }: ChatContainerProps) {
     messages,
     currentAssistantContent,
     currentToolCalls,
+    pendingApproval,
+    respondToApproval,
     isStreaming,
     sendMessage,
     stop,
@@ -136,6 +139,11 @@ export function ChatContainer({ agentId, agentConfig }: ChatContainerProps) {
           </div>
         )}
       </div>
+
+      {/* Approval dialog */}
+      {pendingApproval && (
+        <ApprovalDialog approval={pendingApproval} onRespond={respondToApproval} />
+      )}
 
       {/* Input area */}
       <div className="border-t p-4">

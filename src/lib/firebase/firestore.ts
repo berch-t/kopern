@@ -55,6 +55,8 @@ export interface ToolOverrideConfig {
   enabled: boolean;
 }
 
+export type ToolApprovalPolicy = "auto" | "confirm_destructive" | "confirm_all";
+
 export interface AgentDoc {
   name: string;
   description: string;
@@ -72,6 +74,7 @@ export interface AgentDoc {
   tillDone: TillDoneConfig | null;
   branding: AgentBranding | null;
   toolOverrides: ToolOverrideConfig[];
+  toolApprovalPolicy?: ToolApprovalPolicy;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -90,6 +93,7 @@ export interface ToolDoc {
   description: string;
   parametersSchema: string;
   executeCode: string;
+  destructive?: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

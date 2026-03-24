@@ -51,6 +51,8 @@ import {
   Trophy,
   Dna,
   ArrowDown,
+  Send,
+  Phone,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BugReportDialog } from "@/components/feedback/BugReportDialog";
@@ -839,6 +841,8 @@ export default function LandingPage() {
                     <a href="https://www.notion.so" target="_blank" rel="noopener noreferrer" className="shrink-0"><svg className="h-6 w-6 text-muted-foreground/70 hover:text-primary transition-colors" viewBox="0 0 24 24" fill="currentColor" aria-label="Notion"><path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"/></svg></a>
                     <a href="https://linear.app" target="_blank" rel="noopener noreferrer" className="shrink-0"><svg className="h-6 w-6 text-muted-foreground/70 hover:text-primary transition-colors" viewBox="0 0 24 24" fill="currentColor" aria-label="Linear"><path d="M2.886 4.18A11.982 11.982 0 0 1 11.99 0C18.624 0 24 5.376 24 12.009c0 3.64-1.62 6.903-4.18 9.105L2.887 4.18ZM1.817 5.626l16.556 16.556c-.524.33-1.075.62-1.65.866L.951 7.277c.247-.575.537-1.126.866-1.65ZM.322 9.163l14.515 14.515c-.71.172-1.443.282-2.195.322L0 11.358a12 12 0 0 1 .322-2.195Zm-.17 4.862 9.823 9.824a12.02 12.02 0 0 1-9.824-9.824Z"/></svg></a>
                     <a href="https://vercel.com" target="_blank" rel="noopener noreferrer" className="shrink-0"><svg className="h-5 w-5 text-muted-foreground/70 hover:text-primary transition-colors" viewBox="0 0 24 24" fill="currentColor" aria-label="Vercel"><path d="m12 1.608 12 20.784H0Z"/></svg></a>
+                    <a href="https://telegram.org" target="_blank" rel="noopener noreferrer" className="shrink-0"><svg className="h-6 w-6 text-muted-foreground/70 hover:text-primary transition-colors" viewBox="0 0 24 24" fill="currentColor" aria-label="Telegram"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></a>
+                    <a href="https://www.whatsapp.com" target="_blank" rel="noopener noreferrer" className="shrink-0"><svg className="h-6 w-6 text-muted-foreground/70 hover:text-primary transition-colors" viewBox="0 0 24 24" fill="currentColor" aria-label="WhatsApp"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg></a>
                   </div>
                 ))}
               </div>
@@ -906,7 +910,7 @@ export default function LandingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="grid gap-4 grid-cols-2 lg:grid-cols-4 mt-4"
+            className="grid gap-4 grid-cols-2 lg:grid-cols-3 mt-4"
           >
             <BorderGlow className="bg-card" glowRadius={24}>
               <div className="p-4 space-y-2">
@@ -945,6 +949,26 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-sm font-semibold">{t.integrations.workflow.title}</h3>
                 <p className="text-xs text-muted-foreground">{t.integrations.workflow.description}</p>
+              </div>
+            </BorderGlow>
+
+            <BorderGlow className="bg-card" glowRadius={24}>
+              <div className="p-4 space-y-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-400/10">
+                  <Send className="h-4 w-4 text-sky-400" />
+                </div>
+                <h3 className="text-sm font-semibold">{t.deploySection.telegram.title}</h3>
+                <p className="text-xs text-muted-foreground">{t.deploySection.telegram.description}</p>
+              </div>
+            </BorderGlow>
+
+            <BorderGlow className="bg-card" glowRadius={24}>
+              <div className="p-4 space-y-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/10">
+                  <Phone className="h-4 w-4 text-green-500" />
+                </div>
+                <h3 className="text-sm font-semibold">{t.deploySection.whatsapp.title}</h3>
+                <p className="text-xs text-muted-foreground">{t.deploySection.whatsapp.description}</p>
               </div>
             </BorderGlow>
           </motion.div>

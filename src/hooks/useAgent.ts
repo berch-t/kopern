@@ -18,6 +18,14 @@ export interface ToolCallInfo {
   isError?: boolean;
 }
 
+export interface PendingApproval {
+  toolCallId: string;
+  toolName: string;
+  args: Record<string, unknown>;
+  isDestructive: boolean;
+  timestamp: number;
+}
+
 export interface SessionMetrics {
   inputTokens: number;
   outputTokens: number;
@@ -39,6 +47,7 @@ export function useAgent(agentId: string, agentConfig: AgentPlaygroundConfig | n
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentAssistantContent, setCurrentAssistantContent] = useState("");
   const [currentToolCalls, setCurrentToolCalls] = useState<ToolCallInfo[]>([]);
+  const [pendingApproval, setPendingApproval] = useState<PendingApproval | null>(null);
   const [sessionMetrics, setSessionMetrics] = useState<SessionMetrics | null>(null);
   const [cumulativeMetrics, setCumulativeMetrics] = useState<SessionMetrics>({
     inputTokens: 0,
@@ -111,6 +120,11 @@ export function useAgent(agentId: string, agentConfig: AgentPlaygroundConfig | n
           setCurrentToolCalls([...toolCallsRef.current]);
           break;
         }
+        case "approval_request": {
+          const approvalData = data as PendingApproval;
+          setPendingApproval({ ...approvalData, timestamp: Date.now() });
+          break;
+        }
         case "done": {
           const doneData = data as { metrics?: SessionMetrics };
 
@@ -162,6 +176,23 @@ export function useAgent(agentId: string, agentConfig: AgentPlaygroundConfig | n
     },
   });
 
+  const respondToApproval = useCallback(
+    async (decision: "approved" | "denied") => {
+      if (!pendingApproval) return;
+      try {
+        await fetch(`/api/agents/${agentId}/approve`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ toolCallId: pendingApproval.toolCallId, decision }),
+        });
+      } catch {
+        // If the POST fails, the gate will timeout and auto-deny
+      }
+      setPendingApproval(null);
+    },
+    [agentId, pendingApproval]
+  );
+
   const sendMessage = useCallback(
     (content: string) => {
       if (!agentConfig) return;
@@ -205,6 +236,8 @@ export function useAgent(agentId: string, agentConfig: AgentPlaygroundConfig | n
     messages,
     currentAssistantContent,
     currentToolCalls,
+    pendingApproval,
+    respondToApproval,
     isStreaming,
     sendMessage,
     stop,

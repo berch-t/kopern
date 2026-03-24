@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { MessageSquare, Webhook, MessageCircle, Send, Phone, X } from "lucide-react";
 
 type ActivePanel = "widget" | "webhooks" | "slack" | "telegram" | "whatsapp" | null;
-type ActiveTutorial = "widget" | "webhooks" | "slack" | null;
+type ActiveTutorial = "widget" | "webhooks" | "slack" | "telegram" | "whatsapp" | null;
 
 export default function ConnectorsPage({
   params,
@@ -180,6 +180,9 @@ export default function ConnectorsPage({
             bg="bg-sky-500/10"
             actionLabel={telegramConnection ? t.connectors.telegram.disconnect : t.connectors.telegram.connect}
             onAction={() => setActivePanel("telegram")}
+            tutorialLabel={t.connectors.tutorial}
+            tutorialActive={activeTutorial === "telegram"}
+            onTutorial={() => toggleTutorial("telegram")}
           />
 
           <ConnectorCard
@@ -192,6 +195,9 @@ export default function ConnectorsPage({
             bg="bg-green-500/10"
             actionLabel={whatsappConnection ? t.connectors.whatsapp.disconnect : t.connectors.whatsapp.connect}
             onAction={() => setActivePanel("whatsapp")}
+            tutorialLabel={t.connectors.tutorial}
+            tutorialActive={activeTutorial === "whatsapp"}
+            onTutorial={() => toggleTutorial("whatsapp")}
           />
         </div>
       </FadeIn>
@@ -206,10 +212,14 @@ export default function ConnectorsPage({
                   {activeTutorial === "widget" && <MessageSquare className="h-5 w-5 text-blue-500" />}
                   {activeTutorial === "webhooks" && <Webhook className="h-5 w-5 text-amber-500" />}
                   {activeTutorial === "slack" && <MessageCircle className="h-5 w-5 text-purple-500" />}
+                  {activeTutorial === "telegram" && <Send className="h-5 w-5 text-sky-500" />}
+                  {activeTutorial === "whatsapp" && <Phone className="h-5 w-5 text-green-500" />}
                   <h2 className="text-lg font-semibold">
                     {t.connectors.tutorial} — {
                       activeTutorial === "widget" ? t.connectors.widget.title :
                       activeTutorial === "webhooks" ? t.connectors.webhooks.title :
+                      activeTutorial === "telegram" ? t.connectors.telegram.title :
+                      activeTutorial === "whatsapp" ? t.connectors.whatsapp.title :
                       t.connectors.slack.title
                     }
                   </h2>

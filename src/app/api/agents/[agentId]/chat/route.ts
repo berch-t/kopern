@@ -7,6 +7,9 @@ import { runAgentWithTools } from "@/lib/tools/run-agent";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { logAppError } from "@/lib/errors/logger";
 import { resolveProviderKey } from "@/lib/llm/resolve-key";
+import { registerApprovalGate } from "@/lib/tools/approval-gate";
+import type { ApprovalRequest } from "@/lib/tools/approval";
+import type { ToolApprovalPolicy } from "@/lib/firebase/firestore";
 
 interface ChatRequestBody {
   message: string;
@@ -127,6 +130,17 @@ You MUST maintain a task list for this session. Before executing any action:
       // Resolve API key from user Firestore settings
       const apiKey = userId ? await resolveProviderKey(userId, agentConfig.modelProvider) : undefined;
 
+      // Load tool approval policy from agent doc
+      let toolApprovalPolicy: ToolApprovalPolicy = "auto";
+      if (userId) {
+        try {
+          const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
+          toolApprovalPolicy = agentSnap.data()?.toolApprovalPolicy || "auto";
+        } catch {
+          // Default to auto
+        }
+      }
+
       // Track events for session history
       let assistantOutput = "";
       const toolEvents: { type: string; data: Record<string, unknown> }[] = [];
@@ -148,6 +162,7 @@ You MUST maintain a task list for this session. Before executing any action:
           agentId,
           connectedRepos,
           apiKey,
+          toolApprovalPolicy,
         },
         {
           onToken: (text) => {
@@ -161,6 +176,10 @@ You MUST maintain a task list for this session. Before executing any action:
           onToolEnd: (result) => {
             toolEvents.push({ type: "tool_result", data: { name: result.name, result: result.result, isError: result.isError } });
             send("tool_end", { name: result.name, result: result.result, isError: result.isError });
+          },
+          onApprovalRequest: async (request: ApprovalRequest) => {
+            send("approval_request", request);
+            return registerApprovalGate(request.toolCallId);
           },
           onDone: (metrics) => {
             const cost = calculateTokenCost(

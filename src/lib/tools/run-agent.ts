@@ -17,6 +17,14 @@ import { runExtensions } from "@/lib/extensions/extension-runner";
 import { fireOutboundWebhooks } from "@/lib/connectors/webhook";
 import type { ExtensionEventType } from "@/lib/firebase/firestore";
 import { truncateToolResults } from "@/lib/context/truncate";
+import {
+  requiresApproval,
+  isDestructiveBuiltin,
+  createApprovalGate,
+  type ApprovalPolicy,
+  type ApprovalDecision,
+  type ApprovalRequest,
+} from "@/lib/tools/approval";
 
 const MAX_TOOL_ITERATIONS = 10;
 
@@ -30,12 +38,15 @@ export interface AgentRunConfig {
   connectedRepos?: string[];
   /** Override API key (from user Firestore settings). Falls back to process.env if not provided. */
   apiKey?: string;
+  /** Tool approval policy — defaults to "auto" (no approval needed) */
+  toolApprovalPolicy?: ApprovalPolicy;
 }
 
 export interface AgentRunCallbacks {
   onToken: (text: string) => void;
   onToolStart?: (toolCall: { name: string; args: Record<string, unknown> }) => void;
   onToolEnd?: (result: { name: string; result: string; isError: boolean }) => void;
+  onApprovalRequest?: (request: ApprovalRequest) => Promise<ApprovalDecision>;
   onDone: (metrics: AgentRunMetrics) => void;
   onError: (error: Error) => void;
 }
@@ -58,7 +69,9 @@ export async function runAgentWithTools(
 ): Promise<void> {
   const tools: ToolDefinition[] = [];
   const customToolDocs: { name: string; description: string; parametersSchema: string; executeCode: string }[] = [];
+  const destructiveCustomTools = new Set<string>();
   const connectedRepos = [...(config.connectedRepos || [])];
+  const policy = config.toolApprovalPolicy || "auto";
 
   // Load tools from Firestore
   if (config.userId && config.agentId) {
@@ -75,6 +88,9 @@ export async function runAgentWithTools(
             parametersSchema: t.parametersSchema || '{"type":"object","properties":{}}',
             executeCode: t.executeCode,
           });
+          if (t.destructive) {
+            destructiveCustomTools.add(t.name);
+          }
         }
       }
       if (customToolDocs.length > 0) {
@@ -233,6 +249,27 @@ export async function runAgentWithTools(
 
                 const toolResults: ContentBlock[] = [];
                 for (const tc of pendingToolCalls) {
+                  // Tool approval check
+                  const isDestructive = isDestructiveBuiltin(tc.name) || destructiveCustomTools.has(tc.name);
+                  if (policy !== "auto" && requiresApproval(policy, tc.name, isDestructive) && callbacks.onApprovalRequest) {
+                    const decision = await callbacks.onApprovalRequest({
+                      toolCallId: tc.id,
+                      toolName: tc.name,
+                      args: tc.input,
+                      isDestructive,
+                    });
+                    if (decision === "denied") {
+                      toolResults.push({
+                        type: "tool_result",
+                        tool_use_id: tc.id,
+                        content: "Tool execution denied by operator.",
+                        is_error: true,
+                      });
+                      callbacks.onToolEnd?.({ name: tc.name, result: "Tool execution denied by operator.", isError: true });
+                      continue;
+                    }
+                  }
+
                   const result = isBugTool(tc.name)
                     ? await executeBugTool(tc.name, tc.input, config.userId || "")
                     : await executeTool(tc, toolCtx);

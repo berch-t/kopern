@@ -793,8 +793,16 @@
       "description": "Déclenchez votre agent depuis n'importe quel service — Stripe, Jira, Zapier, n8n. Réponses JSON entrantes, notifications d'événements sortantes, sécurité HMAC."
     },
     "slack": {
-      "title": "Bot Slack",
+      "title": "Slack",
       "description": "Votre agent rejoint les conversations Slack. Mentionnez-le dans les channels, envoyez-lui des DM, contexte de thread complet préservé."
+    },
+    "telegram": {
+      "title": "Telegram",
+      "description": "Déployez votre agent en bot Telegram. Conversations privées et groupes, formatage MarkdownV2, configuration instantanée via @BotFather."
+    },
+    "whatsapp": {
+      "title": "WhatsApp",
+      "description": "Atteignez vos clients sur WhatsApp — l'application de messagerie n°1. API Meta Cloud, accusés de lecture, 1000 conversations gratuites/mois."
     },
     "integratesWith": "Intégrations native"
   },
@@ -948,6 +956,20 @@
       "vulnerability": "Vulnérabilité : {detail}",
       "student": "{model} — {quality}% de qualité retenue"
     }
+  },
+  "approval": {
+    "title": "Approbation requise",
+    "destructive": "Action sensible",
+    "toolLabel": "Tool",
+    "approve": "Approuver",
+    "deny": "Refuser",
+    "denied": "Exécution du tool refusée par l'opérateur.",
+    "timeout": "Délai d'approbation expiré — tool refusé.",
+    "policyLabel": "Politique d'approbation des Tools",
+    "policyAuto": "Automatique (pas de confirmation)",
+    "policyDestructive": "Confirmer les actions sensibles",
+    "policyAll": "Confirmer tous les appels de tools",
+    "policyDescription": "Contrôle si les appels de tools nécessitent une approbation humaine avant exécution. L'EU AI Act Art. 14 recommande une supervision humaine pour les opérations sensibles."
   },
   "connectors": {
     "title": "Connecteurs",

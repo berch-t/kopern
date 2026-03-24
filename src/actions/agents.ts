@@ -62,6 +62,7 @@ export async function updateAgent(
       | "tillDone"
       | "branding"
       | "toolOverrides"
+      | "toolApprovalPolicy"
     >
   >
 ) {

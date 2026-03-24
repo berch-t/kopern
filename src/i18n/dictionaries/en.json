@@ -793,8 +793,16 @@
       "description": "Trigger your agent from any service — Stripe, Jira, Zapier, n8n. Inbound JSON responses, outbound event notifications, HMAC security."
     },
     "slack": {
-      "title": "Slack Bot",
+      "title": "Slack",
       "description": "Your agent joins Slack conversations. Mention it in channels, DM it directly, full thread context preserved."
+    },
+    "telegram": {
+      "title": "Telegram",
+      "description": "Deploy your agent as a Telegram bot. Private chats and groups, MarkdownV2 formatting, instant setup via @BotFather."
+    },
+    "whatsapp": {
+      "title": "WhatsApp",
+      "description": "Reach your customers on WhatsApp — the #1 messaging app. Meta Cloud API, read receipts, 1000 free conversations/month."
     },
     "integratesWith": "Integrates natively"
   },
@@ -948,6 +956,20 @@
       "vulnerability": "Vulnerability: {detail}",
       "student": "{model} — {quality}% quality retention"
     }
+  },
+  "approval": {
+    "title": "Tool Approval Required",
+    "destructive": "Destructive",
+    "toolLabel": "Tool",
+    "approve": "Approve",
+    "deny": "Deny",
+    "denied": "Tool execution denied by operator.",
+    "timeout": "Approval timed out — tool denied.",
+    "policyLabel": "Tool Approval Policy",
+    "policyAuto": "Automatic (no confirmation)",
+    "policyDestructive": "Confirm destructive actions",
+    "policyAll": "Confirm all tool calls",
+    "policyDescription": "Controls whether tool calls require human approval before execution. EU AI Act Art. 14 recommends human oversight for sensitive operations."
   },
   "connectors": {
     "title": "Connectors",

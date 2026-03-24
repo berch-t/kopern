@@ -533,6 +533,126 @@ If you need to chain agents, use the outbound webhook of Agent A to trigger the 
 | HMAC mismatch | Ensure the raw body is used for signature computation (not parsed JSON) |
 | Outbound not firing | Check that the webhook is enabled and the event type matches |
 `,
+
+    telegram: `## Connect Your Agent to Telegram
+
+Deploy your Kopern agent as a Telegram bot. Users can message it directly or add it to groups.
+
+---
+
+### Step 1 — Create a Bot via @BotFather
+
+1. Open Telegram and search for **@BotFather**
+2. Send \`/newbot\`
+3. Choose a name (e.g. "My Company Assistant")
+4. Choose a username (must end with "bot", e.g. "mycompany_kopern_bot")
+5. BotFather gives you a **bot token** — copy it
+
+---
+
+### Step 2 — Connect in Kopern
+
+1. Go to your agent's **Connectors** page
+2. Click the **Telegram Bot** card
+3. Paste the bot token from BotFather
+4. Click **Connect Bot**
+5. Kopern automatically registers the webhook with Telegram
+
+---
+
+### Step 3 — Test
+
+1. Open Telegram and search for your bot's username
+2. Send a message — your agent should respond within a few seconds
+3. The bot also works in group chats (add it and mention it)
+
+---
+
+### How It Works
+
+- Telegram sends messages to Kopern via webhook
+- Kopern runs your agent (system prompt + tools + skills)
+- The response is sent back to the Telegram chat
+- Sessions and billing are tracked automatically
+
+---
+
+### Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Bot doesn't respond | Verify the bot token is correct and the bot is connected in Kopern |
+| "Unauthorized" errors | The bot token may have been revoked — regenerate it via @BotFather |
+| Long messages cut off | Telegram has a 4096 character limit — Kopern automatically splits long messages |
+| Bot doesn't work in groups | Make sure the bot has been added to the group and privacy mode is disabled in BotFather settings |
+`,
+
+    whatsapp: `## Connect Your Agent to WhatsApp
+
+Deploy your Kopern agent on WhatsApp via the Meta Business API. The most popular messaging channel for businesses.
+
+---
+
+### Prerequisites
+
+- A [Meta Business account](https://business.facebook.com)
+- A Meta App with WhatsApp Business API enabled
+- A verified phone number (Meta provides a free test number)
+
+---
+
+### Step 1 — Create a Meta App
+
+1. Go to [developers.facebook.com/apps](https://developers.facebook.com/apps/)
+2. Click **Create App** → Type: **Business**
+3. Add the **WhatsApp** product to your app
+4. In WhatsApp → **Getting Started**, note the **Phone Number ID** and generate a **Permanent Access Token**
+
+---
+
+### Step 2 — Configure the Webhook in Meta
+
+1. In your Meta App → WhatsApp → **Configuration**
+2. Set the **Callback URL** to: \`https://kopern.vercel.app/api/whatsapp/webhook\`
+3. Set the **Verify Token** to the value configured in your Kopern environment
+4. Subscribe to the **messages** field
+
+---
+
+### Step 3 — Connect in Kopern
+
+1. Go to your agent's **Connectors** page
+2. Click the **WhatsApp** card
+3. Enter your Phone Number ID, Access Token, and Verify Token
+4. Click **Connect WhatsApp**
+
+---
+
+### Step 4 — Test
+
+1. Open WhatsApp and send a message to your business number
+2. Your agent should respond within a few seconds
+3. Read receipts are sent automatically
+
+---
+
+### Pricing
+
+- 1,000 free conversations per month (Meta pricing)
+- After that, Meta charges per conversation (varies by country)
+- Kopern usage (tokens) is billed separately per your plan
+
+---
+
+### Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Webhook verification fails | Check that the Verify Token matches between Meta and Kopern env vars |
+| Messages not received | Ensure the "messages" field is subscribed in Meta webhook config |
+| Agent doesn't respond | Check the Access Token validity (may have expired) |
+| "Invalid signature" in logs | Verify WHATSAPP_APP_SECRET matches your Meta App Secret |
+`,
   },
 
   fr: {
@@ -1066,6 +1186,108 @@ Si vous devez chainer des agents, utilisez le webhook sortant de l'Agent A pour 
 | Timeout | Les reponses volumineuses peuvent prendre 30s+ — augmentez le timeout dans votre outil d'automatisation |
 | Erreur HMAC | Assurez-vous que le body brut est utilise pour le calcul de la signature (pas le JSON parse) |
 | Le sortant ne se declenche pas | Verifiez que le webhook est active et que le type d'evenement correspond |
+`,
+
+    telegram: `## Connecter votre Agent a Telegram
+
+Deployez votre agent Kopern en bot Telegram. Les utilisateurs peuvent lui envoyer des messages ou l'ajouter a des groupes.
+
+---
+
+### Etape 1 — Creer un bot via @BotFather
+
+1. Ouvrez Telegram et cherchez **@BotFather**
+2. Envoyez \`/newbot\`
+3. Choisissez un nom (ex : "Assistant Mon Entreprise")
+4. Choisissez un username (doit finir par "bot", ex : "monentreprise_kopern_bot")
+5. BotFather vous donne un **token** — copiez-le
+
+---
+
+### Etape 2 — Connecter dans Kopern
+
+1. Allez dans la page **Connecteurs** de votre agent
+2. Cliquez sur la carte **Bot Telegram**
+3. Collez le token de BotFather
+4. Cliquez **Connecter le Bot**
+5. Kopern enregistre automatiquement le webhook aupres de Telegram
+
+---
+
+### Etape 3 — Tester
+
+1. Ouvrez Telegram et cherchez le username de votre bot
+2. Envoyez un message — votre agent devrait repondre en quelques secondes
+3. Le bot fonctionne aussi dans les groupes (ajoutez-le et mentionnez-le)
+
+---
+
+### Depannage
+
+| Probleme | Solution |
+|----------|----------|
+| Le bot ne repond pas | Verifiez que le token est correct et que le bot est connecte dans Kopern |
+| Messages coupes | Telegram limite a 4096 caracteres — Kopern decoupe automatiquement les longs messages |
+| Le bot ne fonctionne pas en groupe | Assurez-vous que le bot a ete ajoute au groupe et que le mode confidentialite est desactive dans BotFather |
+`,
+
+    whatsapp: `## Connecter votre Agent a WhatsApp
+
+Deployez votre agent Kopern sur WhatsApp via l'API Meta Business. Le canal de messagerie le plus populaire pour les entreprises.
+
+---
+
+### Prerequis
+
+- Un [compte Meta Business](https://business.facebook.com)
+- Une Meta App avec l'API WhatsApp Business activee
+- Un numero de telephone verifie (Meta fournit un numero de test gratuit)
+
+---
+
+### Etape 1 — Creer une Meta App
+
+1. Allez sur [developers.facebook.com/apps](https://developers.facebook.com/apps/)
+2. Cliquez **Creer une application** → Type : **Business**
+3. Ajoutez le produit **WhatsApp** a votre app
+4. Dans WhatsApp → **Premiers pas**, notez le **Phone Number ID** et generez un **Token d'Acces Permanent**
+
+---
+
+### Etape 2 — Configurer le Webhook dans Meta
+
+1. Dans votre Meta App → WhatsApp → **Configuration**
+2. URL de rappel : \`https://kopern.vercel.app/api/whatsapp/webhook\`
+3. Token de verification : la valeur configuree dans votre environnement Kopern
+4. Abonnez-vous au champ **messages**
+
+---
+
+### Etape 3 — Connecter dans Kopern
+
+1. Allez dans la page **Connecteurs** de votre agent
+2. Cliquez sur la carte **WhatsApp**
+3. Entrez votre Phone Number ID, Access Token et Verify Token
+4. Cliquez **Connecter WhatsApp**
+
+---
+
+### Tarification
+
+- 1 000 conversations gratuites par mois (tarification Meta)
+- Au-dela, Meta facture par conversation (varie selon le pays)
+- L'utilisation Kopern (tokens) est facturee separement selon votre plan
+
+---
+
+### Depannage
+
+| Probleme | Solution |
+|----------|----------|
+| La verification du webhook echoue | Verifiez que le Verify Token correspond entre Meta et les variables d'environnement Kopern |
+| Messages non recus | Assurez-vous que le champ "messages" est coche dans la config webhook Meta |
+| L'agent ne repond pas | Verifiez la validite de l'Access Token (expiration possible) |
+| "Invalid signature" dans les logs | Verifiez que WHATSAPP_APP_SECRET correspond au secret de votre Meta App |
 `,
   },
 } as const;
