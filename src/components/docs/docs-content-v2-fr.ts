@@ -3,7 +3,7 @@ export const docsMarkdownV2Fr = `
 
 ### Qu'est-ce que Kopern ?
 
-Kopern est un **Constructeur, Orchestrateur et Évaluateur d'Agents IA**. Créez des agents IA sur mesure, validez-les avec une notation déterministe, optimisez-les dans un Labo d'Optimisation à 6 modes, orchestrez des équipes multi-agents et déployez-les partout — en serveurs MCP, widgets intégrables, webhooks ou bots Slack. Le tout depuis un seul tableau de bord avec facturation Stripe et observabilité en temps réel.
+Kopern est un **Constructeur, Orchestrateur et Évaluateur d'Agents IA**. Créez des agents IA sur mesure, validez-les avec une notation déterministe, optimisez-les dans un Labo d'Optimisation à 6 modes, orchestrez des équipes multi-agents et déployez-les partout — en serveurs MCP, widgets intégrables, webhooks, bots Slack, bots Telegram ou WhatsApp. Le tout depuis un seul tableau de bord avec facturation Stripe et observabilité en temps réel.
 
 **Ce que vous pouvez faire :**
 
@@ -13,7 +13,7 @@ Kopern est un **Constructeur, Orchestrateur et Évaluateur d'Agents IA**. Créez
 - **Valider la qualité** — exécutez des suites de tests avec 6 types de critères (notation déterministe)
 - **Optimiser automatiquement** — Labo d'Optimisation à 6 modes : AutoTune, AutoFix, Stress Lab, Tournoi, Distillation, Évolution
 - **Orchestrer des équipes** — exécution multi-agents parallèle, séquentielle ou conditionnelle avec pipelines et délégation de sous-agents
-- **Déployer partout** — protocole MCP (Claude Code, Cursor), widget de chat intégrable, webhooks (n8n, Zapier, Make), bot Slack
+- **Déployer partout** — protocole MCP (Claude Code, Cursor), widget de chat intégrable, webhooks (n8n, Zapier, Make), bot Slack, bot Telegram, WhatsApp
 - **Automatiser des workflows** — webhooks entrants/sortants avec protection anti-boucle pour une intégration transparente avec les plateformes externes
 - **Tout suivre** — sessions, chronologie des conversations, utilisation de tokens, coûts, facturation Stripe avec compteurs d'utilisation
 - **Sécurisé par conception** — exécution sandboxée, signatures HMAC pour les webhooks, clés API hashées, application des limites de plan sur toutes les routes
@@ -214,6 +214,10 @@ Personnalisez l'apparence de votre agent pour refléter votre marque ou le disti
 **Exemple de message d'accueil :**
 
 *"Bonjour ! Je suis l'assistant DevOps de votre équipe. Je peux vous aider à diagnostiquer des problèmes d'infrastructure, analyser vos fichiers de configuration, et proposer des optimisations. Quelle est votre question ?"*
+
+### Politique d'Approbation des Tools
+
+Contrôlez si les tools destructifs nécessitent une confirmation humaine avant exécution, conformément à l'Article 14 du EU AI Act (supervision humaine). Trois politiques disponibles : **Automatique** (tous les tools s'exécutent librement), **Confirmer les destructifs** (les tools destructifs nécessitent une approbation), et **Confirmer tous** (chaque appel de tool nécessite une approbation). Dans le Playground, une boîte de dialogue avec un compte à rebours de 2 minutes apparaît pour les tools nécessitant une approbation. Sur les connecteurs (Telegram, WhatsApp, Slack, Webhook, MCP), les tools nécessitant une approbation sont automatiquement refusés.
 
 ---
 
@@ -1375,6 +1379,10 @@ print(result["content"])
 - Les clés peuvent être **révoquées** à tout moment depuis le dashboard
 - Effectuez une **rotation régulière** de vos clés pour renforcer la sécurité
 
+### Failover des clés API
+
+Ajoutez plusieurs clés API LLM par provider pour un failover automatique. Si une clé atteint sa limite de requêtes (HTTP 429), Kopern réessaie avec la clé suivante. Configurez jusqu'à 4 clés de secours par provider dans **Paramètres → Clés API**. Les clés sont essayées dans l'ordre ; celles en rate limit entrent en cooldown de 60 secondes. Les erreurs non-récupérables (403, clé invalide) ne déclenchent pas de rotation. Toutes les clés sont stockées dans votre profil Firestore.
+
 ---
 
 ### Suivi d'utilisation
@@ -1528,7 +1536,7 @@ Les métriques (tokens, coût, appels d'outils) sont suivies **par étape** et *
 
 ## Connecteurs (Déploiement externe)
 
-Déployez vos agents au-delà du dashboard Kopern — sur des sites web, via des webhooks et dans des workspaces Slack.
+Déployez vos agents au-delà du dashboard Kopern — sur des sites web, via des webhooks et dans des conversations Slack, Telegram et WhatsApp.
 
 ### Widget de chat intégrable
 
@@ -1632,6 +1640,14 @@ Permettez aux utilisateurs d'interagir avec votre agent directement dans Slack.
 - Réaction 👀 pendant la réflexion, ✅ quand c'est terminé
 
 **Sécurité :** Vérification du signing secret Slack (HMAC-SHA256), traitement asynchrone (réponse < 3s), stockage des tokens côté serveur.
+
+### Bot Telegram
+
+Déployez votre agent sur Telegram. Créez un bot via [@BotFather](https://t.me/BotFather), collez le token dans **Connecteurs → Telegram**, et Kopern enregistre automatiquement le webhook. Les utilisateurs envoient un message au bot et reçoivent les réponses de l'agent dans le même chat. Le contexte de conversation complet est maintenu par chat. L'URL du webhook inclut un token de vérification hashé pour la sécurité.
+
+### WhatsApp
+
+Déployez votre agent sur WhatsApp via l'API Cloud de Meta. Créez une App Meta Business, ajoutez le produit WhatsApp, et configurez le Phone Number ID + Access Token dans **Connecteurs → WhatsApp**. Définissez l'URL du webhook dans le Dashboard Meta : \`https://kopern.vercel.app/api/whatsapp/webhook\`. Les utilisateurs envoient un message à votre numéro WhatsApp et l'agent répond. Les webhooks entrants sont vérifiés via la validation de signature de Meta.
 
 ### Limites par plan
 

@@ -12,6 +12,7 @@ import {
   type AgentBranding,
   type ToolOverrideConfig,
   type ToolApprovalPolicy,
+  type RiskLevel,
 } from "@/lib/firebase/firestore";
 import { updateAgent } from "@/actions/agents";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { ModelSelector } from "@/components/agents/ModelSelector";
 import { SystemPromptEditor } from "@/components/agents/SystemPromptEditor";
 import { PurposeGateConfig as PurposeGateEditor } from "@/components/agents/PurposeGateConfig";
@@ -29,6 +31,7 @@ import { ToolOverrideEditor } from "@/components/agents/ToolOverrideEditor";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { useDictionary } from "@/providers/LocaleProvider";
 import { toast } from "sonner";
+import { FileDown } from "lucide-react";
 
 export default function EditAgentPage({
   params,
@@ -54,6 +57,8 @@ export default function EditAgentPage({
   const [branding, setBranding] = useState<AgentBranding | null>(null);
   const [toolOverrides, setToolOverrides] = useState<ToolOverrideConfig[]>([]);
   const [toolApprovalPolicy, setToolApprovalPolicy] = useState<ToolApprovalPolicy>("auto");
+  const [riskLevel, setRiskLevel] = useState<RiskLevel>("minimal");
+  const [auditLog, setAuditLog] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -69,6 +74,8 @@ export default function EditAgentPage({
       setBranding(agent.branding ?? null);
       setToolOverrides(agent.toolOverrides ?? []);
       setToolApprovalPolicy(agent.toolApprovalPolicy ?? "auto");
+      setRiskLevel(agent.riskLevel ?? "minimal");
+      setAuditLog(agent.auditLog ?? false);
     }
   }, [agent]);
 
@@ -96,6 +103,8 @@ export default function EditAgentPage({
         branding,
         toolOverrides,
         toolApprovalPolicy,
+        riskLevel,
+        auditLog,
       });
       toast.success("Agent updated");
       router.push(`/agents/${agentId}`);
@@ -150,9 +159,48 @@ export default function EditAgentPage({
         {/* Tool Overrides */}
         <ToolOverrideEditor overrides={toolOverrides} onChange={setToolOverrides} />
 
+        {/* EU AI Act — Risk Level */}
+        <div className="space-y-2">
+          <Label>{t.compliance?.riskLevel ?? "Risk Level (EU AI Act Art. 6)"}</Label>
+          <Select value={riskLevel} onValueChange={(v) => {
+            setRiskLevel(v as RiskLevel);
+            // Auto-enable auditLog for limited/high
+            if (v === "limited" || v === "high") setAuditLog(true);
+            // Auto-set approval policy for high-risk
+            if (v === "high" && toolApprovalPolicy === "auto") setToolApprovalPolicy("confirm_destructive");
+          }}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="minimal">{t.compliance?.riskMinimal ?? "Minimal Risk"}</SelectItem>
+              <SelectItem value="limited">{t.compliance?.riskLimited ?? "Limited Risk"}</SelectItem>
+              <SelectItem value="high">{t.compliance?.riskHigh ?? "High Risk"}</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            {t.compliance?.riskDescription ?? "Classify your agent per EU AI Act risk categories. High-risk agents require tool approval and audit logging."}
+          </p>
+        </div>
+
+        {/* Audit Log */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label>{t.compliance?.auditLog ?? "Audit Trail (Art. 12)"}</Label>
+            <p className="text-xs text-muted-foreground">
+              {t.compliance?.auditLogDesc ?? "Log all tool calls and session events for compliance. Required for limited/high risk agents."}
+            </p>
+          </div>
+          <Switch
+            checked={auditLog}
+            onCheckedChange={setAuditLog}
+            disabled={riskLevel === "limited" || riskLevel === "high"}
+          />
+        </div>
+
         {/* Tool Approval Policy */}
         <div className="space-y-2">
-          <Label>{t.approval?.policyLabel ?? "Tool Approval Policy"}</Label>
+          <Label>{t.approval?.policyLabel ?? "Tool Approval Policy"}<span className="text-[10px] text-muted-foreground ml-1">(Art. 14)</span></Label>
           <Select value={toolApprovalPolicy} onValueChange={(v) => setToolApprovalPolicy(v as ToolApprovalPolicy)}>
             <SelectTrigger>
               <SelectValue />
@@ -167,6 +215,38 @@ export default function EditAgentPage({
             {t.approval?.policyDescription ?? "Controls whether tool calls require human approval before execution."}
           </p>
         </div>
+
+        <Separator />
+
+        {/* Compliance Report Download */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={async () => {
+            if (!user) return;
+            try {
+              const token = await user.getIdToken();
+              const res = await fetch(`/api/agents/${agentId}/compliance-report`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (!res.ok) throw new Error("Failed to generate report");
+              const report = await res.json();
+              const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `compliance-report-${agentId}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+              toast.success(t.compliance?.reportDownloaded ?? "Compliance report downloaded");
+            } catch {
+              toast.error(t.compliance?.reportError ?? "Failed to generate compliance report");
+            }
+          }}
+        >
+          <FileDown className="h-4 w-4 mr-2" />
+          {t.compliance?.downloadReport ?? "Download Compliance Report (Art. 11)"}
+        </Button>
 
         <Separator />
 

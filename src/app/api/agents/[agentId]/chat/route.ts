@@ -133,10 +133,12 @@ You MUST maintain a task list for this session. Before executing any action:
 
       // Load tool approval policy from agent doc
       let toolApprovalPolicy: ToolApprovalPolicy = "auto";
+      let riskLevel: "minimal" | "limited" | "high" = "minimal";
       if (userId) {
         try {
           const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
           toolApprovalPolicy = agentSnap.data()?.toolApprovalPolicy || "auto";
+          riskLevel = (agentSnap.data()?.riskLevel as "minimal" | "limited" | "high") || "minimal";
         } catch {
           // Default to auto
         }
@@ -165,6 +167,7 @@ You MUST maintain a task list for this session. Before executing any action:
           apiKey,
           apiKeys: apiKeys.length > 1 ? apiKeys : undefined,
           toolApprovalPolicy,
+          riskLevel,
           skipOutboundWebhooks: isInternalTrigger,
         },
         {

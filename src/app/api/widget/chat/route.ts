@@ -231,6 +231,7 @@ export async function POST(request: NextRequest) {
           apiKeys: apiKeys.length > 1 ? apiKeys : undefined,
           skipOutboundWebhooks: true, // CRITICAL: anti-loop protection
           toolApprovalPolicy: (agentData.toolApprovalPolicy as "auto" | "confirm_destructive" | "confirm_all") || "auto",
+          riskLevel: (agentData.riskLevel as "minimal" | "limited" | "high") || "minimal",
         },
         {
           onToken: (text) => {

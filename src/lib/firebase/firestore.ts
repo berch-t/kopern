@@ -56,6 +56,7 @@ export interface ToolOverrideConfig {
 }
 
 export type ToolApprovalPolicy = "auto" | "confirm_destructive" | "confirm_all";
+export type RiskLevel = "minimal" | "limited" | "high";
 
 export interface AgentDoc {
   name: string;
@@ -75,6 +76,8 @@ export interface AgentDoc {
   branding: AgentBranding | null;
   toolOverrides: ToolOverrideConfig[];
   toolApprovalPolicy?: ToolApprovalPolicy;
+  riskLevel?: RiskLevel;
+  auditLog?: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

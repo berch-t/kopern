@@ -962,6 +962,22 @@
       "student": "{model} — {quality}% de qualité retenue"
     }
   },
+  "compliance": {
+    "riskLevel": "Niveau de Risque (EU AI Act Art. 6)",
+    "riskMinimal": "Risque Minimal",
+    "riskLimited": "Risque Limité",
+    "riskHigh": "Risque Élevé",
+    "riskDescription": "Classifiez votre agent selon les catégories de risque de l'EU AI Act. Les agents à risque élevé nécessitent l'approbation des tools et la journalisation d'audit.",
+    "auditLog": "Journal d'Audit (Art. 12)",
+    "auditLogDesc": "Journalise tous les appels de tools et événements de session pour la conformité. Obligatoire pour les agents à risque limité/élevé.",
+    "humanOversight": "Supervision Humaine (Art. 14)",
+    "transparencyBadge": "Contenu généré par IA",
+    "downloadReport": "Télécharger le Rapport de Conformité (Art. 11)",
+    "reportTitle": "Rapport de Conformité EU AI Act",
+    "reportGenerated": "Rapport généré avec succès",
+    "reportDownloaded": "Rapport de conformité téléchargé",
+    "reportError": "Échec de la génération du rapport de conformité"
+  },
   "approval": {
     "title": "Approbation requise",
     "destructive": "Action sensible",

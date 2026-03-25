@@ -336,7 +336,7 @@ export function getWidgetScript(): string {
     '  <textarea class="kopern-input" rows="1" placeholder="Type a message..."></textarea>',
     '  <button class="kopern-send-btn" aria-label="Send">' + SEND_ICON + '</button>',
     '</div>',
-    '<div class="kopern-footer" style="display:none">Powered by <a href="https://kopern.vercel.app" target="_blank" rel="noopener">Kopern</a></div>',
+    '<div class="kopern-footer"><span class="kopern-powered-by" style="display:none">Powered by <a href="https://kopern.vercel.app" target="_blank" rel="noopener">Kopern</a> &middot; </span><span style="font-style:italic">AI-generated content</span></div>',
   ].join("");
   shadow.appendChild(panel);
 
@@ -591,7 +591,8 @@ export function getWidgetScript(): string {
       }
 
       if (config.showPoweredBy) {
-        footerEl.style.display = "block";
+        var poweredByEl = panel.querySelector(".kopern-powered-by");
+        if (poweredByEl) { poweredByEl.style.display = "inline"; }
       }
     })
     .catch(function(err) {

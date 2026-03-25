@@ -173,6 +173,7 @@ async function executeChat(
           apiKeys: apiKeys.length > 1 ? apiKeys : undefined,
           skipOutboundWebhooks: true, // CRITICAL: anti-loop protection
           toolApprovalPolicy: (agent.toolApprovalPolicy as "auto" | "confirm_destructive" | "confirm_all") || "auto",
+          riskLevel: (agent.riskLevel as "minimal" | "limited" | "high") || "minimal",
         },
         {
           onToken: (text) => { fullResponse += text; },

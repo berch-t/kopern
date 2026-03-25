@@ -11,7 +11,7 @@ Kopern is an AI Agent Builder, Orchestrator & Grader platform. Build custom AI a
 - **Validate quality** — run automated test suites with 6 criterion types (deterministic grading)
 - **Optimize automatically** — 6-mode Optimization Lab: AutoTune, AutoFix, Stress Lab, Tournament, Distillation, Evolution
 - **Orchestrate teams** — parallel, sequential, or conditional multi-agent execution with pipelines and sub-agent delegation
-- **Deploy everywhere** — MCP protocol (Claude Code, Cursor), embeddable chat widget, webhooks (n8n, Zapier, Make), Slack bot
+- **Deploy everywhere** — MCP protocol (Claude Code, Cursor), embeddable chat widget, webhooks (n8n, Zapier, Make), Slack bot, Telegram bot, WhatsApp
 - **Automate workflows** — inbound/outbound webhooks with anti-loop protection for seamless integration with external platforms
 - **Track everything** — sessions, conversation timelines, token usage, costs, Stripe billing with usage-based meters
 - **Secure by design** — sandboxed execution, HMAC webhook signatures, hashed API keys, plan enforcement on all routes
@@ -98,6 +98,24 @@ Create an **MCP Server** to expose your agent as an API:
 | **Thinking Level** | Controls reasoning depth: off, minimal, low, medium, high, xhigh |
 | **System Prompt** | The core instructions that define agent behavior |
 | **Connected Repos** | GitHub repositories the agent can read and search |
+
+### Tool Approval Policy
+
+Control whether destructive tools require human confirmation before execution. This is a key safety mechanism aligned with EU AI Act Article 14 (human oversight).
+
+| Policy | Behavior |
+|--------|----------|
+| **Automatic** | All tools execute without confirmation (default) |
+| **Confirm Destructive** | Destructive tools require approval; safe tools run freely |
+| **Confirm All** | Every tool call requires explicit approval |
+
+**Destructive built-in tools**: \`create_branch\`, \`commit_files\`, \`create_pull_request\`, \`send_thank_you_email\`, \`update_bug_status\`. Custom tools can be marked as destructive in the tool editor.
+
+**How it works in the Playground**: When a tool needs approval, a dialog appears with the tool name, arguments, and Approve/Deny buttons. A 2-minute countdown auto-denies if no action is taken.
+
+**On connectors (Telegram, WhatsApp, Slack, Webhook, MCP)**: Tools requiring approval are automatically denied with an explanation message. Interactive approval on connectors is planned for a future release.
+
+Set the policy in **Agents → [Your Agent] → Edit → Tool Approval Policy**.
 
 ### Versioning
 
@@ -903,7 +921,7 @@ Create a team with these three agents in sequential mode. When executed, each ag
 
 ## Connectors (External Deployment)
 
-Deploy your agents beyond the Kopern dashboard. Connectors let your agents interact with users on websites, respond to external events via webhooks, and join Slack conversations.
+Deploy your agents beyond the Kopern dashboard. Connectors let your agents interact with users on websites, respond to external events via webhooks, and join Slack, Telegram, and WhatsApp conversations.
 
 ### Embeddable Chat Widget
 
@@ -1096,6 +1114,54 @@ Let users interact with your agent directly in Slack channels and DMs.
 - Bot tokens are stored securely in Firestore (server-side only)
 - Events return 200 immediately, processing happens asynchronously (Slack requires < 3s response)
 
+### Telegram Bot
+
+Let users interact with your agent directly in Telegram chats.
+
+#### Setup
+
+1. **Create a Telegram Bot** via [@BotFather](https://t.me/BotFather) — copy the bot token
+2. Go to **Agents → [Your Agent] → Connectors → Telegram**
+3. Paste your bot token and click **Connect**
+4. Kopern automatically registers the webhook with Telegram
+
+#### How It Works
+
+- Send a message to your bot → agent responds in the same chat
+- Supports text messages and replies
+- Full conversation context is maintained per chat
+- Processing happens asynchronously via Vercel serverless
+
+#### Security
+
+- Webhook URL includes a hashed verification token
+- Bot tokens are stored securely in Firestore (server-side only)
+
+### WhatsApp
+
+Deploy your agent on WhatsApp using the Meta Cloud API.
+
+#### Setup
+
+1. **Create a Meta Business App** at [developers.facebook.com](https://developers.facebook.com)
+2. Add the **WhatsApp** product and get your Phone Number ID + Access Token
+3. Go to **Agents → [Your Agent] → Connectors → WhatsApp**
+4. Enter your Phone Number ID and Access Token, then click **Connect**
+5. Set the webhook URL in Meta Dashboard: \`https://kopern.vercel.app/api/whatsapp/webhook\`
+6. Subscribe to the \`messages\` webhook field
+
+#### How It Works
+
+- Users send a message to your WhatsApp number → agent responds
+- Supports text messages
+- Full conversation context per phone number
+- Processing via Vercel serverless with \`after()\`
+
+#### Security
+
+- Incoming webhooks are verified using Meta's signature validation
+- Access tokens stored securely in Firestore (server-side only)
+
 ### Connector Plan Limits
 
 | Feature | Starter | Pro | Usage | Enterprise |
@@ -1104,6 +1170,31 @@ Let users interact with your agent directly in Slack channels and DMs.
 | Remove "Powered by" | No | Yes | Yes | Yes |
 
 Connector usage counts toward your plan's token limits.
+
+---
+
+### API Key Failover
+
+Add multiple API keys per provider for automatic failover. If a key hits a rate limit (HTTP 429), Kopern automatically retries with the next available key.
+
+#### How It Works
+
+1. Go to **Settings → API Keys**
+2. Enter your primary key for any provider
+3. Click **"Add failover key"** to add up to 4 additional keys per provider
+4. Keys are tried in order — if one returns a rate limit error, it's put in cooldown (60s) and the next key is used
+
+#### Supported Errors for Rotation
+
+- HTTP 429 (Too Many Requests)
+- Rate limit exceeded
+- Server overloaded / at capacity
+
+Non-retryable errors (403 Forbidden, invalid key) do **not** trigger rotation.
+
+#### Key Storage
+
+All keys are stored in your Firestore user profile — Kopern never stores LLM API keys in environment variables. Each key is validated before saving (minimum 8 characters, no placeholders).
 
 ---
 

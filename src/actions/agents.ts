@@ -63,6 +63,8 @@ export async function updateAgent(
       | "branding"
       | "toolOverrides"
       | "toolApprovalPolicy"
+      | "riskLevel"
+      | "auditLog"
     >
   >
 ) {

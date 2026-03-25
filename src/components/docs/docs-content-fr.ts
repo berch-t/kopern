@@ -11,7 +11,7 @@ Kopern est une plateforme de construction, d'orchestration et d'evaluation d'age
 - **Valider la qualite** — executez des suites de tests avec 6 types de criteres (notation deterministe)
 - **Optimiser automatiquement** — Labo d'Optimisation a 6 modes : AutoTune, AutoFix, Stress Lab, Tournoi, Distillation, Evolution
 - **Orchestrer des equipes** — execution multi-agents parallele, sequentielle ou conditionnelle avec pipelines et delegation de sous-agents
-- **Deployer partout** — protocole MCP (Claude Code, Cursor), widget de chat integrable, webhooks (n8n, Zapier, Make), bot Slack
+- **Deployer partout** — protocole MCP (Claude Code, Cursor), widget de chat integrable, webhooks (n8n, Zapier, Make), bot Slack, bot Telegram, WhatsApp
 - **Automatiser des workflows** — webhooks entrants/sortants avec protection anti-boucle pour une integration transparente avec les plateformes externes
 - **Tout suivre** — sessions, chronologie des conversations, utilisation de tokens, couts, facturation Stripe avec compteurs d'utilisation
 - **Securise par conception** — execution sandboxee, signatures HMAC pour les webhooks, cles API hashees, application des limites de plan sur toutes les routes
@@ -98,6 +98,24 @@ Creez un **Serveur MCP** pour exposer votre agent comme API :
 | **Niveau de reflexion** | Controle la profondeur de raisonnement : off, minimal, low, medium, high, xhigh |
 | **Prompt systeme** | Les instructions principales qui definissent le comportement |
 | **Repos connectes** | Depots GitHub que l'agent peut lire et rechercher |
+
+### Politique d'Approbation des Tools
+
+Controlez si les tools destructifs necessitent une confirmation humaine avant execution. Ce mecanisme de securite est aligne avec l'Article 14 du EU AI Act (supervision humaine).
+
+| Politique | Comportement |
+|-----------|-------------|
+| **Automatique** | Tous les tools s'executent sans confirmation (par defaut) |
+| **Confirmer les destructifs** | Les tools destructifs necessitent une approbation ; les autres s'executent librement |
+| **Confirmer tous** | Chaque appel de tool necessite une approbation explicite |
+
+**Tools destructifs integres** : \`create_branch\`, \`commit_files\`, \`create_pull_request\`, \`send_thank_you_email\`, \`update_bug_status\`. Les tools personnalises peuvent etre marques comme destructifs dans l'editeur de tools.
+
+**Dans le Playground** : Lorsqu'un tool necessite une approbation, une boite de dialogue apparait avec le nom du tool, ses arguments et les boutons Approuver/Refuser. Un compte a rebours de 2 minutes refuse automatiquement si aucune action n'est prise.
+
+**Sur les connecteurs (Telegram, WhatsApp, Slack, Webhook, MCP)** : Les tools necessitant une approbation sont automatiquement refuses avec un message explicatif. L'approbation interactive sur les connecteurs est prevue pour une version future.
+
+Configurez la politique dans **Agents → [Votre Agent] → Modifier → Politique d'Approbation des Tools**.
 
 ### Versionnage
 
@@ -903,7 +921,7 @@ Creez une equipe avec ces trois agents en mode sequentiel. A l'execution, chaque
 
 ## Connecteurs (Deploiement externe)
 
-Deployez vos agents au-dela du dashboard Kopern. Les connecteurs permettent a vos agents d'interagir avec les utilisateurs sur des sites web, de repondre a des evenements externes via des webhooks et de participer a des conversations Slack.
+Deployez vos agents au-dela du dashboard Kopern. Les connecteurs permettent a vos agents d'interagir avec les utilisateurs sur des sites web, de repondre a des evenements externes via des webhooks et de participer a des conversations Slack, Telegram et WhatsApp.
 
 ### Widget de chat integrable
 
@@ -1096,6 +1114,54 @@ Permettez aux utilisateurs d'interagir avec votre agent directement dans les cha
 - Les tokens du bot sont stockes de maniere securisee dans Firestore (cote serveur uniquement)
 - Les evenements retournent 200 immediatement, le traitement se fait de maniere asynchrone (Slack exige une reponse < 3s)
 
+### Bot Telegram
+
+Permettez aux utilisateurs d'interagir avec votre agent directement dans les conversations Telegram.
+
+#### Configuration
+
+1. **Creez un Bot Telegram** via [@BotFather](https://t.me/BotFather) — copiez le token du bot
+2. Allez dans **Agents → [Votre Agent] → Connecteurs → Telegram**
+3. Collez votre token et cliquez sur **Connecter**
+4. Kopern enregistre automatiquement le webhook aupres de Telegram
+
+#### Fonctionnement
+
+- Envoyez un message a votre bot → l'agent repond dans le meme chat
+- Supporte les messages texte et les reponses
+- Le contexte de conversation complet est maintenu par chat
+- Le traitement se fait de maniere asynchrone via Vercel serverless
+
+#### Securite
+
+- L'URL du webhook inclut un token de verification hashe
+- Les tokens des bots sont stockes de maniere securisee dans Firestore (cote serveur uniquement)
+
+### WhatsApp
+
+Deployez votre agent sur WhatsApp via l'API Cloud de Meta.
+
+#### Configuration
+
+1. **Creez une App Meta Business** sur [developers.facebook.com](https://developers.facebook.com)
+2. Ajoutez le produit **WhatsApp** et recuperez votre Phone Number ID + Access Token
+3. Allez dans **Agents → [Votre Agent] → Connecteurs → WhatsApp**
+4. Entrez votre Phone Number ID et Access Token, puis cliquez sur **Connecter**
+5. Definissez l'URL du webhook dans le Dashboard Meta : \`https://kopern.vercel.app/api/whatsapp/webhook\`
+6. Abonnez-vous au champ webhook \`messages\`
+
+#### Fonctionnement
+
+- Les utilisateurs envoient un message a votre numero WhatsApp → l'agent repond
+- Supporte les messages texte
+- Contexte de conversation complet par numero de telephone
+- Traitement via Vercel serverless avec \`after()\`
+
+#### Securite
+
+- Les webhooks entrants sont verifies via la validation de signature de Meta
+- Les access tokens sont stockes de maniere securisee dans Firestore (cote serveur uniquement)
+
 ### Limites par plan
 
 | Fonctionnalite | Starter | Pro | Usage | Enterprise |
@@ -1104,6 +1170,31 @@ Permettez aux utilisateurs d'interagir avec votre agent directement dans les cha
 | Retirer « Powered by » | Non | Oui | Oui | Oui |
 
 L'utilisation des connecteurs est comptabilisee dans les limites de tokens de votre plan.
+
+---
+
+### Failover des Cles API
+
+Ajoutez plusieurs cles API par provider pour un failover automatique. Si une cle atteint sa limite de requetes (HTTP 429), Kopern reessaie automatiquement avec la cle suivante disponible.
+
+#### Fonctionnement
+
+1. Allez dans **Parametres → Cles API**
+2. Entrez votre cle principale pour n'importe quel provider
+3. Cliquez sur **« Ajouter une cle de secours »** pour ajouter jusqu'a 4 cles supplementaires par provider
+4. Les cles sont essayees dans l'ordre — si l'une renvoie une erreur de rate limit, elle est mise en cooldown (60s) et la cle suivante est utilisee
+
+#### Erreurs Declenchant la Rotation
+
+- HTTP 429 (Too Many Requests)
+- Rate limit depasse
+- Serveur surcharge / a capacite
+
+Les erreurs non-recuperables (403 Forbidden, cle invalide) ne declenchent **pas** de rotation.
+
+#### Stockage des Cles
+
+Toutes les cles sont stockees dans votre profil Firestore — Kopern ne stocke jamais de cles API LLM dans les variables d'environnement. Chaque cle est validee avant sauvegarde (minimum 8 caracteres, pas de placeholders).
 
 ---
 

@@ -188,6 +188,7 @@ export async function POST(
           apiKeys: apiKeys.length > 1 ? apiKeys : undefined,
           skipOutboundWebhooks: true, // CRITICAL: anti-loop protection
           toolApprovalPolicy: (agent.toolApprovalPolicy as "auto" | "confirm_destructive" | "confirm_all") || "auto",
+          riskLevel: (agent.riskLevel as "minimal" | "limited" | "high") || "minimal",
         },
         {
           onToken: (text) => {
@@ -255,6 +256,7 @@ export async function POST(
 
     return NextResponse.json({
       response,
+      ai_generated: true,
       metrics: {
         inputTokens: metrics.inputTokens,
         outputTokens: metrics.outputTokens,

@@ -962,6 +962,22 @@
       "student": "{model} — {quality}% quality retention"
     }
   },
+  "compliance": {
+    "riskLevel": "Risk Level (EU AI Act Art. 6)",
+    "riskMinimal": "Minimal Risk",
+    "riskLimited": "Limited Risk",
+    "riskHigh": "High Risk",
+    "riskDescription": "Classify your agent per EU AI Act risk categories. High-risk agents require tool approval and audit logging.",
+    "auditLog": "Audit Trail (Art. 12)",
+    "auditLogDesc": "Log all tool calls and session events for compliance. Required for limited/high risk agents.",
+    "humanOversight": "Human Oversight (Art. 14)",
+    "transparencyBadge": "AI-generated content",
+    "downloadReport": "Download Compliance Report (Art. 11)",
+    "reportTitle": "EU AI Act Compliance Report",
+    "reportGenerated": "Report generated successfully",
+    "reportDownloaded": "Compliance report downloaded",
+    "reportError": "Failed to generate compliance report"
+  },
   "approval": {
     "title": "Tool Approval Required",
     "destructive": "Destructive",

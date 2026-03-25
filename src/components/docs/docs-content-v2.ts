@@ -3,7 +3,7 @@ export const docsMarkdownV2 = `
 
 ### What is Kopern?
 
-Kopern is a full-stack **AI Agent Builder, Orchestrator & Grader**. Build custom AI agents powered by leading LLM providers (Anthropic, OpenAI, Google, Ollama), validate them with deterministic grading, optimize them in a 6-mode Optimization Lab, orchestrate multi-agent teams, and deploy them anywhere — as MCP servers, embeddable widgets, webhooks, or Slack bots. All from a single dashboard with Stripe billing and real-time observability.
+Kopern is a full-stack **AI Agent Builder, Orchestrator & Grader**. Build custom AI agents powered by leading LLM providers (Anthropic, OpenAI, Google, Ollama), validate them with deterministic grading, optimize them in a 6-mode Optimization Lab, orchestrate multi-agent teams, and deploy them anywhere — as MCP servers, embeddable widgets, webhooks, Slack bots, Telegram bots, or WhatsApp. All from a single dashboard with Stripe billing and real-time observability.
 
 Key capabilities at a glance:
 
@@ -14,7 +14,7 @@ Key capabilities at a glance:
 - **Grade** agents with 6 criterion types — output matching, schema validation, tool usage, safety checks, custom scripts, and LLM judges
 - **Optimize** with a 6-mode Optimization Lab — AutoTune, AutoFix, Stress Lab, Tournament, Distillation, Evolution
 - **Orchestrate** multiple agents as teams (parallel, sequential, conditional), pipelines (multi-step chains), or via sub-agent delegation
-- **Deploy everywhere** — MCP protocol (Claude Code, Cursor), embeddable chat widget, webhooks (n8n, Zapier, Make), Slack bot
+- **Deploy everywhere** — MCP protocol (Claude Code, Cursor), embeddable chat widget, webhooks (n8n, Zapier, Make), Slack bot, Telegram bot, WhatsApp
 - **Automate workflows** — inbound/outbound webhooks with anti-loop protection for seamless integration with external automation platforms
 - **Track** billing, sessions, conversation timelines, tool calls, and costs in real time with Stripe usage-based meters
 - **Secure by design** — sandboxed execution, HMAC webhook signatures, hashed API keys, plan enforcement on all routes
@@ -230,6 +230,10 @@ Customize your agent's visual identity in the Playground and MCP Server response
 | **Welcome Message** | First message shown when a user opens the Playground |
 
 Configure branding in the agent's **Settings** section.
+
+### Tool Approval Policy
+
+Control whether destructive tools require human confirmation before execution, aligned with EU AI Act Article 14 (human oversight). Three policies are available: **Automatic** (all tools run freely), **Confirm Destructive** (destructive tools need approval), and **Confirm All** (every tool call needs approval). In the Playground, a dialog with a 2-minute countdown appears for tools needing approval. On connectors (Telegram, WhatsApp, Slack, Webhook, MCP), tools requiring approval are automatically denied.
 
 ---
 
@@ -1606,6 +1610,10 @@ print(f"Cost: \${r2['metrics']['cost']}/.4f}")
 - You can create multiple keys per server for key rotation
 - Delete compromised keys immediately from the **API Keys** page
 
+### API Key Failover
+
+Add multiple LLM API keys per provider for automatic failover. If a key hits a rate limit (HTTP 429), Kopern retries with the next available key. Configure up to 4 failover keys per provider in **Settings → API Keys**. Keys are tried in order; rate-limited keys enter a 60-second cooldown. Non-retryable errors (403, invalid key) do not trigger rotation. All keys are stored in your Firestore user profile.
+
 ### Usage Tracking
 
 Token usage is tracked per MCP server per month, stored in Firestore at \`mcpServers/{serverId}/usage/{yearMonth}\`.
@@ -1818,7 +1826,7 @@ Each step runs as an independent LLM call with:
 
 ## Connectors (External Deployment)
 
-Deploy your agents beyond the Kopern dashboard — on websites, via webhooks, and inside Slack workspaces.
+Deploy your agents beyond the Kopern dashboard — on websites, via webhooks, and inside Slack, Telegram, and WhatsApp conversations.
 
 ### Embeddable Chat Widget
 
@@ -1922,6 +1930,14 @@ Let users interact with your agent directly in Slack.
 - 👀 reaction while thinking, ✅ when done
 
 **Security:** Slack signing secret verification (HMAC-SHA256), async processing (< 3s response), server-side token storage.
+
+### Telegram Bot
+
+Deploy your agent on Telegram. Create a bot via [@BotFather](https://t.me/BotFather), paste the token in **Connectors → Telegram**, and Kopern auto-registers the webhook. Users message the bot and get agent responses in the same chat. Full conversation context is maintained per chat. Webhook URL includes a hashed verification token for security.
+
+### WhatsApp
+
+Deploy your agent on WhatsApp via the Meta Cloud API. Create a Meta Business App, add the WhatsApp product, and configure the Phone Number ID + Access Token in **Connectors → WhatsApp**. Set the webhook URL in Meta Dashboard to \`https://kopern.vercel.app/api/whatsapp/webhook\`. Users message your WhatsApp number and the agent responds. Incoming webhooks are verified using Meta's signature validation.
 
 ### Connector Plan Limits
 
@@ -2269,7 +2285,7 @@ Custom tool code and grading scripts execute in a **Node.js \`vm\` module sandbo
 ## FAQ
 
 **Can I use my own API keys for LLM providers?**
-Not yet. Kopern manages provider access and billing. This ensures consistent pricing and simplifies usage tracking. Self-hosted Ollama models are supported if you want to run models locally at no cost.
+Yes. Go to **Settings → API Keys** and enter your keys for any provider (Anthropic, OpenAI, Google, Mistral AI). You can add up to 5 keys per provider for automatic failover. Ollama models run locally at no cost and require no key.
 
 **What models are supported?**
 Kopern supports four providers:

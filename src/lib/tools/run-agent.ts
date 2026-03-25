@@ -44,6 +44,8 @@ export interface AgentRunConfig {
   toolApprovalPolicy?: ApprovalPolicy;
   /** Skip outbound webhooks — MUST be true for inbound webhook, Telegram, WhatsApp, Slack routes (anti-loop) */
   skipOutboundWebhooks?: boolean;
+  /** EU AI Act risk level — high-risk agents require toolApprovalPolicy !== "auto" */
+  riskLevel?: "minimal" | "limited" | "high";
 }
 
 export interface AgentRunCallbacks {
@@ -71,6 +73,13 @@ export async function runAgentWithTools(
   config: AgentRunConfig,
   callbacks: AgentRunCallbacks
 ): Promise<void> {
+  // EU AI Act Art. 6: high-risk agents MUST have tool approval enabled
+  if (config.riskLevel === "high" && (!config.toolApprovalPolicy || config.toolApprovalPolicy === "auto")) {
+    callbacks.onError?.(new Error("High-risk agents (EU AI Act) require a tool approval policy. Set to 'confirm_destructive' or 'confirm_all' in agent settings."));
+    callbacks.onDone({ inputTokens: 0, outputTokens: 0, toolCallCount: 0, toolIterations: 0 });
+    return;
+  }
+
   const tools: ToolDefinition[] = [];
   const customToolDocs: { name: string; description: string; parametersSchema: string; executeCode: string }[] = [];
   const destructiveCustomTools = new Set<string>();
