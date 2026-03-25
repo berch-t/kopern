@@ -166,7 +166,7 @@ export default async function Image() {
             display: "flex",
           }}
         >
-          kopern.vercel.app
+          kopern.ai
         </div>
       </div>
     ),

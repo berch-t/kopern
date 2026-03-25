@@ -14,7 +14,7 @@ import { SlideUp } from "@/components/motion/SlideUp";
 import { ArrowLeft, Phone, Trash2, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopern.vercel.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopern.ai";
 
 interface WhatsAppConnectorProps {
   agentId: string;

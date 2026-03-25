@@ -82,6 +82,8 @@ export async function sendWebhook(
 // ─── Self-call Prevention ────────────────────────────────────────────
 
 const BLOCKED_DOMAINS = [
+  "kopern.ai",
+  "www.kopern.ai",
   "kopern.vercel.app",
   "kopern.com",
   "www.kopern.com",

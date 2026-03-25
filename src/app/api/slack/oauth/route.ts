@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   const stateParam = searchParams.get("state");
   const errorParam = searchParams.get("error");
 
-  const baseUrl = process.env.NEXTAUTH_URL || "https://kopern.vercel.app";
+  const baseUrl = process.env.NEXTAUTH_URL || "https://kopern.ai";
 
   // Handle Slack OAuth denial
   if (errorParam) {

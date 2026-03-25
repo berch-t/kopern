@@ -733,6 +733,7 @@ export type ErrorSource =
   | "team"
   | "meta_agent"
   | "plan_guard"
+  | "openai_compat"
   | "system";
 
 export interface ErrorLogDoc {

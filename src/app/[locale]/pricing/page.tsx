@@ -18,6 +18,7 @@ import {
   Minus,
   Lightbulb,
   DollarSign,
+  Code2,
   Github,
   LayoutDashboard,
   Zap,
@@ -153,6 +154,12 @@ export default function PricingPage() {
             <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
               <Lightbulb className="h-4 w-4" />
               {t.nav.examples}
+            </Button>
+          </LocalizedLink>
+          <LocalizedLink href="/api-reference">
+            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
+              <Code2 className="h-4 w-4" />
+              {t.nav.apiReference}
             </Button>
           </LocalizedLink>
           <LocalizedLink href="/pricing">

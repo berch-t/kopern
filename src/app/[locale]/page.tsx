@@ -51,6 +51,7 @@ import {
   Trophy,
   Dna,
   ArrowDown,
+  Code2,
   Send,
   Phone,
 } from "lucide-react";
@@ -394,6 +395,12 @@ export default function LandingPage() {
             <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground hover:!bg-transparent dark:hover:!bg-transparent border border-transparent hover:border-primary/50">
               <Lightbulb className="h-4 w-4" />
               {t.nav.examples}
+            </Button>
+          </LocalizedLink>
+          <LocalizedLink href="/api-reference">
+            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground hover:!bg-transparent dark:hover:!bg-transparent border border-transparent hover:border-primary/50">
+              <Code2 className="h-4 w-4" />
+              {t.nav.apiReference}
             </Button>
           </LocalizedLink>
           <LocalizedLink href="/pricing">

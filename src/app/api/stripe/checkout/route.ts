@@ -4,7 +4,7 @@ import { getStripe, getOrCreateStripeCustomer } from "@/lib/stripe/server";
 import { getPriceId, getUsageMeteredPriceIds } from "@/lib/stripe/config";
 import type { PlanTier } from "@/lib/billing/pricing";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopern.vercel.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopern.ai";
 
 export async function POST(req: NextRequest) {
   try {

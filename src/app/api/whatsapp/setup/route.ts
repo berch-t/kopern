@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopern.vercel.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopern.ai";
 
 /**
  * POST /api/whatsapp/setup — Connect WhatsApp to a Kopern agent

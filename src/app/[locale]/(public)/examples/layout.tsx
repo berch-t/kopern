@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopern.vercel.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopern.ai";
 
 export async function generateMetadata({
   params,

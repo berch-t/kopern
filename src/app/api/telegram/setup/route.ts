@@ -8,7 +8,7 @@ import {
   getTelegramBotInfo,
 } from "@/lib/connectors/telegram";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopern.vercel.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopern.ai";
 
 /**
  * POST /api/telegram/setup — Connect a Telegram bot to a Kopern agent

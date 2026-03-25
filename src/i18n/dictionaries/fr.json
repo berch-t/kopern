@@ -140,6 +140,7 @@
     "settings": "Paramètres",
     "bugs": "Bug Tracker",
     "docs": "Documentation",
+    "apiReference": "Référence API",
     "pricing": "Tarifs"
   },
   "auth": {

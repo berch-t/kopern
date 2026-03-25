@@ -92,7 +92,7 @@ export async function updateSessionMetrics(
 /**
  * Create a new session record. Returns the session ID.
  */
-export type SessionSource = "playground" | "widget" | "webhook" | "slack" | "mcp" | "grading" | "autoresearch" | "pipeline" | "team";
+export type SessionSource = "playground" | "widget" | "webhook" | "slack" | "mcp" | "openai_compat" | "grading" | "autoresearch" | "pipeline" | "team";
 
 export async function createSessionServer(
   userId: string,

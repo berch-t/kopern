@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const baseUrl = process.env.NEXTAUTH_URL || "https://kopern.vercel.app";
+  const baseUrl = process.env.NEXTAUTH_URL || "https://kopern.ai";
   const redirectUri = `${baseUrl}/api/slack/oauth`;
 
   const state = Buffer.from(

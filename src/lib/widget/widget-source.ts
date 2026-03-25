@@ -25,7 +25,7 @@ export function getWidgetScript(): string {
       var url = new URL(src, window.location.href);
       API_HOST = url.origin;
     } catch(e) {
-      API_HOST = "https://kopern.vercel.app";
+      API_HOST = "https://kopern.ai";
     }
   }
 
@@ -336,7 +336,7 @@ export function getWidgetScript(): string {
     '  <textarea class="kopern-input" rows="1" placeholder="Type a message..."></textarea>',
     '  <button class="kopern-send-btn" aria-label="Send">' + SEND_ICON + '</button>',
     '</div>',
-    '<div class="kopern-footer"><span class="kopern-powered-by" style="display:none">Powered by <a href="https://kopern.vercel.app" target="_blank" rel="noopener">Kopern</a> &middot; </span><span style="font-style:italic">AI-generated content</span></div>',
+    '<div class="kopern-footer"><span class="kopern-powered-by" style="display:none">Powered by <a href="https://kopern.ai" target="_blank" rel="noopener">Kopern</a> &middot; </span><span style="font-style:italic">AI-generated content</span></div>',
   ].join("");
   shadow.appendChild(panel);
 

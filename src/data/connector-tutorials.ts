@@ -56,7 +56,7 @@ In your Slack App settings:
 3. In **Request URL**, enter:
 
 \`\`\`
-https://kopern.vercel.app/api/slack/events
+https://kopern.ai/api/slack/events
 \`\`\`
 
 > Slack will send a verification challenge — it should pass automatically.
@@ -214,7 +214,7 @@ Copy the embed snippet from the configuration panel and paste it before the clos
 
 \`\`\`html
 <script
-  src="https://kopern.vercel.app/api/widget/script"
+  src="https://kopern.ai/api/widget/script"
   data-key="kpn_YOUR_API_KEY_HERE"
   data-agent="YOUR_AGENT_ID"
   async
@@ -325,7 +325,7 @@ Use webhooks to integrate your Kopern agent with any external service — automa
 ### Endpoint
 
 \`\`\`
-POST https://kopern.vercel.app/api/webhook/{agentId}?key=kpn_YOUR_API_KEY
+POST https://kopern.ai/api/webhook/{agentId}?key=kpn_YOUR_API_KEY
 \`\`\`
 
 ### Request Format
@@ -377,7 +377,7 @@ const expected = 'sha256=' + signature;
 ### Quick Test with curl
 
 \`\`\`bash
-curl -X POST "https://kopern.vercel.app/api/webhook/YOUR_AGENT_ID?key=kpn_YOUR_KEY" \\
+curl -X POST "https://kopern.ai/api/webhook/YOUR_AGENT_ID?key=kpn_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"message": "Hello, what can you do?"}'
 \`\`\`
@@ -430,7 +430,7 @@ Outbound webhooks fire when specific events occur in your agent.
 1. In n8n, add an **HTTP Request** node
 2. Configure:
    - **Method:** POST
-   - **URL:** \`https://kopern.vercel.app/api/webhook/YOUR_AGENT_ID?key=kpn_YOUR_KEY\`
+   - **URL:** \`https://kopern.ai/api/webhook/YOUR_AGENT_ID?key=kpn_YOUR_KEY\`
    - **Body Content Type:** JSON
    - **Body:**
    \`\`\`json
@@ -465,7 +465,7 @@ This creates a Slack bot powered by your Kopern agent, orchestrated through n8n.
 
 1. Add an **HTTP** > **Make a request** module
 2. Configure:
-   - **URL:** \`https://kopern.vercel.app/api/webhook/YOUR_AGENT_ID?key=kpn_YOUR_KEY\`
+   - **URL:** \`https://kopern.ai/api/webhook/YOUR_AGENT_ID?key=kpn_YOUR_KEY\`
    - **Method:** POST
    - **Body type:** Raw
    - **Content type:** JSON
@@ -493,7 +493,7 @@ This creates a Slack bot powered by your Kopern agent, orchestrated through n8n.
 1. Add a **Webhooks by Zapier** > **Custom Request** action
 2. Configure:
    - **Method:** POST
-   - **URL:** \`https://kopern.vercel.app/api/webhook/YOUR_AGENT_ID?key=kpn_YOUR_KEY\`
+   - **URL:** \`https://kopern.ai/api/webhook/YOUR_AGENT_ID?key=kpn_YOUR_KEY\`
    - **Data:**
    \`\`\`
    {"message": "Your dynamic content here"}
@@ -613,7 +613,7 @@ Deploy your Kopern agent on WhatsApp via the Meta Business API. The most popular
 ### Step 2 — Configure the Webhook in Meta
 
 1. In your Meta App → WhatsApp → **Configuration**
-2. Set the **Callback URL** to: \`https://kopern.vercel.app/api/whatsapp/webhook\`
+2. Set the **Callback URL** to: \`https://kopern.ai/api/whatsapp/webhook\`
 3. Set the **Verify Token** to the value configured in your Kopern environment
 4. Subscribe to the **messages** field
 
@@ -710,7 +710,7 @@ Dans les parametres de votre App Slack :
 3. Dans **Request URL**, entrez :
 
 \`\`\`
-https://kopern.vercel.app/api/slack/events
+https://kopern.ai/api/slack/events
 \`\`\`
 
 > Slack enverra un challenge de verification — il devrait passer automatiquement.
@@ -868,7 +868,7 @@ Copiez le code d'integration depuis le panneau de configuration et collez-le ava
 
 \`\`\`html
 <script
-  src="https://kopern.vercel.app/api/widget/script"
+  src="https://kopern.ai/api/widget/script"
   data-key="kpn_VOTRE_CLE_API_ICI"
   data-agent="VOTRE_AGENT_ID"
   async
@@ -979,7 +979,7 @@ Utilisez les webhooks pour integrer votre agent Kopern a n'importe quel service 
 ### Endpoint
 
 \`\`\`
-POST https://kopern.vercel.app/api/webhook/{agentId}?key=kpn_VOTRE_CLE_API
+POST https://kopern.ai/api/webhook/{agentId}?key=kpn_VOTRE_CLE_API
 \`\`\`
 
 ### Format de la Requete
@@ -1031,7 +1031,7 @@ const expected = 'sha256=' + signature;
 ### Test Rapide avec curl
 
 \`\`\`bash
-curl -X POST "https://kopern.vercel.app/api/webhook/VOTRE_AGENT_ID?key=kpn_VOTRE_CLE" \\
+curl -X POST "https://kopern.ai/api/webhook/VOTRE_AGENT_ID?key=kpn_VOTRE_CLE" \\
   -H "Content-Type: application/json" \\
   -d '{"message": "Bonjour, que peux-tu faire ?"}'
 \`\`\`
@@ -1084,7 +1084,7 @@ Les webhooks sortants se declenchent lorsque des evenements specifiques se produ
 1. Dans n8n, ajoutez un noeud **HTTP Request**
 2. Configurez :
    - **Methode :** POST
-   - **URL :** \`https://kopern.vercel.app/api/webhook/VOTRE_AGENT_ID?key=kpn_VOTRE_CLE\`
+   - **URL :** \`https://kopern.ai/api/webhook/VOTRE_AGENT_ID?key=kpn_VOTRE_CLE\`
    - **Type de contenu :** JSON
    - **Body :**
    \`\`\`json
@@ -1119,7 +1119,7 @@ Cela cree un bot Slack alimente par votre agent Kopern, orchestre via n8n.
 
 1. Ajoutez un module **HTTP** > **Make a request**
 2. Configurez :
-   - **URL :** \`https://kopern.vercel.app/api/webhook/VOTRE_AGENT_ID?key=kpn_VOTRE_CLE\`
+   - **URL :** \`https://kopern.ai/api/webhook/VOTRE_AGENT_ID?key=kpn_VOTRE_CLE\`
    - **Methode :** POST
    - **Type de body :** Raw
    - **Type de contenu :** JSON
@@ -1147,7 +1147,7 @@ Cela cree un bot Slack alimente par votre agent Kopern, orchestre via n8n.
 1. Ajoutez une action **Webhooks by Zapier** > **Custom Request**
 2. Configurez :
    - **Methode :** POST
-   - **URL :** \`https://kopern.vercel.app/api/webhook/VOTRE_AGENT_ID?key=kpn_VOTRE_CLE\`
+   - **URL :** \`https://kopern.ai/api/webhook/VOTRE_AGENT_ID?key=kpn_VOTRE_CLE\`
    - **Data :**
    \`\`\`
    {"message": "Votre contenu dynamique ici"}
@@ -1257,7 +1257,7 @@ Deployez votre agent Kopern sur WhatsApp via l'API Meta Business. Le canal de me
 ### Etape 2 — Configurer le Webhook dans Meta
 
 1. Dans votre Meta App → WhatsApp → **Configuration**
-2. URL de rappel : \`https://kopern.vercel.app/api/whatsapp/webhook\`
+2. URL de rappel : \`https://kopern.ai/api/whatsapp/webhook\`
 3. Token de verification : la valeur configuree dans votre environnement Kopern
 4. Abonnez-vous au champ **messages**
 

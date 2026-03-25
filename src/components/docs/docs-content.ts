@@ -643,6 +643,106 @@ Token usage is tracked per server per month. View usage in the **API Keys** page
 
 ---
 
+## OpenAI-Compatible Endpoint
+
+Use any Kopern agent as a drop-in replacement for the OpenAI API. This works with **Cursor**, **Continue**, **aider**, **LibreChat**, or any tool that supports the OpenAI \`/v1/chat/completions\` format.
+
+### Endpoint
+
+\`\`\`
+POST /api/agents/{agentId}/v1/chat/completions
+\`\`\`
+
+**Authentication:** Bearer token using your MCP API key (\`kpn_...\`).
+
+### Request (OpenAI format)
+
+\`\`\`json
+{
+  "messages": [
+    {"role": "user", "content": "Analyze this contract for risks"}
+  ],
+  "stream": true
+}
+\`\`\`
+
+The \`model\` field is ignored — the agent uses its configured model. The \`system\` role in messages is also ignored — the agent uses its own system prompt and skills.
+
+### Response (streaming)
+
+Standard OpenAI SSE format:
+
+\`\`\`
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","choices":[{"delta":{"role":"assistant"}}]}
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","choices":[{"delta":{"content":"The contract"}}]}
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","choices":[{"delta":{"content":" contains..."}}]}
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","choices":[{"delta":{}}],"finish_reason":"stop"}
+data: [DONE]
+\`\`\`
+
+### Response (non-streaming)
+
+Set \`"stream": false\` (or omit it) for a standard JSON response:
+
+\`\`\`json
+{
+  "id": "chatcmpl-...",
+  "object": "chat.completion",
+  "choices": [{"message": {"role": "assistant", "content": "..."}, "finish_reason": "stop"}],
+  "usage": {"prompt_tokens": 150, "completion_tokens": 230, "total_tokens": 380}
+}
+\`\`\`
+
+### Code Examples
+
+**cURL (streaming):**
+\`\`\`bash
+curl -X POST https://kopern.ai/api/agents/YOUR_AGENT_ID/v1/chat/completions \\
+  -H "Authorization: Bearer kpn_your_api_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{"messages":[{"role":"user","content":"Hello"}],"stream":true}'
+\`\`\`
+
+**Python (OpenAI SDK):**
+\`\`\`python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="kpn_your_api_key",
+    base_url="https://kopern.ai/api/agents/YOUR_AGENT_ID/v1"
+)
+
+response = client.chat.completions.create(
+    model="kopern",  # ignored — agent uses its configured model
+    messages=[{"role": "user", "content": "Summarize this document"}],
+    stream=True
+)
+for chunk in response:
+    print(chunk.choices[0].delta.content or "", end="")
+\`\`\`
+
+**Cursor / Continue config:**
+\`\`\`json
+{
+  "models": [{
+    "title": "My Kopern Agent",
+    "provider": "openai",
+    "model": "kopern",
+    "apiKey": "kpn_your_api_key",
+    "apiBase": "https://kopern.ai/api/agents/YOUR_AGENT_ID/v1"
+  }]
+}
+\`\`\`
+
+### Features
+
+- Full tool calling support — the agent uses all its configured tools (GitHub, custom, built-in)
+- Session tracking and billing — every call creates a session and tracks token usage
+- Same rate limiting as MCP (30 requests/minute)
+- Anti-loop protection — outbound webhooks are not fired from this endpoint
+
+---
+
 ## Agent Teams
 
 Teams let you **orchestrate multiple agents** working together on a task. Each team member has a role and contributes to a shared goal.
@@ -942,7 +1042,7 @@ Add an AI chat bubble to any website with a single \`<script>\` tag.
 
 \`\`\`html
 <script
-  src="https://kopern.vercel.app/api/widget/script"
+  src="https://kopern.ai/api/widget/script"
   data-key="kpn_your_api_key_here"
   async
 ></script>
@@ -1050,7 +1150,7 @@ Kopern webhooks are designed for seamless integration with workflow automation p
 
 **Trigger a Kopern agent from n8n (inbound):**
 1. Add an **HTTP Request** node in your n8n workflow
-2. Set method to \`POST\` and URL to \`https://kopern.vercel.app/api/webhook/{agentId}?key=kpn_xxx\`
+2. Set method to \`POST\` and URL to \`https://kopern.ai/api/webhook/{agentId}?key=kpn_xxx\`
 3. Set body to JSON: \`{"message": "your prompt here", "metadata": {...}}\`
 4. The response contains the agent's reply in \`response\` and token metrics in \`metrics\`
 
@@ -1063,7 +1163,7 @@ Kopern webhooks are designed for seamless integration with workflow automation p
 
 **Trigger a Kopern agent from Zapier:**
 1. Use a **Webhooks by Zapier → Custom Request** action
-2. Method: POST, URL: \`https://kopern.vercel.app/api/webhook/{agentId}?key=kpn_xxx\`
+2. Method: POST, URL: \`https://kopern.ai/api/webhook/{agentId}?key=kpn_xxx\`
 3. Body: \`{"message": "...", "metadata": {...}}\`
 
 **Trigger a Zapier workflow from Kopern:**
@@ -1074,7 +1174,7 @@ Kopern webhooks are designed for seamless integration with workflow automation p
 
 **Trigger a Kopern agent from Make:**
 1. Use an **HTTP → Make a request** module
-2. URL: \`https://kopern.vercel.app/api/webhook/{agentId}?key=kpn_xxx\`, method: POST
+2. URL: \`https://kopern.ai/api/webhook/{agentId}?key=kpn_xxx\`, method: POST
 3. Body type: JSON, body: \`{"message": "...", "metadata": {...}}\`
 
 **Trigger a Make scenario from Kopern:**
@@ -1095,7 +1195,7 @@ Let users interact with your agent directly in Slack channels and DMs.
 
 1. **Create a Slack App** at [api.slack.com/apps](https://api.slack.com/apps)
 2. Configure **OAuth Scopes**: \`chat:write\`, \`app_mentions:read\`, \`channels:history\`, \`im:history\`, \`reactions:write\`
-3. Set **Event Subscriptions** URL: \`https://kopern.vercel.app/api/slack/events\`
+3. Set **Event Subscriptions** URL: \`https://kopern.ai/api/slack/events\`
 4. Subscribe to events: \`app_mention\`, \`message.im\`
 5. Add environment variables: \`SLACK_CLIENT_ID\`, \`SLACK_CLIENT_SECRET\`, \`SLACK_SIGNING_SECRET\`
 6. Go to **Agents → [Your Agent] → Connectors → Slack → Connect**
@@ -1147,7 +1247,7 @@ Deploy your agent on WhatsApp using the Meta Cloud API.
 2. Add the **WhatsApp** product and get your Phone Number ID + Access Token
 3. Go to **Agents → [Your Agent] → Connectors → WhatsApp**
 4. Enter your Phone Number ID and Access Token, then click **Connect**
-5. Set the webhook URL in Meta Dashboard: \`https://kopern.vercel.app/api/whatsapp/webhook\`
+5. Set the webhook URL in Meta Dashboard: \`https://kopern.ai/api/whatsapp/webhook\`
 6. Subscribe to the \`messages\` webhook field
 
 #### How It Works

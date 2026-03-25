@@ -126,9 +126,9 @@ export function WidgetConfigurator({ agentId, agentName, onBack }: WidgetConfigu
   }, [user, agentId, t.connectors.widget.keyWarning]);
 
   const embedSnippet = generatedKey
-    ? `<script src="https://kopern.vercel.app/api/widget/script" data-key="${generatedKey}" async></script>`
+    ? `<script src="https://kopern.ai/api/widget/script" data-key="${generatedKey}" async></script>`
     : hasApiKey
-      ? `<script src="https://kopern.vercel.app/api/widget/script" data-key="${apiKeyPrefix}..." async></script>`
+      ? `<script src="https://kopern.ai/api/widget/script" data-key="${apiKeyPrefix}..." async></script>`
       : "";
 
   const handleCopySnippet = useCallback(() => {

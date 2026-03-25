@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Bug,
   Cable,
+  Code2,
   CreditCard,
   LayoutDashboard,
   Lightbulb,
@@ -55,6 +56,7 @@ function useNavItems() {
 
   return {
     main: items,
+    apiRef: { href: "/api-reference", label: t.nav.apiReference, icon: Code2 },
     docs: { href: "/docs", label: t.nav.docs, icon: BookOpen },
   };
 }
@@ -63,7 +65,7 @@ function useNavItems() {
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
-  const { main: navItems, docs } = useNavItems();
+  const { main: navItems, apiRef, docs } = useNavItems();
 
   return (
     <motion.aside
@@ -145,12 +147,13 @@ export function Sidebar() {
       </nav>
 
       {/* Bottom nav */}
-      <div className="border-t px-2 py-3">
-        {(() => {
-          const isActive = pathname.includes(docs.href);
+      <div className="border-t px-2 py-3 space-y-1">
+        {[apiRef, docs].map((item) => {
+          const isActive = pathname.includes(item.href);
           const link = (
             <LocalizedLink
-              href={docs.href}
+              key={item.href}
+              href={item.href}
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 isActive
@@ -158,7 +161,7 @@ export function Sidebar() {
                   : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
               )}
             >
-              <docs.icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary")} />
+              <item.icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary")} />
               <AnimatePresence>
                 {!collapsed && (
                   <motion.span
@@ -167,7 +170,7 @@ export function Sidebar() {
                     exit={{ opacity: 0, width: 0 }}
                     className="overflow-hidden whitespace-nowrap"
                   >
-                    {docs.label}
+                    {item.label}
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -175,14 +178,14 @@ export function Sidebar() {
           );
           if (collapsed) {
             return (
-              <Tooltip delayDuration={0}>
+              <Tooltip key={item.href} delayDuration={0}>
                 <TooltipTrigger asChild>{link}</TooltipTrigger>
-                <TooltipContent side="right">{docs.label}</TooltipContent>
+                <TooltipContent side="right">{item.label}</TooltipContent>
               </Tooltip>
             );
           }
           return link;
-        })()}
+        })}
       </div>
     </motion.aside>
   );
@@ -192,9 +195,9 @@ export function Sidebar() {
 export function MobileSidebar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const { main: navItems, docs } = useNavItems();
+  const { main: navItems, apiRef, docs } = useNavItems();
 
-  const allItems = [...navItems, docs];
+  const allItems = [...navItems, apiRef, docs];
 
   return (
     <>

@@ -354,7 +354,7 @@ export function WebhookManager({ agentId, apiKeyPrefix, onBack }: WebhookManager
                       {wh.type === "inbound" && (() => {
                         const isFullKey = apiKeyPrefix && apiKeyPrefix.startsWith("kpn_") && apiKeyPrefix.length > 20;
                         const keyDisplay = isFullKey ? apiKeyPrefix : (apiKeyPrefix ? apiKeyPrefix + "..." : "YOUR_API_KEY");
-                        const webhookUrl = `https://kopern.vercel.app/api/webhook/${agentId}?key=${keyDisplay}`;
+                        const webhookUrl = `https://kopern.ai/api/webhook/${agentId}?key=${keyDisplay}`;
                         return (
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">

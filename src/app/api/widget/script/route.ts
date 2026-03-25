@@ -13,7 +13,7 @@ export async function GET() {
         "default-src 'none'",
         "script-src 'self'",
         "style-src 'unsafe-inline'",
-        "connect-src https://kopern.vercel.app https://*.kopern.com",
+        "connect-src https://kopern.ai https://kopern.vercel.app https://*.kopern.ai",
         "img-src data:",
       ].join("; "),
     },

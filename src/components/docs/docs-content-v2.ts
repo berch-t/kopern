@@ -1625,6 +1625,63 @@ View usage in:
 
 ---
 
+## OpenAI-Compatible Endpoint
+
+Any Kopern agent can be used as a drop-in replacement for the OpenAI API. This makes your agents accessible from **Cursor**, **Continue**, **aider**, **LibreChat**, the **OpenAI Python/Node SDK**, or any tool that supports the OpenAI \`/v1/chat/completions\` format.
+
+### How It Works
+
+\`\`\`
+POST /api/agents/{agentId}/v1/chat/completions
+Authorization: Bearer kpn_your_api_key
+\`\`\`
+
+The endpoint accepts standard OpenAI request bodies. The \`model\` field is ignored — the agent always uses its configured model. System messages are also ignored — the agent uses its own system prompt and skills.
+
+### Streaming Example (Python)
+
+\`\`\`python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="kpn_your_api_key",
+    base_url="https://kopern.ai/api/agents/YOUR_AGENT_ID/v1"
+)
+
+response = client.chat.completions.create(
+    model="kopern",
+    messages=[{"role": "user", "content": "Analyze this contract"}],
+    stream=True
+)
+for chunk in response:
+    print(chunk.choices[0].delta.content or "", end="")
+\`\`\`
+
+### Cursor / Continue Configuration
+
+\`\`\`json
+{
+  "models": [{
+    "title": "My Kopern Agent",
+    "provider": "openai",
+    "model": "kopern",
+    "apiKey": "kpn_your_api_key",
+    "apiBase": "https://kopern.ai/api/agents/YOUR_AGENT_ID/v1"
+  }]
+}
+\`\`\`
+
+### Key Details
+
+- **Auth**: Same MCP API key (\`kpn_\` prefix) used for MCP Servers
+- **Streaming**: \`"stream": true\` returns OpenAI SSE format (\`data: {...}\` chunks ending with \`data: [DONE]\`)
+- **Non-streaming**: Omit or set \`"stream": false\` for a standard JSON response with \`usage\` field
+- **Tool calling**: The agent uses all its configured tools (GitHub, custom, built-in) — tool calls happen server-side and are transparent
+- **Billing**: Session tracked per call, tokens counted, same plan limits apply
+- **Rate limit**: 30 requests/minute per agent (shared with MCP)
+
+---
+
 ## GitHub Integration
 
 ### Connecting GitHub
@@ -1834,7 +1891,7 @@ Add an AI chat bubble to any website with a single script tag:
 
 \`\`\`html
 <script
-  src="https://kopern.vercel.app/api/widget/script"
+  src="https://kopern.ai/api/widget/script"
   data-key="kpn_your_api_key_here"
   async
 ></script>
@@ -1861,7 +1918,7 @@ Add an AI chat bubble to any website with a single script tag:
 #### Inbound — External services trigger your agent
 
 \`\`\`bash
-curl -X POST "https://kopern.vercel.app/api/webhook/{agentId}?key=kpn_xxx" \\
+curl -X POST "https://kopern.ai/api/webhook/{agentId}?key=kpn_xxx" \\
   -H "Content-Type: application/json" \\
   -d '{"message": "New order #1234", "metadata": {"source": "stripe"}}'
 \`\`\`
@@ -1919,7 +1976,7 @@ Let users interact with your agent directly in Slack.
 **Setup:**
 1. Create a Slack App at [api.slack.com/apps](https://api.slack.com/apps)
 2. Add OAuth scopes: \`chat:write\`, \`app_mentions:read\`, \`channels:history\`, \`im:history\`, \`reactions:write\`
-3. Set Event Subscriptions URL: \`https://kopern.vercel.app/api/slack/events\`
+3. Set Event Subscriptions URL: \`https://kopern.ai/api/slack/events\`
 4. Subscribe to: \`app_mention\`, \`message.im\`
 5. Connect from Kopern: Agents → Connectors → Slack → Connect
 
@@ -1937,7 +1994,7 @@ Deploy your agent on Telegram. Create a bot via [@BotFather](https://t.me/BotFat
 
 ### WhatsApp
 
-Deploy your agent on WhatsApp via the Meta Cloud API. Create a Meta Business App, add the WhatsApp product, and configure the Phone Number ID + Access Token in **Connectors → WhatsApp**. Set the webhook URL in Meta Dashboard to \`https://kopern.vercel.app/api/whatsapp/webhook\`. Users message your WhatsApp number and the agent responds. Incoming webhooks are verified using Meta's signature validation.
+Deploy your agent on WhatsApp via the Meta Cloud API. Create a Meta Business App, add the WhatsApp product, and configure the Phone Number ID + Access Token in **Connectors → WhatsApp**. Set the webhook URL in Meta Dashboard to \`https://kopern.ai/api/whatsapp/webhook\`. Users message your WhatsApp number and the agent responds. Incoming webhooks are verified using Meta's signature validation.
 
 ### Connector Plan Limits
 

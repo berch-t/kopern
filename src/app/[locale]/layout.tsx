@@ -10,7 +10,7 @@ import { notFound } from "next/navigation";
 import { OrganizationJsonLd, SoftwareApplicationJsonLd, FAQJsonLd } from "@/components/seo/JsonLd";
 import { CookieConsent } from "@/components/shared/CookieConsent";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopern.vercel.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopern.ai";
 
 export async function generateMetadata({
   params,

@@ -1395,6 +1395,63 @@ L'utilisation de tokens est suivie automatiquement pour chaque serveur MCP :
 
 ---
 
+## Endpoint Compatible OpenAI
+
+Tout agent Kopern peut être utilisé comme remplacement direct de l'API OpenAI. Vos agents deviennent accessibles depuis **Cursor**, **Continue**, **aider**, **LibreChat**, le **SDK Python/Node OpenAI**, ou tout outil supportant le format \`/v1/chat/completions\`.
+
+### Fonctionnement
+
+\`\`\`
+POST /api/agents/{agentId}/v1/chat/completions
+Authorization: Bearer kpn_votre_cle_api
+\`\`\`
+
+L'endpoint accepte les requêtes au format standard OpenAI. Le champ \`model\` est ignoré — l'agent utilise toujours son modèle configuré. Les messages \`system\` sont aussi ignorés — l'agent utilise son propre system prompt et ses skills.
+
+### Exemple Streaming (Python)
+
+\`\`\`python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="kpn_votre_cle_api",
+    base_url="https://kopern.ai/api/agents/VOTRE_AGENT_ID/v1"
+)
+
+response = client.chat.completions.create(
+    model="kopern",
+    messages=[{"role": "user", "content": "Analysez ce contrat"}],
+    stream=True
+)
+for chunk in response:
+    print(chunk.choices[0].delta.content or "", end="")
+\`\`\`
+
+### Configuration Cursor / Continue
+
+\`\`\`json
+{
+  "models": [{
+    "title": "Mon Agent Kopern",
+    "provider": "openai",
+    "model": "kopern",
+    "apiKey": "kpn_votre_cle_api",
+    "apiBase": "https://kopern.ai/api/agents/VOTRE_AGENT_ID/v1"
+  }]
+}
+\`\`\`
+
+### Détails clés
+
+- **Auth** : même clé API MCP (préfixe \`kpn_\`) utilisée pour les serveurs MCP
+- **Streaming** : \`"stream": true\` retourne le format SSE OpenAI (\`data: {...}\` terminé par \`data: [DONE]\`)
+- **Non-streaming** : omettez ou mettez \`"stream": false\` pour une réponse JSON avec le champ \`usage\`
+- **Tool calling** : l'agent utilise tous ses outils configurés (GitHub, custom, built-in) — les appels d'outils sont transparents côté serveur
+- **Facturation** : session créée par appel, tokens comptabilisés, mêmes limites de plan
+- **Limite de débit** : 30 requêtes/minute par agent (partagé avec MCP)
+
+---
+
 ## Intégration GitHub
 
 ### Connecter GitHub
@@ -1544,7 +1601,7 @@ Ajoutez une bulle de chat IA à n'importe quel site web avec une seule balise sc
 
 \`\`\`html
 <script
-  src="https://kopern.vercel.app/api/widget/script"
+  src="https://kopern.ai/api/widget/script"
   data-key="kpn_votre_cle_api"
   async
 ></script>
@@ -1571,7 +1628,7 @@ Ajoutez une bulle de chat IA à n'importe quel site web avec une seule balise sc
 #### Entrants — Des services externes déclenchent votre agent
 
 \`\`\`bash
-curl -X POST "https://kopern.vercel.app/api/webhook/{agentId}?key=kpn_xxx" \\
+curl -X POST "https://kopern.ai/api/webhook/{agentId}?key=kpn_xxx" \\
   -H "Content-Type: application/json" \\
   -d '{"message": "Nouvelle commande #1234", "metadata": {"source": "stripe"}}'
 \`\`\`
@@ -1629,7 +1686,7 @@ Permettez aux utilisateurs d'interagir avec votre agent directement dans Slack.
 **Configuration :**
 1. Créez une Slack App sur [api.slack.com/apps](https://api.slack.com/apps)
 2. Ajoutez les OAuth scopes : \`chat:write\`, \`app_mentions:read\`, \`channels:history\`, \`im:history\`, \`reactions:write\`
-3. Définissez l'URL Event Subscriptions : \`https://kopern.vercel.app/api/slack/events\`
+3. Définissez l'URL Event Subscriptions : \`https://kopern.ai/api/slack/events\`
 4. Abonnez-vous à : \`app_mention\`, \`message.im\`
 5. Connectez depuis Kopern : Agents → Connecteurs → Slack → Connecter
 
@@ -1647,7 +1704,7 @@ Déployez votre agent sur Telegram. Créez un bot via [@BotFather](https://t.me/
 
 ### WhatsApp
 
-Déployez votre agent sur WhatsApp via l'API Cloud de Meta. Créez une App Meta Business, ajoutez le produit WhatsApp, et configurez le Phone Number ID + Access Token dans **Connecteurs → WhatsApp**. Définissez l'URL du webhook dans le Dashboard Meta : \`https://kopern.vercel.app/api/whatsapp/webhook\`. Les utilisateurs envoient un message à votre numéro WhatsApp et l'agent répond. Les webhooks entrants sont vérifiés via la validation de signature de Meta.
+Déployez votre agent sur WhatsApp via l'API Cloud de Meta. Créez une App Meta Business, ajoutez le produit WhatsApp, et configurez le Phone Number ID + Access Token dans **Connecteurs → WhatsApp**. Définissez l'URL du webhook dans le Dashboard Meta : \`https://kopern.ai/api/whatsapp/webhook\`. Les utilisateurs envoient un message à votre numéro WhatsApp et l'agent répond. Les webhooks entrants sont vérifiés via la validation de signature de Meta.
 
 ### Limites par plan
 
