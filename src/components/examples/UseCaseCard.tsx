@@ -25,9 +25,16 @@ export function UseCaseCard({ useCase, index }: UseCaseCardProps) {
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
               <useCase.icon className="h-6 w-6 text-primary" />
             </div>
-            <Badge variant="secondary" className="text-xs">
-              {useCase.domain}
-            </Badge>
+            <div className="flex items-center gap-1.5">
+              {useCase.mcpIntegration?.includes("mcp.data.gouv.fr") && (
+                <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] px-1.5 py-0">
+                  MCP
+                </Badge>
+              )}
+              <Badge variant="secondary" className="text-xs">
+                {useCase.domain}
+              </Badge>
+            </div>
           </div>
 
           {/* Content */}

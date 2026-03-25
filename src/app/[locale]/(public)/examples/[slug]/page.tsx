@@ -126,7 +126,10 @@ export default function ExampleDetailPage({
         modelProvider: "anthropic",
         modelId: "claude-sonnet-4-6",
         thinkingLevel: "off",
-        builtinTools: [],
+        builtinTools: [
+          ...(uc.mcpIntegration?.includes("mcp.data.gouv.fr") ? ["datagouv"] : []),
+          ...(uc.mcpIntegration?.includes("PISTE") ? ["piste"] : []),
+        ],
       });
       await Promise.all(
         uc.skills.map((s) =>

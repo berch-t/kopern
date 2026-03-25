@@ -208,7 +208,11 @@
       "optimize": "Optimize",
       "notFound": "Agent not found",
       "loadingAgent": "Loading agent...",
-      "noPrompt": "No system prompt defined"
+      "noPrompt": "No system prompt defined",
+      "deleteAgent": "Delete Agent",
+      "deleteConfirm": "Are you sure you want to delete this agent? All skills, tools, extensions, sessions, grading suites, and MCP servers will be permanently lost.",
+      "deleteSuccess": "Agent deleted successfully",
+      "deleting": "Deleting..."
     },
     "form": {
       "name": "Name",
@@ -223,6 +227,13 @@
       "modelId": "Model ID",
       "thinkingLevel": "Thinking Level",
       "builtinTools": "Built-in Tools",
+      "builtinToolDescriptions": {
+        "github_write": "Create branches, commit files, and open PRs on connected repos",
+        "bug_management": "Track, update, and respond to bug reports (admin)",
+        "slack_read": "Read messages and list channels from connected Slack workspace",
+        "datagouv": "Search, explore, and query 50,000+ French open datasets (DVF, LEGI, cadastre, DGFiP, etc.)",
+        "piste": "Search and read French legal texts — codes, laws, decrees, and collective agreements via the official Légifrance API"
+      },
       "save": "Save Agent",
       "create": "Create Agent",
       "saving": "Saving...",
@@ -367,7 +378,10 @@
   },
   "examples": {
     "title": "Workflow Examples",
-    "subtitle": "15 production-ready agent configurations for real business workflows. Each example includes system prompt, skills, tools, MCP integration, and grading suite — ready to deploy on Kopern.",
+    "subtitle": "Production-ready agent configurations for real business workflows. Each example includes system prompt, skills, tools, MCP integration, and grading suite — ready to deploy on Kopern.",
+    "datagouvTitle": "Powered by data.gouv.fr MCP",
+    "datagouvSubtitle": "These agents leverage the official data.gouv.fr MCP server — free, no API key required. Access 90,000+ French open datasets, query tabular data in-place, and discover government APIs.",
+    "datagouvBadge": "data.gouv.fr MCP",
     "useThisAgent": "Use this Agent",
     "creating": "Creating...",
     "allExamples": "All examples",

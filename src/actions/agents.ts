@@ -7,10 +7,22 @@ import {
   serverTimestamp,
   query,
   orderBy,
+  type CollectionReference,
 } from "firebase/firestore";
 import {
   agentsCollection,
   agentDoc,
+  skillsCollection,
+  toolsCollection,
+  extensionsCollection,
+  versionsCollection,
+  gradingSuitesCollection,
+  mcpServersCollection,
+  pipelinesCollection,
+  sessionsCollection,
+  autoresearchRunsCollection,
+  webhooksCollection,
+  webhookLogsCollection,
   type AgentDoc,
 } from "@/lib/firebase/firestore";
 
@@ -74,7 +86,39 @@ export async function updateAgent(
   });
 }
 
+/** Delete all docs in a collection (Firestore doesn't cascade deletes to subcollections) */
+async function deleteCollection(ref: CollectionReference) {
+  const snapshot = await getDocs(ref);
+  await Promise.all(snapshot.docs.map((doc) => deleteDoc(doc.ref)));
+}
+
 export async function deleteAgent(userId: string, agentId: string) {
+  // Delete all subcollections first (Firestore does NOT cascade)
+  await Promise.all([
+    deleteCollection(skillsCollection(userId, agentId)),
+    deleteCollection(toolsCollection(userId, agentId)),
+    deleteCollection(extensionsCollection(userId, agentId)),
+    deleteCollection(versionsCollection(userId, agentId)),
+    deleteCollection(mcpServersCollection(userId, agentId)),
+    deleteCollection(pipelinesCollection(userId, agentId)),
+    deleteCollection(sessionsCollection(userId, agentId)),
+    deleteCollection(autoresearchRunsCollection(userId, agentId)),
+    deleteCollection(webhooksCollection(userId, agentId)),
+    deleteCollection(webhookLogsCollection(userId, agentId)),
+  ]);
+  // Delete grading suites + their nested cases/runs
+  const suites = await getDocs(gradingSuitesCollection(userId, agentId));
+  for (const suite of suites.docs) {
+    const casesRef = gradingSuitesCollection(userId, agentId).parent?.parent;
+    // Cases and runs are nested under each suite — delete via path
+    const { gradingCasesCollection, gradingRunsCollection } = await import("@/lib/firebase/firestore");
+    await Promise.all([
+      deleteCollection(gradingCasesCollection(userId, agentId, suite.id)),
+      deleteCollection(gradingRunsCollection(userId, agentId, suite.id)),
+    ]);
+    await deleteDoc(suite.ref);
+  }
+  // Finally delete the agent document itself
   await deleteDoc(agentDoc(userId, agentId));
 }
 

@@ -211,4 +211,55 @@ export const useCasesFr: Record<
     costReduction: "~50K\u20ac/an en temps d'ing\u00e9nierie data + pr\u00e9vient 200K\u20ac+ de co\u00fbts li\u00e9s aux donn\u00e9es corrompues en aval",
     riskMitigation: "99,5% de qualit\u00e9 des donn\u00e9es avec validation pr\u00e9-chargement \u2014 z\u00e9ro corruption silencieuse",
   },
+  // data.gouv.fr MCP Templates
+  "analyste-donnees-publiques": {
+    title: "Analyste Donn\u00e9es Publiques — France",
+    domain: "data.gouv.fr / Open Data",
+    tagline: "Explorez, interrogez et analysez n'importe quel dataset de data.gouv.fr via le serveur MCP officiel",
+    description:
+      "Un agent analyste g\u00e9n\u00e9raliste connect\u00e9 au serveur MCP data.gouv.fr (9 outils). Il peut rechercher dans le catalogue fran\u00e7ais d'open data (90 000+ datasets), interroger des donn\u00e9es tabulaires sans t\u00e9l\u00e9chargement, d\u00e9couvrir les API gouvernementales et produire des analyses structur\u00e9es. Id\u00e9al pour les journalistes, chercheurs, analystes de politiques publiques et d\u00e9veloppeurs civic tech.",
+    timeSaved: "2-6 heures de navigation manuelle sur data.gouv.fr r\u00e9duites \u00e0 une conversation",
+    costReduction: "\u00c9limine le besoin d'ing\u00e9nieurs data pour l'analyse exploratoire (~30K\u20ac/an)",
+    riskMitigation: "Interroge les donn\u00e9es en direct — pas de CSV p\u00e9rim\u00e9s ni d'\u00e9cart de version",
+  },
+  "assistant-juridique-france": {
+    title: "Assistant Juridique — France",
+    domain: "data.gouv.fr / Open Data",
+    tagline: "Recherchez les lois, r\u00e8glements et conventions collectives fran\u00e7aises via les datasets juridiques de data.gouv.fr",
+    description:
+      "Un agent de recherche juridique qui exploite data.gouv.fr pour rechercher dans LEGI (codes et lois consolid\u00e9s), JORF (Journal Officiel — d\u00e9crets, circulaires), KALI (conventions collectives nationales) et CASS (d\u00e9cisions de la Cour de cassation). Il peut croiser les textes juridiques, expliquer les articles en langage clair et identifier la jurisprudence pertinente. Pas un substitut au conseil juridique — un acc\u00e9l\u00e9rateur de recherche.",
+    timeSaved: "1-3 heures de recherche manuelle sur L\u00e9gifrance r\u00e9duites \u00e0 quelques minutes",
+    costReduction: "~20K\u20ac/an en temps de recherche de collaborateur junior pour un petit cabinet",
+    riskMitigation: "Croisement de plusieurs sources pour r\u00e9duire le risque d'oublier une r\u00e9glementation pertinente",
+  },
+  "assistant-immobilier-dvf": {
+    title: "Analyste Immobilier — DVF France",
+    domain: "data.gouv.fr / Open Data",
+    tagline: "Analysez les transactions immobili\u00e8res (DVF), le cadastre et les bases b\u00e2timents depuis data.gouv.fr",
+    description:
+      "Un agent sp\u00e9cialis\u00e9 dans l'analyse immobili\u00e8re utilisant DVF (Demandes de Valeurs Fonci\u00e8res — toutes les transactions immobili\u00e8res en France), les donn\u00e9es cadastrales et la BDNB. Il peut calculer le prix/m\u00b2 par commune, identifier les tendances du march\u00e9, comparer les quartiers et croiser avec les donn\u00e9es de performance \u00e9nerg\u00e9tique. Essentiel pour agents immobiliers, investisseurs, notaires et promoteurs.",
+    timeSaved: "4-8 heures d'analyse de tableurs DVF r\u00e9duites \u00e0 une conversation",
+    costReduction: "Remplace les abonnements sp\u00e9cialis\u00e9s en donn\u00e9es immobili\u00e8res (5K\u20ac-15K\u20ac/an)",
+    riskMitigation: "Donn\u00e9es de transactions officielles DGFiP — aucun biais d'estimation ni erreur d'\u00e9chantillonnage",
+  },
+  "veille-fiscale-comptable": {
+    title: "Veille Fiscale & Comptable — France",
+    domain: "data.gouv.fr / Open Data",
+    tagline: "Interrogez les donn\u00e9es fiscales, taux d'imposition locaux et statistiques DGFiP depuis data.gouv.fr",
+    description:
+      "Un agent de veille fiscale exploitant les datasets ouverts DGFiP sur data.gouv.fr. Il peut rechercher les taux d'imposition locaux (taxe fonci\u00e8re, CFE, CVAE) par commune, comparer la pression fiscale entre territoires, analyser les statistiques de recettes fiscales et croiser avec les donn\u00e9es \u00e9conomiques INSEE. Con\u00e7u pour comptables, conseillers fiscaux, DAF et analystes de finances municipales.",
+    timeSaved: "2-4 heures de recherche manuelle DGFiP par analyse",
+    costReduction: "Remplace les outils sp\u00e9cialis\u00e9s de donn\u00e9es fiscales (3K\u20ac-8K\u20ac/an de licences)",
+    riskMitigation: "Donn\u00e9es officielles DGFiP — source faisant autorit\u00e9 pour les taux d'imposition et statistiques fiscales",
+  },
+  "assistant-urbanisme-construction": {
+    title: "Assistant Urbanisme & Construction — France",
+    domain: "data.gouv.fr / Open Data",
+    tagline: "Explorez les donn\u00e9es PLU, bases b\u00e2timents et permis de construire depuis data.gouv.fr",
+    description:
+      "Un agent d'intelligence urbanistique et construction exploitant data.gouv.fr pour les donn\u00e9es PLU (Plan Local d'Urbanisme), la BDNB (base b\u00e2timents nationale via API), les permis de construire (Sit@del) et le cadastre. Il aide architectes, promoteurs, urbanistes et collectivit\u00e9s \u00e0 comprendre les r\u00e8gles de zonage, les caract\u00e9ristiques du parc b\u00e2ti et les tendances de construction. Croisement avec les donn\u00e9es DPE de l'ADEME.",
+    timeSaved: "3-6 heures de croisement de sources urbanistiques multiples",
+    costReduction: "\u00c9vite les erreurs co\u00fbteuses de conformit\u00e9 zonage (10K\u20ac-100K\u20ac par projet)",
+    riskMitigation: "Croisement des sources officielles pour valider la compatibilit\u00e9 zonage avant acquisition fonci\u00e8re",
+  },
 };

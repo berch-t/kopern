@@ -12,6 +12,8 @@ import { logAppError } from "@/lib/errors/logger";
 import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
 import { createSessionServer, updateSessionMetrics, appendSessionEvents, endSessionServer } from "@/lib/billing/track-usage-server";
 import { calculateTokenCost } from "@/lib/billing/pricing";
+import { checkRateLimit, webhookRateLimit } from "@/lib/security/rate-limit";
+import { webhookInboundSchema, validateBody } from "@/lib/security/validation";
 
 // ─── Auth helper ─────────────────────────────────────────────────────
 
@@ -51,6 +53,11 @@ export async function POST(
   }
 
   const { userId } = key;
+
+  // Rate limiting by API key
+  const rl = await checkRateLimit(webhookRateLimit, agentId);
+  if (rl) return rl;
+
   const ADMIN_UIDS = (process.env.NEXT_PUBLIC_ADMIN_UID ?? "").split(",").filter(Boolean);
   const isAdmin = ADMIN_UIDS.includes(userId);
 
@@ -66,16 +73,15 @@ export async function POST(
     }
   }
 
-  // 4. Parse body
-  let body: { message?: string; webhookId?: string; metadata?: Record<string, unknown> };
+  // 4. Parse + validate body
+  let body: { message: string; webhookId?: string; metadata?: Record<string, unknown>; sessionId?: string };
   try {
-    body = await request.json();
+    const raw = await request.json();
+    const parsed = validateBody(webhookInboundSchema, raw);
+    if ("error" in parsed) return parsed.error;
+    body = parsed.data;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-
-  if (!body.message || typeof body.message !== "string") {
-    return NextResponse.json({ error: "message field is required" }, { status: 400 });
   }
 
   // 5. HMAC verification if webhookId provided

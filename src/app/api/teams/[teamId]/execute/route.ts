@@ -3,6 +3,8 @@ import { createSSEStream, sseResponse } from "@/lib/utils/sse";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
+import { teamExecuteSchema, validateBody } from "@/lib/security/validation";
+import { checkRateLimit, chatRateLimit } from "@/lib/security/rate-limit";
 
 interface TeamExecuteBody {
   prompt: string;
@@ -28,8 +30,15 @@ export async function POST(
   { params }: { params: Promise<{ teamId: string }> }
 ) {
   const { teamId } = await params;
-  const body = (await request.json()) as TeamExecuteBody;
+  const raw = await request.json();
+  const parsed = validateBody(teamExecuteSchema, raw);
+  if ("error" in parsed) return parsed.error;
+  const body = parsed.data as TeamExecuteBody;
   const { prompt, userId, team } = body;
+
+  // Rate limit
+  const rl = await checkRateLimit(chatRateLimit, `team:${userId}`);
+  if (rl) return rl;
 
   // Enforce plan: teams require Pro+
   if (userId) {

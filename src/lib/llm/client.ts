@@ -1,6 +1,7 @@
 // Multi-provider LLM streaming client with tool calling support + key rotation
 
 import { executeWithKeyRotation } from "./key-rotation";
+import { ensureValidToolSchema } from "../tools/agent-tools";
 
 export interface LLMMessage {
   role: "user" | "assistant" | "system";
@@ -158,14 +159,10 @@ async function streamAnthropic(config: LLMConfig, callbacks: LLMStreamCallbacks)
   };
 
   if (config.tools && config.tools.length > 0) {
-    // Sanitize tool schemas — Anthropic requires type: "object" in input_schema
+    // Final safety net — ensure every tool schema is valid for Anthropic API
     body.tools = config.tools.map((t) => ({
       ...t,
-      input_schema: {
-        type: "object",
-        properties: {},
-        ...t.input_schema,
-      },
+      input_schema: ensureValidToolSchema(t.input_schema),
     }));
   }
 
@@ -316,7 +313,7 @@ async function streamOpenAI(config: LLMConfig, callbacks: LLMStreamCallbacks) {
       function: {
         name: t.name,
         description: t.description,
-        parameters: t.input_schema,
+        parameters: ensureValidToolSchema(t.input_schema),
       },
     }));
   }
@@ -474,7 +471,7 @@ async function streamGoogle(config: LLMConfig, callbacks: LLMStreamCallbacks) {
         functionDeclarations: config.tools.map((t) => ({
           name: t.name,
           description: t.description,
-          parameters: t.input_schema,
+          parameters: ensureValidToolSchema(t.input_schema),
         })),
       },
     ];
@@ -591,7 +588,7 @@ async function streamMistral(config: LLMConfig, callbacks: LLMStreamCallbacks) {
       function: {
         name: t.name,
         description: t.description,
-        parameters: t.input_schema,
+        parameters: ensureValidToolSchema(t.input_schema),
       },
     }));
   }

@@ -1171,6 +1171,26 @@ Deploy your agent on WhatsApp using the Meta Cloud API.
 
 Connector usage counts toward your plan's token limits.
 
+### data.gouv.fr MCP Integration
+
+Give your agents access to France's national open data platform (50,000+ datasets) by connecting the free **data.gouv.fr MCP server**.
+
+**Setup:**
+1. Go to your agent's **MCP Servers** tab
+2. Add server with URL: \`https://mcp.data.gouv.fr/mcp\` (no API key needed)
+3. Your agent gains 9 tools: \`search_datasets\`, \`get_dataset_info\`, \`list_dataset_resources\`, \`get_resource_info\`, \`query_resource_data\`, \`search_dataservices\`, \`get_dataservice_info\`, \`get_dataservice_openapi_spec\`, \`get_metrics\`
+
+**Key tool — \`query_resource_data\`:** Queries CSV/XLSX data in-place via the Tabular API. Filter, sort, and paginate without downloading files.
+
+**Pre-built templates:** 5 ready-to-use agents in **Examples → Powered by data.gouv.fr MCP**:
+- Public Data Analyst — general open data exploration
+- Legal Research Assistant — LEGI, JORF, KALI (French laws & agreements)
+- Real Estate Analyst (DVF) — all French real estate transactions
+- Tax & Accounting Intelligence — DGFiP local tax rates & fiscal stats
+- Urban Planning & Building — PLU zoning, cadastre, building permits
+
+**Tips:** Check \`get_resource_info\` for Tabular API availability. Use \`search_dataservices\` for government APIs (BDNB, BAN). Always verify data freshness via \`get_dataset_info\`.
+
 ---
 
 ### API Key Failover

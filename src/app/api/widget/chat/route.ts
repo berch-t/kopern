@@ -8,6 +8,8 @@ import { calculateTokenCost } from "@/lib/billing/pricing";
 import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
 import { createSessionServer, updateSessionMetrics, appendSessionEvents, endSessionServer } from "@/lib/billing/track-usage-server";
 import { logAppError } from "@/lib/errors/logger";
+import { checkRateLimit, widgetRateLimit } from "@/lib/security/rate-limit";
+import { widgetChatSchema, validateBody } from "@/lib/security/validation";
 
 interface WidgetChatRequest {
   message: string;
@@ -73,6 +75,10 @@ export async function POST(request: NextRequest) {
 
   const { userId, agentId } = resolved;
 
+  // Rate limiting by API key
+  const rl = await checkRateLimit(widgetRateLimit, plainKey);
+  if (rl) return rl;
+
   // --- Load widget config for CORS + settings ---
   const widgetSnap = await adminDb
     .doc(`users/${userId}/agents/${agentId}/connectors/widget`)
@@ -133,17 +139,13 @@ export async function POST(request: NextRequest) {
   // --- Parse request body ---
   let body: WidgetChatRequest;
   try {
-    body = (await request.json()) as WidgetChatRequest;
+    const raw = await request.json();
+    const parsed = validateBody(widgetChatSchema, raw);
+    if ("error" in parsed) return parsed.error;
+    body = raw as WidgetChatRequest;
   } catch {
     return NextResponse.json(
       { error: "Invalid request body" },
-      { status: 400, headers: cors }
-    );
-  }
-
-  if (!body.message || typeof body.message !== "string") {
-    return NextResponse.json(
-      { error: "message is required" },
       { status: 400, headers: cors }
     );
   }

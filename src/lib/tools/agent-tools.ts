@@ -145,6 +145,25 @@ function sanitizeKey(key: string): string {
   return key.replace(/[^a-zA-Z0-9_.-]/g, "_").slice(0, 64);
 }
 
+/**
+ * Ensures a tool schema is valid for the Anthropic API:
+ * - Top-level must be { type: "object", properties: { ... } }
+ * - Handles flat schemas where properties are at the top level
+ * - Sanitizes all property keys to match ^[a-zA-Z0-9_.-]{1,64}$
+ * Used as the single source of truth for schema normalization across all code paths.
+ */
+export function ensureValidToolSchema(raw: Record<string, unknown>): Record<string, unknown> {
+  let schema = { ...raw };
+  // If type is not literally the string "object", the parsed object IS the properties
+  if (schema.type !== "object") {
+    schema = { type: "object", properties: schema };
+  }
+  if (!schema.properties) {
+    schema.properties = {};
+  }
+  return sanitizeSchemaKeys(schema) as Record<string, unknown>;
+}
+
 /** Recursively sanitize all property keys in a JSON Schema to match Anthropic's pattern */
 function sanitizeSchemaKeys(obj: unknown): unknown {
   if (obj === null || obj === undefined || typeof obj !== "object") return obj;
@@ -178,15 +197,7 @@ export function getCustomToolDefinitions(
     } catch {
       schema = { type: "object", properties: {} };
     }
-    // Ensure type: "object" is always present — Anthropic requires it
-    if (!schema.type) {
-      schema.type = "object";
-    }
-    if (!schema.properties) {
-      schema.properties = {};
-    }
-    // Sanitize all property keys to match Anthropic's pattern ^[a-zA-Z0-9_.-]{1,64}$
-    schema = sanitizeSchemaKeys(schema) as Record<string, unknown>;
+    schema = ensureValidToolSchema(schema);
     return {
       name: sanitizeToolName(t.name),
       description: t.description || "Custom tool",

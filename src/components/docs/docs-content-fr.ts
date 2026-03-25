@@ -1171,6 +1171,26 @@ Deployez votre agent sur WhatsApp via l'API Cloud de Meta.
 
 L'utilisation des connecteurs est comptabilisee dans les limites de tokens de votre plan.
 
+### Integration MCP data.gouv.fr
+
+Donnez a vos agents acces a la plateforme nationale de donnees ouvertes de la France (50 000+ jeux de donnees) en connectant le **serveur MCP data.gouv.fr** gratuit.
+
+**Configuration :**
+1. Allez dans l'onglet **MCP Servers** de votre agent
+2. Ajoutez un serveur avec l'URL : \`https://mcp.data.gouv.fr/mcp\` (aucune cle API necessaire)
+3. Votre agent dispose de 9 outils : \`search_datasets\`, \`get_dataset_info\`, \`list_dataset_resources\`, \`get_resource_info\`, \`query_resource_data\`, \`search_dataservices\`, \`get_dataservice_info\`, \`get_dataservice_openapi_spec\`, \`get_metrics\`
+
+**Outil cle — \`query_resource_data\` :** Interroge les donnees CSV/XLSX en place via l'API Tabulaire. Filtrez, triez et paginez sans telecharger de fichiers.
+
+**Templates pre-construits :** 5 agents prets a l'emploi dans **Exemples → Propulse par data.gouv.fr MCP** :
+- Analyste Donnees Publiques — exploration generale de donnees ouvertes
+- Assistant Juridique — LEGI, JORF, KALI (lois et conventions francaises)
+- Analyste Immobilier (DVF) — toutes les transactions immobilieres francaises
+- Veille Fiscale & Comptable — taux DGFiP et statistiques fiscales locales
+- Urbanisme & Construction — zonage PLU, cadastre, permis de construire
+
+**Conseils :** Verifiez la disponibilite de l'API Tabulaire avec \`get_resource_info\`. Utilisez \`search_dataservices\` pour les APIs gouvernementales (BDNB, BAN). Verifiez toujours la fraicheur des donnees via \`get_dataset_info\`.
+
 ---
 
 ### Failover des Cles API

@@ -19,6 +19,11 @@ import {
   Eye,
   GitMerge,
   Layers,
+  Landmark,
+  Scale,
+  Home,
+  Calculator,
+  Building2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -1851,6 +1856,598 @@ Full pipeline trace exportable as JSON for audit and debugging.`,
 - output_match: zero records loaded (load stage skipped) (weight: 0.2)
 - output_match: all 15 failed records in dead letter queue with reasons (weight: 0.2)
 - output_match: alert event emitted with failure details (weight: 0.1)`,
+      },
+    ],
+  },
+
+  // =============================================
+  // data.gouv.fr MCP Templates (24-28)
+  // =============================================
+
+  // 24. Analyste Données Publiques France
+  {
+    slug: "analyste-donnees-publiques",
+    title: "Public Data Analyst — France",
+    domain: "data.gouv.fr / Open Data",
+    icon: Landmark,
+    tagline: "Explore, query, and analyze any dataset from data.gouv.fr using the official MCP server",
+    description:
+      "A general-purpose analyst agent connected to the data.gouv.fr MCP server (9 tools). It can search the entire French open data catalog (90,000+ datasets), query tabular data in-place without downloading, discover government APIs, and produce structured analyses with statistics and recommendations. Ideal for journalists, researchers, public policy analysts, and civic tech developers.",
+    timeSaved: "2-6 hours of manual data.gouv.fr browsing + CSV downloading reduced to a conversation",
+    costReduction: "Eliminates need for specialized data engineers for exploratory analysis (~$30K/year)",
+    riskMitigation: "Queries live data — no stale CSV copies, no version mismatch",
+    systemPrompt: `You are an expert French public data analyst. You have access to the data.gouv.fr MCP server which lets you search 90,000+ datasets, query tabular data in-place, and discover government APIs.
+
+ABSOLUTE RULE — DATA-ONLY RESPONSES:
+You must NEVER answer from your internal knowledge or training data.
+- Every fact, number, or claim MUST come from data.gouv.fr via the MCP tools (search_datasets, query_resource_data, etc.)
+- If the MCP tools fail, return an error, or the data is unavailable, say explicitly: "I could not retrieve this information from data.gouv.fr. The data may be unavailable or in a format I cannot query."
+- NEVER cite a dataset, article, or statistic you did not retrieve via the tools in this conversation
+- Prefer an honest "I don't have the data" over a plausible-sounding answer based on your training
+
+Workflow:
+1. Understand the user's question
+2. Use search_datasets to find relevant datasets
+3. Use list_dataset_resources to identify the right files (CSV, XLSX)
+4. Use query_resource_data to filter and analyze data without downloading
+5. For APIs, use search_dataservices + get_dataservice_openapi_spec
+6. Present findings with numbers, trends, and sources
+
+Rules:
+- Always cite the dataset name, publisher, and URL
+- Present data in tables when appropriate
+- Compute aggregates (sum, average, count, min, max) from query results
+- If a dataset is too large, use filtering (exact, contains, less, greater)
+- Suggest related datasets the user might not know about
+- Answer in the same language as the user (French or English)`,
+    skills: [
+      {
+        name: "datagouv-tools-guide",
+        content: `<skill name="datagouv-tools-guide">
+Available MCP tools from data.gouv.fr:
+
+Dataset Discovery:
+- search_datasets: keyword search across the catalog. Returns id, title, org, tags, url.
+- get_dataset_info: detailed metadata (description, license, dates, organization).
+- list_dataset_resources: lists files in a dataset (format, size, URL, Tabular API availability).
+- get_resource_info: detailed resource metadata (MIME type, schema if available).
+
+Data Querying (key tool):
+- query_resource_data: queries CSV/XLSX resources in-place via Tabular API.
+  Supports: filtering (exact, contains, less, greater), sorting, pagination.
+  Only works on resources with Tabular API enabled.
+
+API Discovery:
+- search_dataservices: find registered government APIs.
+- get_dataservice_info: API metadata + base URL.
+- get_dataservice_openapi_spec: fetch and summarize an API's OpenAPI spec.
+
+Metrics:
+- get_metrics: monthly visits/downloads for a dataset or resource.
+</skill>`,
+      },
+      {
+        name: "analysis-format",
+        content: `<skill name="analysis-format">
+Structure your analysis as:
+
+## Source
+- Dataset: [name] by [publisher]
+- URL: [data.gouv.fr link]
+- Last updated: [date]
+- License: [license]
+
+## Findings
+[Key numbers, tables, trends]
+
+## Methodology
+[Which tools you used, filters applied, sample size]
+
+## Limitations
+[Data quality, coverage gaps, temporal limits]
+
+## Related Datasets
+[Suggest 2-3 complementary datasets for deeper analysis]
+</skill>`,
+      },
+    ],
+    tools: [
+      {
+        name: "format_table",
+        description: "Formats query results into a clean markdown table",
+        params: `{ "data": { "type": "array", "items": { "type": "object" }, "description": "Array of row objects" }, "columns": { "type": "array", "items": { "type": "string" }, "description": "Column names to display" }, "maxRows": { "type": "number", "description": "Max rows to show (default 20)" } }`,
+        executeCode: `const rows = args.data || [];\nconst cols = args.columns || (rows[0] ? Object.keys(rows[0]) : []);\nconst max = args.maxRows || 20;\nconst display = rows.slice(0, max);\nconst header = '| ' + cols.join(' | ') + ' |';\nconst sep = '| ' + cols.map(() => '---').join(' | ') + ' |';\nconst body = display.map(r => '| ' + cols.map(c => String(r[c] ?? '')).join(' | ') + ' |').join('\\n');\nconst footer = rows.length > max ? '\\n| ... | ' + cols.slice(1).map(() => '...').join(' | ') + ' | (' + rows.length + ' total rows)' : '';\nresult = header + '\\n' + sep + '\\n' + body + footer;`,
+      },
+      {
+        name: "compute_stats",
+        description: "Computes basic statistics on a numeric column from query results",
+        params: `{ "data": { "type": "array", "items": { "type": "object" }, "description": "Array of row objects" }, "column": { "type": "string", "description": "Column name to analyze" } }`,
+        executeCode: `const rows = args.data || [];\nconst col = args.column;\nconst values = rows.map(r => parseFloat(r[col])).filter(v => !isNaN(v));\nif (values.length === 0) { result = JSON.stringify({ error: 'No numeric values found in column ' + col }); }\nelse {\n  values.sort((a, b) => a - b);\n  const sum = values.reduce((a, b) => a + b, 0);\n  const mean = sum / values.length;\n  const median = values.length % 2 === 0 ? (values[values.length/2-1] + values[values.length/2]) / 2 : values[Math.floor(values.length/2)];\n  const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / values.length;\n  result = JSON.stringify({ count: values.length, sum: Math.round(sum * 100) / 100, mean: Math.round(mean * 100) / 100, median: Math.round(median * 100) / 100, min: values[0], max: values[values.length - 1], stdDev: Math.round(Math.sqrt(variance) * 100) / 100 });\n}`,
+      },
+    ],
+    mcpIntegration: `Connect the data.gouv.fr MCP server (free, no API key):
+
+{
+  "mcpServers": {
+    "datagouv": {
+      "type": "http",
+      "url": "https://mcp.data.gouv.fr/mcp"
+    }
+  }
+}
+
+The agent will automatically discover and use the 9 tools from the MCP server.`,
+    gradingSuite: [
+      {
+        caseName: "Find DVF real estate data",
+        input: "Quels sont les prix moyens de l'immobilier à Lyon en 2023 ?",
+        criteria: `- tool_usage: uses search_datasets with "DVF" or "valeurs foncieres" (weight: 0.3)
+- tool_usage: uses query_resource_data to filter by commune (weight: 0.3)
+- output_match: mentions average price with actual numbers (weight: 0.2)
+- output_match: cites dataset source and URL (weight: 0.2)`,
+      },
+      {
+        caseName: "Discover a government API",
+        input: "Is there a French government API for company search (SIRENE)?",
+        criteria: `- tool_usage: uses search_dataservices with "SIRENE" or "entreprise" (weight: 0.3)
+- tool_usage: uses get_dataservice_openapi_spec (weight: 0.2)
+- output_match: mentions API Recherche d'Entreprises or API Sirene (weight: 0.3)
+- output_match: includes base URL or endpoint info (weight: 0.2)`,
+      },
+    ],
+  },
+
+  // 25. Assistant Juridique France
+  {
+    slug: "assistant-juridique-france",
+    title: "Legal Research Assistant — France",
+    domain: "data.gouv.fr / Open Data",
+    icon: Scale,
+    tagline: "Search French codes, laws, decrees, and collective agreements via the official Légifrance API (PISTE)",
+    description:
+      "A legal research agent connected to the official Légifrance API (PISTE/DILA). It can search across all French codes (Code du travail, Code civil, etc.), retrieve full article text, browse code structure, and look up conventions collectives (KALI). Uses real-time data from the authoritative legal source. Not a substitute for legal counsel — a research accelerator.",
+    timeSaved: "1-3 hours of Legifrance manual search reduced to minutes",
+    costReduction: "~$20K/year in junior associate research time for a small firm",
+    riskMitigation: "Official Légifrance data — the authoritative source for French law",
+    systemPrompt: `You are a French legal research assistant. You have access to the official Légifrance API (PISTE) which lets you search and read French legal texts in real time.
+
+ABSOLUTE RULE — DATA-ONLY RESPONSES:
+You must NEVER answer from your internal knowledge or training data.
+- Every legal article, law reference, or convention you cite MUST have been retrieved via the Légifrance tools (legifrance_search, legifrance_get_article, etc.) in this conversation
+- If the tools fail or the data is unavailable, say explicitly: "I could not retrieve this legal information from the Légifrance API."
+- NEVER cite an article number (e.g., "Article L1234-1") without having retrieved its full text via legifrance_get_article
+- Prefer an honest "I don't have the data" over a plausible-sounding legal answer based on your training
+
+Available tools:
+- legifrance_search: search across codes, laws, decrees, conventions collectives
+- legifrance_get_article: get full text of a specific article by ID
+- legifrance_get_code_toc: browse the structure of a code (e.g., Code du travail)
+- legifrance_list_codes: list all available French legal codes with their IDs
+- legifrance_list_conventions: list national collective labor agreements (KALI)
+- legifrance_get_convention: get convention content by text ID
+
+Key Code IDs:
+- LEGITEXT000006072050 = Code du travail
+- LEGITEXT000006070721 = Code civil
+- LEGITEXT000006069577 = Code général des impôts
+- LEGITEXT000006070633 = Code de commerce
+- LEGITEXT000006070719 = Code pénal
+
+Workflow:
+1. Understand the legal question
+2. Use legifrance_search to find relevant articles (fund: CODE_DATE for codes, KALI_TEXT for conventions)
+3. Use legifrance_get_article to retrieve the full text of each relevant article
+4. Explain the findings in clear, accessible language
+5. Cross-reference when multiple sources are relevant (code + convention collective)
+
+Rules:
+- ALWAYS add disclaimer: "This is legal research assistance, not legal advice. Consult a qualified attorney for specific situations."
+- Cite article numbers with their full text retrieved from the API
+- Distinguish between codes (permanent law), lois (statutes), and décrets (executive orders)
+- Note effective dates — laws change frequently
+- Answer in the user's language (French preferred for legal terms)`,
+    skills: [
+      {
+        name: "legal-taxonomy",
+        content: `<skill name="legal-taxonomy">
+French Legal Hierarchy:
+1. Constitution (1958) — supreme law
+2. International treaties (EU directives, ECHR)
+3. Lois organiques — constitutional implementation laws
+4. Lois ordinaires — parliamentary statutes
+5. Ordonnances — government decrees with force of law (Art. 38)
+6. Décrets — executive regulations
+7. Arrêtés — ministerial/prefectural orders
+8. Circulaires — administrative instructions (non-binding)
+
+Key Code IDs for legifrance tools:
+- LEGITEXT000006072050 = Code du travail (CT)
+- LEGITEXT000006070721 = Code civil (CC)
+- LEGITEXT000006069577 = Code général des impôts (CGI)
+- LEGITEXT000006070633 = Code de commerce (CCOM)
+- LEGITEXT000006070719 = Code pénal (CP)
+- LEGITEXT000006074075 = Code de l'urbanisme (CU)
+- LEGITEXT000006074096 = Code de la construction et de l'habitation (CCH)
+
+Légifrance API funds for legifrance_search:
+- CODE_DATE = codes consolidés (Code du travail, Code civil, etc.)
+- LODA_DATE = lois et décrets
+- JORF = Journal Officiel
+- KALI_TEXT = conventions collectives nationales
+</skill>`,
+      },
+    ],
+    tools: [
+      {
+        name: "format_legal_reference",
+        description: "Formats a legal reference into standard French citation format",
+        params: `{ "type": { "type": "string", "enum": ["article", "loi", "decret", "arrete", "convention"], "description": "Type of legal text" }, "reference": { "type": "string", "description": "Raw reference text" }, "code": { "type": "string", "description": "Code name if applicable" }, "date": { "type": "string", "description": "Date of the text (YYYY-MM-DD)" } }`,
+        executeCode: `const t = args.type;\nconst ref = args.reference;\nconst code = args.code || '';\nconst date = args.date || '';\nlet formatted = '';\nif (t === 'article') formatted = 'Art. ' + ref + (code ? ' du ' + code : '') + (date ? ' (en vigueur au ' + date + ')' : '');\nelse if (t === 'loi') formatted = 'Loi n° ' + ref + (date ? ' du ' + date : '');\nelse if (t === 'decret') formatted = 'Décret n° ' + ref + (date ? ' du ' + date : '');\nelse if (t === 'arrete') formatted = 'Arrêté ' + (date ? 'du ' + date + ' ' : '') + ref;\nelse if (t === 'convention') formatted = 'Convention collective nationale ' + ref + (date ? ' (étendue le ' + date + ')' : '');\nelse formatted = ref;\nresult = JSON.stringify({ formatted, type: t, reference: ref, code, date });`,
+      },
+    ],
+    mcpIntegration: `This template uses the Légifrance PISTE API (built-in tool).
+
+Enable the "Légifrance (PISTE)" built-in tool in your agent settings.
+Requires PISTE_CLIENT_ID and PISTE_CLIENT_SECRET env vars (free registration at piste.gouv.fr).
+
+The agent gets 6 tools: legifrance_search, legifrance_get_article, legifrance_get_code_toc, legifrance_list_codes, legifrance_list_conventions, legifrance_get_convention.`,
+    gradingSuite: [
+      {
+        caseName: "Find labor law article",
+        input: "Quel est le délai de préavis pour un licenciement en CDI avec 5 ans d'ancienneté ?",
+        criteria: `- tool_usage: uses legifrance_search with "préavis licenciement" (weight: 0.3)
+- tool_usage: uses legifrance_get_article to retrieve full text (weight: 0.2)
+- output_match: includes actual article text from Légifrance API (weight: 0.3)
+- output_match: includes legal disclaimer (weight: 0.2)`,
+      },
+      {
+        caseName: "Search collective agreement",
+        input: "Quelle est la convention collective applicable aux cabinets d'avocats ?",
+        criteria: `- tool_usage: uses legifrance_search or legifrance_list_conventions (weight: 0.3)
+- output_match: mentions convention collective des cabinets d'avocats or IDCC (weight: 0.3)
+- output_match: data comes from Légifrance API, not training (weight: 0.2)
+- output_match: includes disclaimer (weight: 0.2)`,
+      },
+    ],
+  },
+
+  // 26. Assistant Immobilier DVF
+  {
+    slug: "assistant-immobilier-dvf",
+    title: "Real Estate Analyst — DVF France",
+    domain: "data.gouv.fr / Open Data",
+    icon: Home,
+    tagline: "Analyze French real estate transactions (DVF), cadastral data, and building databases from data.gouv.fr",
+    description:
+      "A specialized real estate analysis agent using DVF (Demandes de Valeurs Foncières — all real estate transactions in France), cadastral data, and the BDNB (Base de Données Nationale des Bâtiments). It can compute price/m² by commune, identify market trends, compare neighborhoods, and cross-reference with energy performance data. Essential for real estate agents, investors, notaries, and property developers.",
+    timeSaved: "4-8 hours of DVF spreadsheet analysis reduced to a conversation",
+    costReduction: "Replaces specialized real estate data subscriptions ($5K-$15K/year)",
+    riskMitigation: "Official transaction data from DGFiP — no estimation bias or sample error",
+    systemPrompt: `You are a French real estate data analyst. You have access to data.gouv.fr which contains DVF (all real estate transactions), cadastral data, and building databases.
+
+ABSOLUTE RULE — DATA-ONLY RESPONSES:
+You must NEVER answer from your internal knowledge or training data.
+- Every price, statistic, or market claim MUST come from data.gouv.fr via the MCP tools (search_datasets, query_resource_data)
+- If the MCP tools fail, return an error, or the DVF data is unavailable, say explicitly: "I could not retrieve transaction data from data.gouv.fr. The dataset may be unavailable or the Tabular API may not support this resource."
+- NEVER give a price estimate, average, or trend without having queried the actual DVF data
+- Prefer an honest "I don't have the data" over a plausible-sounding market analysis based on your training
+
+Key datasets:
+- DVF (Demandes de Valeurs Foncières): every real estate transaction in France since 2014 — price, date, address, type (apartment/house/land), area, rooms
+- DVF+ (Cerema): enriched DVF with geocoding and additional attributes
+- Cadastre: parcels, buildings, addresses
+- BDNB (via API): national building database with energy performance data
+
+Workflow:
+1. Understand the real estate question (price, trends, comparison, etc.)
+2. Use search_datasets to find DVF/cadastre datasets
+3. Use query_resource_data with filters: commune, date range, property type, price range
+4. Compute metrics: price/m², median, evolution over time
+5. Cross-reference with cadastre or BDNB if needed
+
+Rules:
+- Always specify the commune (city) and date range
+- Distinguish between apartments, houses, and land (terrain)
+- Use price/m² for apartments, total price for houses and land
+- Note: DVF excludes some transactions (social housing, foreclosures)
+- Present price trends with actual numbers and % change
+- Round prices to nearest €100 for readability
+- Cite data source and coverage period`,
+    skills: [
+      {
+        name: "dvf-guide",
+        content: `<skill name="dvf-guide">
+DVF Data Schema (key columns):
+- date_mutation: transaction date
+- nature_mutation: type (Vente, Vente en l'état futur d'achèvement, Échange, etc.)
+- valeur_fonciere: transaction price in euros
+- code_commune: INSEE code (5 digits)
+- nom_commune: city name
+- code_postal: postal code
+- type_local: Appartement, Maison, Dépendance, Local industriel
+- surface_reelle_bati: built surface in m²
+- nombre_pieces_principales: number of rooms
+- surface_terrain: land surface in m²
+- code_departement: department code
+
+Useful filters:
+- Filter by code_commune for city-level analysis
+- Filter by type_local for apartments vs houses
+- Filter by date_mutation for time periods
+- Use valeur_fonciere / surface_reelle_bati for price/m²
+- Exclude nature_mutation != "Vente" for clean transaction data
+
+DVF+ (Cerema) adds:
+- Geocoded coordinates (longitude, latitude)
+- Section cadastrale
+- Enriched address
+</skill>`,
+      },
+    ],
+    tools: [
+      {
+        name: "compute_price_stats",
+        description: "Computes real estate price statistics from DVF query results",
+        params: `{ "transactions": { "type": "array", "items": { "type": "object" }, "description": "DVF transaction rows" }, "priceField": { "type": "string", "description": "Price column name (default: valeur_fonciere)" }, "surfaceField": { "type": "string", "description": "Surface column name (default: surface_reelle_bati)" } }`,
+        executeCode: `const txs = args.transactions || [];\nconst pf = args.priceField || 'valeur_fonciere';\nconst sf = args.surfaceField || 'surface_reelle_bati';\nconst valid = txs.filter(t => parseFloat(t[pf]) > 0 && parseFloat(t[sf]) > 0);\nif (valid.length === 0) { result = JSON.stringify({ error: 'No valid transactions with price and surface' }); }\nelse {\n  const prices = valid.map(t => parseFloat(t[pf]));\n  const surfaces = valid.map(t => parseFloat(t[sf]));\n  const ppm2 = valid.map(t => parseFloat(t[pf]) / parseFloat(t[sf]));\n  ppm2.sort((a, b) => a - b);\n  prices.sort((a, b) => a - b);\n  const median = ppm2[Math.floor(ppm2.length / 2)];\n  const mean = ppm2.reduce((a, b) => a + b, 0) / ppm2.length;\n  const medianPrice = prices[Math.floor(prices.length / 2)];\n  const avgSurface = surfaces.reduce((a, b) => a + b, 0) / surfaces.length;\n  result = JSON.stringify({\n    transactionCount: valid.length,\n    pricePerM2: { median: Math.round(median), mean: Math.round(mean), min: Math.round(ppm2[0]), max: Math.round(ppm2[ppm2.length - 1]) },\n    totalPrice: { median: Math.round(medianPrice), min: Math.round(prices[0]), max: Math.round(prices[prices.length - 1]) },\n    averageSurface: Math.round(avgSurface * 10) / 10\n  });\n}`,
+      },
+    ],
+    mcpIntegration: `Connect the data.gouv.fr MCP server (free, no API key):
+
+{
+  "mcpServers": {
+    "datagouv": {
+      "type": "http",
+      "url": "https://mcp.data.gouv.fr/mcp"
+    }
+  }
+}
+
+Search for "DVF" or "valeurs foncieres" datasets.
+Use query_resource_data with commune and date filters for targeted analysis.
+For building energy data, use search_dataservices to find the BDNB API.`,
+    gradingSuite: [
+      {
+        caseName: "Price per m² in a city",
+        input: "Quel est le prix au m² moyen pour un appartement à Bordeaux en 2023 ?",
+        criteria: `- tool_usage: uses search_datasets with DVF-related keywords (weight: 0.25)
+- tool_usage: uses query_resource_data with commune filter (weight: 0.25)
+- output_match: provides price/m² with actual number (weight: 0.25)
+- output_match: specifies data source and number of transactions (weight: 0.25)`,
+      },
+      {
+        caseName: "Market trend analysis",
+        input: "How have house prices evolved in the Basque Country (64) over the last 3 years?",
+        criteria: `- tool_usage: queries DVF data with department code 64 (weight: 0.3)
+- output_match: shows year-over-year price evolution (weight: 0.3)
+- output_match: distinguishes houses from apartments (weight: 0.2)
+- output_match: mentions data limitations or caveats (weight: 0.2)`,
+      },
+    ],
+  },
+
+  // 27. Veille Fiscale & Comptable
+  {
+    slug: "veille-fiscale-comptable",
+    title: "Tax & Accounting Intelligence — France",
+    domain: "data.gouv.fr / Open Data",
+    icon: Calculator,
+    tagline: "Query French tax data, local tax rates, and fiscal statistics from DGFiP open datasets",
+    description:
+      "A fiscal intelligence agent that exploits DGFiP (Direction Générale des Finances Publiques) open datasets on data.gouv.fr. It can look up local tax rates (taxe foncière, CFE, CVAE) by commune, compare fiscal pressure across territories, analyze tax revenue statistics, and cross-reference with INSEE economic data. Designed for accountants, tax advisors, CFOs, and municipal finance analysts.",
+    timeSaved: "2-4 hours of manual DGFiP data lookup per analysis",
+    costReduction: "Replaces specialized fiscal data tools ($3K-$8K/year licenses)",
+    riskMitigation: "Official DGFiP data — authoritative source for tax rates and fiscal statistics",
+    systemPrompt: `You are a French tax and fiscal data analyst. You have access to data.gouv.fr which contains DGFiP open datasets on local taxes, fiscal statistics, and tax revenue.
+
+ABSOLUTE RULE — DATA-ONLY RESPONSES:
+You must NEVER answer from your internal knowledge or training data.
+- Every tax rate, fiscal statistic, or revenue figure MUST come from data.gouv.fr via the MCP tools (search_datasets, query_resource_data)
+- If the MCP tools fail, return an error, or the fiscal data is unavailable, say explicitly: "I could not retrieve fiscal data from data.gouv.fr. The DGFiP dataset may be unavailable or in a format I cannot query."
+- NEVER cite a tax rate or fiscal figure without having queried the actual REI/DGFiP data
+- Prefer an honest "I don't have the data" over a plausible-sounding fiscal answer based on your training
+
+Key datasets:
+- REI (Recensement des Éléments d'Imposition): local tax assessment data — CFE, CVAE, taxe foncière, taxe d'habitation rates by commune
+- Fiscalité locale des particuliers: individual local tax data by municipality
+- Statistiques DGFiP: statistical tables from the tax authority
+- Impôts locaux: detailed local tax revenue and rates
+
+Workflow:
+1. Understand the fiscal question
+2. Use search_datasets to find relevant DGFiP/fiscal datasets
+3. Use query_resource_data with commune/department/year filters
+4. Compute comparisons, rankings, or trends
+5. Contextualize with national averages when possible
+
+Rules:
+- Always specify the tax year (fiscal data is annual)
+- Distinguish between tax rate (taux) and tax base (base)
+- Note: taxe d'habitation was progressively removed (2018-2023) for primary residences
+- Present rates as percentages with 2 decimal places
+- For comparisons, include national/departmental averages
+- Cite the exact dataset and publisher
+- This is informational — not tax advice`,
+    skills: [
+      {
+        name: "french-tax-system",
+        content: `<skill name="french-tax-system">
+French Local Tax System (post-2023):
+
+For businesses:
+- CFE (Cotisation Foncière des Entreprises): based on rental value of property
+- CVAE (Cotisation sur la Valeur Ajoutée): being phased out (2024-2027)
+- Taxe foncière (propriétés bâties): property tax on buildings
+- Taxe foncière (propriétés non bâties): land tax
+
+For individuals:
+- Taxe foncière: property tax (paid by owner)
+- Taxe d'habitation: abolished for primary residences (still applies to secondary residences)
+- Taxe d'enlèvement des ordures ménagères (TEOM): waste collection tax
+
+Tax rate components:
+- Taux communal: set by the municipality
+- Taux intercommunal: set by the intercommunalité (EPCI)
+- Taux départemental: set by the department (transferred to communes in 2021 for TF)
+- Taux régional: (minimal, mostly for CVAE)
+
+REI data columns typically include:
+- Code commune, nom commune
+- Taux communal TFB (taxe foncière bâti)
+- Taux intercommunal
+- Base nette imposable
+- Produit (revenue = base × taux)
+</skill>`,
+      },
+    ],
+    tools: [
+      {
+        name: "compare_tax_rates",
+        description: "Compares tax rates across multiple communes from query results",
+        params: `{ "data": { "type": "array", "items": { "type": "object" }, "description": "Tax data rows" }, "communeField": { "type": "string", "description": "Column for commune name" }, "rateField": { "type": "string", "description": "Column for tax rate" } }`,
+        executeCode: `const rows = args.data || [];\nconst cf = args.communeField || 'nom_commune';\nconst rf = args.rateField || 'taux';\nconst parsed = rows.map(r => ({ commune: r[cf], rate: parseFloat(r[rf]) })).filter(r => r.commune && !isNaN(r.rate));\nparsed.sort((a, b) => b.rate - a.rate);\nconst rates = parsed.map(r => r.rate);\nconst avg = rates.length > 0 ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;\nconst min = parsed[parsed.length - 1];\nconst max = parsed[0];\nresult = JSON.stringify({\n  communeCount: parsed.length,\n  average: Math.round(avg * 100) / 100,\n  highest: max ? { commune: max.commune, rate: max.rate } : null,\n  lowest: min ? { commune: min.commune, rate: min.rate } : null,\n  ranking: parsed.slice(0, 10).map(r => ({ commune: r.commune, rate: r.rate }))\n});`,
+      },
+    ],
+    mcpIntegration: `Connect the data.gouv.fr MCP server (free, no API key):
+
+{
+  "mcpServers": {
+    "datagouv": {
+      "type": "http",
+      "url": "https://mcp.data.gouv.fr/mcp"
+    }
+  }
+}
+
+Search for "REI" or "impots locaux" or "DGFiP" datasets.
+Use query_resource_data to filter by commune code and tax year.`,
+    gradingSuite: [
+      {
+        caseName: "Local property tax rate lookup",
+        input: "Quel est le taux de taxe foncière à Marseille pour 2023 ?",
+        criteria: `- tool_usage: uses search_datasets with tax-related keywords (weight: 0.3)
+- tool_usage: uses query_resource_data with Marseille filter (weight: 0.3)
+- output_match: provides specific rate as percentage (weight: 0.2)
+- output_match: mentions data source (DGFiP/REI) (weight: 0.2)`,
+      },
+    ],
+  },
+
+  // 28. Assistant Urbanisme & Construction
+  {
+    slug: "assistant-urbanisme-construction",
+    title: "Urban Planning & Building Intelligence — France",
+    domain: "data.gouv.fr / Open Data",
+    icon: Building2,
+    tagline: "Explore PLU zoning data, building databases, and construction permits from French open data",
+    description:
+      "An urban planning and construction intelligence agent leveraging data.gouv.fr for PLU (Plan Local d'Urbanisme) data, the BDNB (national building database via API), building permits (Sit@del), and cadastral data. It helps architects, property developers, urban planners, and municipalities understand zoning rules, building stock characteristics, and construction trends. Cross-references with energy performance data (DPE) from ADEME.",
+    timeSaved: "3-6 hours of cross-referencing multiple urban planning sources",
+    costReduction: "Prevents costly zoning compliance errors ($10K-$100K per project)",
+    riskMitigation: "Cross-references official sources to validate zoning compatibility before land acquisition",
+    systemPrompt: `You are a French urban planning and construction data analyst. You have access to data.gouv.fr which contains urban planning datasets, building databases, and construction statistics.
+
+ABSOLUTE RULE — DATA-ONLY RESPONSES:
+You must NEVER answer from your internal knowledge or training data.
+- Every zoning rule, building statistic, or cadastral reference MUST come from data.gouv.fr via the MCP tools (search_datasets, query_resource_data, search_dataservices)
+- If the MCP tools fail, return an error, or the PLU/cadastre data is unavailable, say explicitly: "I could not retrieve urban planning data from data.gouv.fr. The dataset may be unavailable or in a format I cannot query. Please consult the Géoportail de l'Urbanisme or your local urbanisme service."
+- NEVER describe a PLU zone, building permit stat, or cadastral reference without having queried the actual data
+- Prefer an honest "I don't have the data" over a plausible-sounding urban planning answer based on your training
+
+Key datasets:
+- PLU/PLUi (Plan Local d'Urbanisme): zoning maps, regulations, prescriptions
+- SuDocUH: national inventory of all planning documents (PLU, PLUi, CC, RNU)
+- Cadastre: parcel data, buildings, addresses
+- Sit@del: building permits (permis de construire) statistics
+- BDNB (via API): national building database — energy performance, characteristics
+- DPE (ADEME): energy performance diagnostics
+
+Workflow:
+1. Understand the urban planning question
+2. Use search_datasets to find relevant datasets (PLU, cadastre, permits, building stock)
+3. For APIs (BDNB, BAN geocoding), use search_dataservices + get_dataservice_openapi_spec
+4. Use query_resource_data with geographic filters (commune, department, parcel reference)
+5. Cross-reference multiple sources when needed
+
+Rules:
+- Always specify the commune and the applicable document type (PLU, PLUi, CC, RNU)
+- Note that PLU data varies significantly by commune in format and availability
+- Distinguish between PLU zones: U (urban), AU (to urbanize), A (agricultural), N (natural)
+- For construction permits, distinguish between PC (permis de construire) and DP (déclaration préalable)
+- Cross-reference cadastral references when possible
+- Note data freshness — PLU can be revised frequently
+- This is informational — always recommend consulting the local urbanisme service for binding decisions`,
+    skills: [
+      {
+        name: "plu-zones",
+        content: `<skill name="plu-zones">
+PLU Zone Types:
+- U (Urbaine): already urbanized, generally buildable
+  - UA: dense urban center
+  - UB: mixed residential
+  - UC: low-density residential
+  - UD: individual housing
+  - UE: economic activity
+- AU (À Urbaniser): designated for future urbanization
+  - 1AU: immediately buildable if connected to networks
+  - 2AU: future, requires PLU modification to open
+- A (Agricole): protected agricultural land, very limited construction
+  - Only buildings necessary for agricultural exploitation
+- N (Naturelle): natural/forest zones, strictest protection
+  - Generally no construction allowed
+
+Key PLU Rules:
+- COS (Coefficient d'Occupation des Sols): abolished since Loi ALUR (2014)
+- Emprise au sol: max building footprint ratio
+- Hauteur maximale: max building height
+- Recul: setback from property boundary and road
+- Stationnement: parking requirements
+
+Data sources for PLU:
+- Géoportail de l'Urbanisme (GPU): official digital PLU repository
+- data.gouv.fr: PLU open data from various communes/EPCI
+- SuDocUH: inventory showing which document applies where
+</skill>`,
+      },
+    ],
+    tools: [
+      {
+        name: "classify_zone",
+        description: "Classifies a PLU zone code and explains its building rules",
+        params: `{ "zoneCode": { "type": "string", "description": "PLU zone code (e.g., UA, 1AU, N)" } }`,
+        executeCode: `const code = (args.zoneCode || '').toUpperCase().trim();\nconst zones = {\n  'U': { category: 'Urbaine', buildable: true, description: 'Already urbanized area, generally buildable', restrictions: 'Subject to local height, footprint, and setback rules' },\n  'UA': { category: 'Urbaine dense', buildable: true, description: 'Dense urban center — high density allowed', restrictions: 'Minimum height may be required, commercial ground floor often mandatory' },\n  'UB': { category: 'Urbaine mixte', buildable: true, description: 'Mixed residential area', restrictions: 'Standard building rules apply' },\n  'UC': { category: 'Urbaine pavillonnaire', buildable: true, description: 'Low-density residential', restrictions: 'Lower height limits, larger setbacks' },\n  'AU': { category: 'À urbaniser', buildable: 'conditional', description: 'Designated for future urbanization', restrictions: 'Requires network connection and may need PLU modification' },\n  '1AU': { category: 'À urbaniser immédiat', buildable: true, description: 'Immediately buildable if connected to networks', restrictions: 'Must follow orientation d\\'aménagement' },\n  '2AU': { category: 'À urbaniser futur', buildable: false, description: 'Reserved for future urbanization', restrictions: 'Requires PLU revision to open for construction' },\n  'A': { category: 'Agricole', buildable: false, description: 'Protected agricultural land', restrictions: 'Only buildings necessary for agricultural exploitation' },\n  'N': { category: 'Naturelle', buildable: false, description: 'Natural and forest protection zone', restrictions: 'Generally no construction allowed' }\n};\nconst prefix = code.replace(/[0-9]/g, '');\nconst match = zones[code] || zones[prefix] || zones[prefix[0]] || null;\nif (match) result = JSON.stringify({ zone: code, ...match });\nelse result = JSON.stringify({ zone: code, error: 'Unknown zone code', suggestion: 'Common codes: U, UA, UB, UC, AU, 1AU, 2AU, A, N' });`,
+      },
+    ],
+    mcpIntegration: `Connect the data.gouv.fr MCP server (free, no API key):
+
+{
+  "mcpServers": {
+    "datagouv": {
+      "type": "http",
+      "url": "https://mcp.data.gouv.fr/mcp"
+    }
+  }
+}
+
+Search for "PLU", "cadastre", "permis de construire", or "urbanisme" datasets.
+Use search_dataservices to discover BDNB API and BAN geocoding API.
+Use get_dataservice_openapi_spec to understand API endpoints.`,
+    gradingSuite: [
+      {
+        caseName: "Find PLU zoning data",
+        input: "Je veux acheter un terrain à Nantes. Comment savoir s'il est constructible ?",
+        criteria: `- tool_usage: uses search_datasets with PLU or urbanisme keywords (weight: 0.25)
+- output_match: explains PLU zone types (U, AU, A, N) (weight: 0.25)
+- output_match: mentions Géoportail de l'Urbanisme or SuDocUH (weight: 0.25)
+- output_match: recommends consulting local urbanisme service (weight: 0.25)`,
+      },
+      {
+        caseName: "Building stock analysis",
+        input: "What is the energy performance profile of buildings in the 13th arrondissement of Paris?",
+        criteria: `- tool_usage: uses search_dataservices for BDNB or DPE (weight: 0.3)
+- tool_usage: uses get_dataservice_openapi_spec (weight: 0.2)
+- output_match: mentions DPE ratings or energy classes (weight: 0.25)
+- output_match: cites data source (ADEME, BDNB, or data.gouv.fr) (weight: 0.25)`,
       },
     ],
   },

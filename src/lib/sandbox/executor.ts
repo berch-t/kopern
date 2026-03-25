@@ -36,9 +36,9 @@ export async function executeSandboxed(
   };
 
   const wrappedCode = `
-    (async () => {
+    __promise = (async () => {
       ${code}
-    })().then(r => { result = r; })
+    })();
   `;
 
   const context = vm.createContext(sandbox);
@@ -46,8 +46,8 @@ export async function executeSandboxed(
 
   try {
     script.runInContext(context, { timeout: TIMEOUT_MS });
-    // Wait for async completion
-    await sandbox.result;
+    // Wait for async code to complete (if any awaits in user code)
+    await (sandbox as Record<string, unknown>).__promise;
     const output = sandbox.result;
     if (output === undefined || output === null) return "null";
     return typeof output === "string" ? output : JSON.stringify(output);

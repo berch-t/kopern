@@ -3,6 +3,8 @@ import { createSSEStream, sseResponse } from "@/lib/utils/sse";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
+import { pipelineExecuteSchema, validateBody } from "@/lib/security/validation";
+import { checkRateLimit, chatRateLimit } from "@/lib/security/rate-limit";
 
 interface PipelineStepConfig {
   agentId: string;
@@ -30,8 +32,15 @@ export async function POST(
   { params }: { params: Promise<{ agentId: string; pipelineId: string }> }
 ) {
   const { pipelineId } = await params;
-  const body = (await request.json()) as PipelineExecuteBody;
+  const raw = await request.json();
+  const parsed = validateBody(pipelineExecuteSchema, raw);
+  if ("error" in parsed) return parsed.error;
+  const body = parsed.data as PipelineExecuteBody;
   const { prompt, userId, pipelineName, steps } = body;
+
+  // Rate limit
+  const rl = await checkRateLimit(chatRateLimit, `pipeline:${userId}`);
+  if (rl) return rl;
 
   // Enforce plan: pipelines require Pro+
   if (userId) {

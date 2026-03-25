@@ -208,7 +208,11 @@
       "optimize": "Optimiser",
       "notFound": "Agent introuvable",
       "loadingAgent": "Chargement de l'agent...",
-      "noPrompt": "Aucun prompt système défini"
+      "noPrompt": "Aucun prompt système défini",
+      "deleteAgent": "Supprimer l'agent",
+      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cet agent ? Tous les skills, tools, extensions, sessions, suites de notation et serveurs MCP seront définitivement perdus.",
+      "deleteSuccess": "Agent supprimé avec succès",
+      "deleting": "Suppression..."
     },
     "form": {
       "name": "Nom",
@@ -223,6 +227,13 @@
       "modelId": "ID du Modèle",
       "thinkingLevel": "Niveau de Réflexion",
       "builtinTools": "Built-in Tools",
+      "builtinToolDescriptions": {
+        "github_write": "Créer des branches, committer des fichiers et ouvrir des PRs sur les repos connectés",
+        "bug_management": "Suivre, mettre à jour et répondre aux rapports de bugs (admin)",
+        "slack_read": "Lire les messages et lister les canaux du workspace Slack connecté",
+        "datagouv": "Rechercher, explorer et interroger 50 000+ jeux de données ouverts français (DVF, LEGI, cadastre, DGFiP, etc.)",
+        "piste": "Rechercher et consulter les textes juridiques français — codes, lois, décrets et conventions collectives via l'API officielle Légifrance"
+      },
       "save": "Enregistrer l'Agent",
       "create": "Créer l'Agent",
       "saving": "Enregistrement...",
@@ -367,7 +378,10 @@
   },
   "examples": {
     "title": "Exemples de Workflows",
-    "subtitle": "15 configurations d'agents prêtes pour la production pour des workflows métier réels. Chaque exemple inclut un prompt système, des skills, des tools, une intégration MCP et une suite de notation — prêt à déployer sur Kopern.",
+    "subtitle": "Configurations d'agents prêtes pour la production pour des workflows métier réels. Chaque exemple inclut un prompt système, des skills, des tools, une intégration MCP et une suite de notation — prêt à déployer sur Kopern.",
+    "datagouvTitle": "Propulsé par le MCP data.gouv.fr",
+    "datagouvSubtitle": "Ces agents exploitent le serveur MCP officiel data.gouv.fr — gratuit, sans clé API. Accédez à 90 000+ datasets français, interrogez les données tabulaires sans téléchargement et découvrez les API gouvernementales.",
+    "datagouvBadge": "MCP data.gouv.fr",
     "useThisAgent": "Utiliser cet Agent",
     "creating": "Création...",
     "allExamples": "Tous les exemples",

@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import {
   generateApiKey,
-  hashApiKey,
   getKeyPrefix,
   createApiKeyDocs,
   deleteApiKeyDoc,
+  rotateApiKey,
 } from "@/lib/mcp/auth";
 
 async function getAuthUser(request: NextRequest) {
@@ -157,26 +157,23 @@ export async function PUT(request: NextRequest) {
 
   const serverData = serverSnap.data()!;
 
-  // Delete old API key index
-  await deleteApiKeyDoc(serverData.apiKeyHash);
+  // Rotate: disable old key (audit trail) + create new key
+  const rotated = await rotateApiKey(serverData.apiKeyHash);
+  if (!rotated) {
+    return NextResponse.json({ error: "Failed to rotate key" }, { status: 500 });
+  }
 
-  // Generate new key
-  const plainKey = generateApiKey();
-  const newHash = hashApiKey(plainKey);
-  const newPrefix = getKeyPrefix(plainKey);
-
-  // Create new API key index
-  await createApiKeyDocs(plainKey, user.uid, agentId, serverId, serverData.rateLimitPerMinute);
+  const newPrefix = getKeyPrefix(rotated.newKey);
 
   // Update server doc with new hash/prefix
   await serverRef.update({
-    apiKeyHash: newHash,
+    apiKeyHash: rotated.newHash,
     apiKeyPrefix: newPrefix,
     updatedAt: new Date(),
   });
 
   return NextResponse.json({
-    apiKey: plainKey, // shown once
+    apiKey: rotated.newKey, // shown once
     apiKeyPrefix: newPrefix,
   });
 }

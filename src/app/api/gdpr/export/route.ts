@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase/admin";
+import { checkRateLimit, gdprRateLimit } from "@/lib/security/rate-limit";
 
 /**
  * GET /api/gdpr/export — GDPR Art. 15 Data Access
@@ -16,6 +17,10 @@ export async function GET(request: Request) {
     const token = authHeader.slice(7);
     const decoded = await adminAuth.verifyIdToken(token);
     const userId = decoded.uid;
+
+    // Rate limiting
+    const rl = await checkRateLimit(gdprRateLimit, userId);
+    if (rl) return rl;
 
     // Collect all user data
     const exportData: Record<string, unknown> = {

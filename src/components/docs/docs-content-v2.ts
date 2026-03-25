@@ -1946,6 +1946,84 @@ Deploy your agent on WhatsApp via the Meta Cloud API. Create a Meta Business App
 | Connectors | 0 | 3 | Unlimited | Unlimited |
 | Remove branding | No | Yes | Yes | Yes |
 
+### data.gouv.fr MCP Integration
+
+Connect the **data.gouv.fr MCP server** to give your agents access to France's national open data platform — 50,000+ datasets from government agencies, covering real estate, tax, legal, demographics, environment, and more.
+
+#### What is data.gouv.fr MCP?
+
+data.gouv.fr is France's official open data portal operated by Etalab/DINUM. The **MCP server** (\`mcp.data.gouv.fr\`) exposes 9 tools that let AI agents search, explore, and query datasets programmatically:
+
+| Tool | Description |
+|------|-------------|
+| \`search_datasets\` | Search datasets by keywords (title, description, tags) |
+| \`get_dataset_info\` | Detailed metadata for a specific dataset |
+| \`list_dataset_resources\` | List all files (resources) in a dataset |
+| \`get_resource_info\` | Detailed resource metadata (format, size, schema) |
+| \`query_resource_data\` | **Key tool** — query CSV/XLSX data in-place via the Tabular API (filter, sort, paginate) |
+| \`search_dataservices\` | Search registered government APIs |
+| \`get_dataservice_info\` | API metadata and base URL |
+| \`get_dataservice_openapi_spec\` | Fetch and summarize an API's OpenAPI spec |
+| \`get_metrics\` | Visits and downloads metrics for datasets/resources |
+
+#### Setup
+
+**No API key required.** Add the MCP server to your agent's configuration:
+
+1. Go to your agent's detail page
+2. Open the **MCP Servers** tab
+3. Click **Add MCP Server** and enter:
+   - **Name**: \`datagouv\`
+   - **URL**: \`https://mcp.data.gouv.fr/mcp\`
+4. Save — your agent now has access to all 9 tools
+
+Alternatively, configure it in your \`.mcp.json\`:
+
+\`\`\`json
+{
+  "mcpServers": {
+    "datagouv": {
+      "type": "http",
+      "url": "https://mcp.data.gouv.fr/mcp"
+    }
+  }
+}
+\`\`\`
+
+#### Pre-built Templates
+
+Kopern includes 5 ready-to-use templates powered by data.gouv.fr MCP:
+
+| Template | Use Case |
+|----------|----------|
+| **Public Data Analyst** | General open data exploration, statistics, trend analysis |
+| **Legal Research Assistant** | Search LEGI, JORF, KALI — French laws, decrees, collective agreements |
+| **Real Estate Analyst (DVF)** | Analyze all French real estate transactions — price/m², trends, comparisons |
+| **Tax & Accounting Intelligence** | DGFiP tax rates, local fiscal pressure, revenue statistics |
+| **Urban Planning & Building** | PLU zoning, building permits, cadastre, energy performance |
+
+Find them in **Examples** → **Powered by data.gouv.fr MCP** section.
+
+#### Key Datasets
+
+| Dataset | Publisher | Content |
+|---------|-----------|---------|
+| DVF (Valeurs Foncières) | DGFiP | Every real estate transaction in France since 2014 |
+| LEGI | DILA | Consolidated French codes and laws |
+| JORF | DILA | Official Journal — decrees, circulars, announcements |
+| KALI | DILA | National collective labor agreements |
+| REI | DGFiP | Local tax assessment data (CFE, CVAE, taxe foncière) |
+| Cadastre | DGFiP | Parcels, buildings, addresses |
+| Base Adresse Nationale | IGN/Etalab | All French addresses with geocoding |
+
+#### Tips
+
+- **Use \`query_resource_data\`** as much as possible — it queries data in-place without downloading files
+- Not all resources support the Tabular API — check with \`get_resource_info\` first
+- For APIs (BDNB, BAN, API Entreprises), use \`search_dataservices\` + \`get_dataservice_openapi_spec\`
+- Combine with custom tools for domain-specific formatting (price/m² calculations, legal citations, tax comparisons)
+- Data freshness varies — always check \`get_dataset_info\` for the last update date
+
 ---
 
 ## Sessions & Observability

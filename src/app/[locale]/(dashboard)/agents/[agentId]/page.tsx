@@ -1,11 +1,13 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { LocalizedLink } from "@/components/LocalizedLink";
+import { useLocalizedRouter } from "@/hooks/useLocalizedRouter";
 import { useDictionary } from "@/providers/LocaleProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { useDocument } from "@/hooks/useFirestore";
 import { agentDoc, type AgentDoc } from "@/lib/firebase/firestore";
+import { deleteAgent } from "@/actions/agents";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +16,7 @@ import { SlideUp } from "@/components/motion/SlideUp";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { AnimatedCounter } from "@/components/motion/AnimatedCounter";
 import { GitHubConnector } from "@/components/agents/GitHubConnector";
+import { toast } from "sonner";
 import {
   Pencil,
   BookOpen,
@@ -26,6 +29,7 @@ import {
   Activity,
   FlaskConical,
   Plug,
+  Trash2,
 } from "lucide-react";
 
 export default function AgentDetailPage({
@@ -39,6 +43,23 @@ export default function AgentDetailPage({
     user ? agentDoc(user.uid, agentId) : null
   );
   const t = useDictionary();
+  const router = useLocalizedRouter();
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!user) return;
+    const confirmed = window.confirm(t.agents.detail.deleteConfirm);
+    if (!confirmed) return;
+    setDeleting(true);
+    try {
+      await deleteAgent(user.uid, agentId);
+      toast.success(t.agents.detail.deleteSuccess);
+      router.push("/agents");
+    } catch {
+      toast.error("Failed to delete agent");
+      setDeleting(false);
+    }
+  };
 
   if (loading) {
     return <div className="animate-pulse text-muted-foreground">{t.agents.detail.loadingAgent}</div>;
@@ -76,6 +97,16 @@ export default function AgentDetailPage({
           </div>
           <div className="flex items-center gap-3">
             <GitHubConnector agentId={agentId} connectedRepos={agent.connectedRepos ?? []} />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+              title={t.agents.detail.deleteAgent}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
             {agent.latestGradingScore !== null && (
               <div className="text-sm text-muted-foreground text-right">
                 {t.agents.detail.gradingScore}

@@ -1656,6 +1656,84 @@ Déployez votre agent sur WhatsApp via l'API Cloud de Meta. Créez une App Meta 
 | Connecteurs | 0 | 3 | Illimité | Illimité |
 | Retirer le branding | Non | Oui | Oui | Oui |
 
+### Intégration MCP data.gouv.fr
+
+Connectez le **serveur MCP data.gouv.fr** pour donner à vos agents accès à la plateforme nationale de données ouvertes — plus de 50 000 jeux de données provenant d'organismes publics, couvrant l'immobilier, la fiscalité, le droit, la démographie, l'environnement, et bien plus.
+
+#### Qu'est-ce que data.gouv.fr MCP ?
+
+data.gouv.fr est le portail officiel des données ouvertes de la France, opéré par Etalab/DINUM. Le **serveur MCP** (\`mcp.data.gouv.fr\`) expose 9 outils permettant aux agents IA de rechercher, explorer et interroger les jeux de données de manière programmatique :
+
+| Outil | Description |
+|-------|-------------|
+| \`search_datasets\` | Rechercher des jeux de données par mots-clés (titre, description, tags) |
+| \`get_dataset_info\` | Métadonnées détaillées d'un jeu de données |
+| \`list_dataset_resources\` | Lister tous les fichiers (ressources) d'un jeu de données |
+| \`get_resource_info\` | Métadonnées détaillées d'une ressource (format, taille, schéma) |
+| \`query_resource_data\` | **Outil clé** — interroger les données CSV/XLSX en place via l'API Tabulaire (filtrer, trier, paginer) |
+| \`search_dataservices\` | Rechercher les APIs gouvernementales enregistrées |
+| \`get_dataservice_info\` | Métadonnées d'une API et URL de base |
+| \`get_dataservice_openapi_spec\` | Récupérer et résumer la spec OpenAPI d'une API |
+| \`get_metrics\` | Métriques de visites et téléchargements pour les jeux de données/ressources |
+
+#### Configuration
+
+**Aucune clé API requise.** Ajoutez le serveur MCP à la configuration de votre agent :
+
+1. Allez sur la page de détail de votre agent
+2. Ouvrez l'onglet **MCP Servers**
+3. Cliquez **Ajouter un serveur MCP** et entrez :
+   - **Nom** : \`datagouv\`
+   - **URL** : \`https://mcp.data.gouv.fr/mcp\`
+4. Enregistrez — votre agent a maintenant accès aux 9 outils
+
+Ou configurez dans votre \`.mcp.json\` :
+
+\`\`\`json
+{
+  "mcpServers": {
+    "datagouv": {
+      "type": "http",
+      "url": "https://mcp.data.gouv.fr/mcp"
+    }
+  }
+}
+\`\`\`
+
+#### Templates pré-construits
+
+Kopern inclut 5 templates prêts à l'emploi propulsés par data.gouv.fr MCP :
+
+| Template | Cas d'usage |
+|----------|-------------|
+| **Analyste Données Publiques** | Exploration de données ouvertes, statistiques, analyse de tendances |
+| **Assistant Juridique** | Recherche dans LEGI, JORF, KALI — lois, décrets, conventions collectives |
+| **Analyste Immobilier (DVF)** | Analyse de toutes les transactions immobilières françaises — prix/m², tendances |
+| **Veille Fiscale & Comptable** | Taux DGFiP, pression fiscale locale, statistiques de recettes |
+| **Urbanisme & Construction** | Zonage PLU, permis de construire, cadastre, performance énergétique |
+
+Retrouvez-les dans **Exemples** → section **Propulsé par data.gouv.fr MCP**.
+
+#### Jeux de données clés
+
+| Jeu de données | Éditeur | Contenu |
+|----------------|---------|---------|
+| DVF (Valeurs Foncières) | DGFiP | Toutes les transactions immobilières en France depuis 2014 |
+| LEGI | DILA | Codes et lois consolidés de la République française |
+| JORF | DILA | Journal Officiel — décrets, circulaires, annonces |
+| KALI | DILA | Conventions collectives nationales |
+| REI | DGFiP | Données d'imposition locale (CFE, CVAE, taxe foncière) |
+| Cadastre | DGFiP | Parcelles, bâtiments, adresses |
+| Base Adresse Nationale | IGN/Etalab | Toutes les adresses françaises avec géocodage |
+
+#### Conseils
+
+- **Utilisez \`query_resource_data\`** autant que possible — il interroge les données en place sans télécharger de fichiers
+- Toutes les ressources ne supportent pas l'API Tabulaire — vérifiez d'abord avec \`get_resource_info\`
+- Pour les APIs (BDNB, BAN, API Entreprises), utilisez \`search_dataservices\` + \`get_dataservice_openapi_spec\`
+- Combinez avec des outils custom pour du formatage spécialisé (calculs prix/m², citations juridiques, comparaisons fiscales)
+- La fraîcheur des données varie — vérifiez toujours \`get_dataset_info\` pour la date de dernière mise à jour
+
 ---
 
 ## Sessions et observabilité

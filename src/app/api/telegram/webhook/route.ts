@@ -15,6 +15,7 @@ import {
   sendTelegramMessage,
   sendTelegramChatAction,
 } from "@/lib/connectors/telegram";
+import { connectorRateLimit } from "@/lib/security/rate-limit";
 
 export async function POST(request: NextRequest) {
   // Telegram sends secret in header — lookup bot by secret
@@ -66,6 +67,15 @@ async function processTelegramMessage(
   }
 
   const { userId, agentId, botToken } = botLookup;
+
+  // Rate limit by bot
+  if (connectorRateLimit) {
+    const rl = await connectorRateLimit.limit(`telegram:${agentId}`);
+    if (!rl.success) {
+      logAppError({ code: "TELEGRAM_RATE_LIMITED", message: "Rate limit exceeded", source: "webhook", severity: "warning", userId, agentId });
+      return;
+    }
+  }
 
   // Send "typing" indicator
   await sendTelegramChatAction(botToken, update.chatId);

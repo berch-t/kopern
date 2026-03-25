@@ -9,6 +9,13 @@ export async function GET() {
       "Content-Type": "text/javascript; charset=utf-8",
       "Cache-Control": "public, max-age=3600, s-maxage=86400",
       "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": [
+        "default-src 'none'",
+        "script-src 'self'",
+        "style-src 'unsafe-inline'",
+        "connect-src https://kopern.vercel.app https://*.kopern.com",
+        "img-src data:",
+      ].join("; "),
     },
   });
 }

@@ -15,6 +15,7 @@ import {
   addReaction,
   getThreadHistory,
 } from "@/lib/connectors/slack";
+import { connectorRateLimit } from "@/lib/security/rate-limit";
 
 // --- Types for Slack event payloads ---
 
@@ -155,6 +156,22 @@ async function processSlackEvent(body: SlackEventPayload): Promise<void> {
   }
 
   const { userId, agentId } = teamLookup;
+
+  // Rate limit by team ID (soft — skip processing if exceeded)
+  if (connectorRateLimit) {
+    const rl = await connectorRateLimit.limit(`slack:${body.team_id}`);
+    if (!rl.success) {
+      logAppError({
+        code: "SLACK_RATE_LIMITED",
+        message: `Slack rate limit exceeded for team ${body.team_id}`,
+        source: "slack_events",
+        severity: "warning",
+        userId,
+        agentId,
+      });
+      return;
+    }
+  }
 
   // Check plan limits (skip for admin)
   const ADMIN_UIDS = (process.env.NEXT_PUBLIC_ADMIN_UID ?? "").split(",").filter(Boolean);

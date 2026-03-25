@@ -7,6 +7,8 @@ import { resolveUserKey } from "@/lib/llm/resolve-key";
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
 import type { AgentSpec } from "@/lib/meta-agent/types";
+import { metaCreateSchema, validateBody } from "@/lib/security/validation";
+import { checkRateLimit, chatRateLimit } from "@/lib/security/rate-limit";
 
 const DEMO_RATE_LIMIT = 2; // max calls per IP per day
 
@@ -18,15 +20,17 @@ interface MetaCreateBody {
 }
 
 export async function POST(request: NextRequest) {
-  const body = (await request.json()) as MetaCreateBody;
+  const raw = await request.json();
+  const parsed = validateBody(metaCreateSchema, raw);
+  if ("error" in parsed) return parsed.error;
+
+  const body = raw as MetaCreateBody;
   const { description, modelProvider, modelId, userId } = body;
 
-  if (!description || description.trim().length < 10) {
-    return NextResponse.json(
-      { error: "Description must be at least 10 characters" },
-      { status: 400 }
-    );
-  }
+  // Rate limit by userId or IP
+  const rlKey = userId || (request.headers.get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
+  const rl = await checkRateLimit(chatRateLimit, `meta:${rlKey}`);
+  if (rl) return rl;
 
   // Enforce plan: meta-agent requires Pro+ (skip for unauthenticated hero usage)
   if (userId) {

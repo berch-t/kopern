@@ -9,6 +9,7 @@ import { runAgentWithTools, type AgentRunMetrics } from "@/lib/tools/run-agent";
 import type { LLMMessage } from "@/lib/llm/client";
 import { createSessionServer, updateSessionMetrics, appendSessionEvents, endSessionServer } from "@/lib/billing/track-usage-server";
 import { calculateTokenCost } from "@/lib/billing/pricing";
+import { checkRateLimit, mcpRateLimit } from "@/lib/security/rate-limit";
 
 // ─── MCP Protocol Types ──────────────────────────────────────────────
 
@@ -248,6 +249,10 @@ export async function POST(request: NextRequest) {
   if (!resolved.enabled) {
     return jsonErr(null, -32000, "API key is disabled", 403);
   }
+
+  // Rate limiting by API key
+  const rl = await checkRateLimit(mcpRateLimit, resolved.agentId);
+  if (rl) return rl;
 
   // 2. Parse body
   let body: JsonRpcRequest;

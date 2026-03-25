@@ -13,6 +13,8 @@ import {
   type ToolExecutionContext,
 } from "@/lib/tools/agent-tools";
 import { getBugTools, executeBugTool, isBugTool } from "@/lib/tools/bug-tools";
+import { getDatagouvTools, executeDatagouvTool, isDatagouvTool } from "@/lib/tools/datagouv-tools";
+import { getPisteTools, executePisteTool, isPisteTool } from "@/lib/tools/piste-tools";
 import { runExtensions } from "@/lib/extensions/extension-runner";
 import { fireOutboundWebhooks } from "@/lib/connectors/webhook";
 import type { ExtensionEventType } from "@/lib/firebase/firestore";
@@ -134,12 +136,16 @@ export async function runAgentWithTools(
   // Check agent's builtinTools for special capabilities
   let hasBugManagement = false;
   let hasGitHubWrite = false;
+  let hasDatagouv = false;
+  let hasPiste = false;
   if (config.userId && config.agentId) {
     try {
       const agentSnap = await adminDb.doc(`users/${config.userId}/agents/${config.agentId}`).get();
       const builtinTools: string[] = agentSnap.data()?.builtinTools || [];
       hasBugManagement = builtinTools.includes("bug_management");
       hasGitHubWrite = builtinTools.includes("github_write");
+      hasDatagouv = builtinTools.includes("datagouv");
+      hasPiste = builtinTools.includes("piste");
     } catch {
       // Skip
     }
@@ -153,6 +159,16 @@ export async function runAgentWithTools(
   // Bug management tools
   if (hasBugManagement) {
     tools.push(...getBugTools());
+  }
+
+  // data.gouv.fr MCP tools (9 tools via server-side HTTP to mcp.data.gouv.fr)
+  if (hasDatagouv) {
+    tools.push(...getDatagouvTools());
+  }
+
+  // PISTE / Légifrance tools (6 tools via OAuth2 + HTTP to PISTE API)
+  if (hasPiste) {
+    tools.push(...getPisteTools());
   }
 
   // Slack tools (loaded when agent has a Slack connection with valid bot token)
@@ -301,7 +317,11 @@ export async function runAgentWithTools(
 
                   const result = isBugTool(tc.name)
                     ? await executeBugTool(tc.name, tc.input, config.userId || "")
-                    : await executeTool(tc, toolCtx);
+                    : isDatagouvTool(tc.name)
+                      ? await executeDatagouvTool(tc.name, tc.input)
+                      : isPisteTool(tc.name)
+                        ? await executePisteTool(tc.name, tc.input)
+                        : await executeTool(tc, toolCtx);
                   // Count tool result tokens as additional input
                   inputTokens += estimateTokens(result.result);
                   callbacks.onToolEnd?.({

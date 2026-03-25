@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase/admin";
+import { checkRateLimit, gdprRateLimit } from "@/lib/security/rate-limit";
 
 /**
  * DELETE /api/gdpr/delete — GDPR Art. 17 Right to Erasure
@@ -16,6 +17,10 @@ export async function DELETE(request: Request) {
     const token = authHeader.slice(7);
     const decoded = await adminAuth.verifyIdToken(token);
     const userId = decoded.uid;
+
+    // Rate limiting
+    const rl = await checkRateLimit(gdprRateLimit, userId);
+    if (rl) return rl;
 
     // Delete all subcollections recursively
     const batch = adminDb.batch();

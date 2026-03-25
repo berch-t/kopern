@@ -5,6 +5,7 @@ import { countTokens, trackUsage } from "@/lib/mcp/token-counter";
 import { streamLLM, type LLMMessage } from "@/lib/llm/client";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
+import { checkRateLimit, mcpRateLimit } from "@/lib/security/rate-limit";
 
 interface JsonRpcRequest {
   jsonrpc: "2.0";
@@ -48,6 +49,10 @@ export async function POST(request: NextRequest) {
       { status: 403 }
     );
   }
+
+  // Rate limiting
+  const rl = await checkRateLimit(mcpRateLimit, resolved.agentId);
+  if (rl) return rl;
 
   // 3. Parse JSON-RPC body
   let body: JsonRpcRequest;

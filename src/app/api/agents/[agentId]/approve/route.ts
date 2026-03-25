@@ -1,23 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveApprovalGate } from "@/lib/tools/approval-gate";
 import type { ApprovalDecision } from "@/lib/tools/approval";
-
-interface ApproveRequestBody {
-  toolCallId: string;
-  decision: ApprovalDecision;
-}
+import { approveToolSchema, validateBody } from "@/lib/security/validation";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ agentId: string }> }
 ) {
   await params; // consume params
-  const body = (await request.json()) as ApproveRequestBody;
-  const { toolCallId, decision } = body;
-
-  if (!toolCallId || !decision || !["approved", "denied"].includes(decision)) {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-  }
+  const raw = await request.json();
+  const parsed = validateBody(approveToolSchema, raw);
+  if ("error" in parsed) return parsed.error;
+  const { toolCallId, decision } = parsed.data;
 
   const resolved = resolveApprovalGate(toolCallId, decision);
   if (!resolved) {

@@ -14,6 +14,8 @@ export const BUILTIN_TOOLS = [
   { id: "github_write", name: "GitHub Write", description: "Create branches, commit files, and open PRs on connected repos" },
   { id: "bug_management", name: "Bug Management", description: "Track, update, and respond to bug reports (admin)", adminOnly: true },
   { id: "slack_read", name: "Slack Read", description: "Read messages and list channels from connected Slack workspace" },
+  { id: "datagouv", name: "data.gouv.fr", description: "Search, explore, and query 50,000+ French open datasets (DVF, LEGI, cadastre, DGFiP, etc.)" },
+  { id: "piste", name: "Légifrance (PISTE)", description: "Search and read French legal texts — codes, laws, decrees, and collective agreements via the official Légifrance API" },
 ] as const;
 
 export function buildCustomTool(toolDoc: ToolDoc): BuiltTool {

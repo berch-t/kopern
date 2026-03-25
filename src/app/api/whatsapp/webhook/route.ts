@@ -16,6 +16,7 @@ import {
   sendWhatsAppMessage,
   markWhatsAppMessageRead,
 } from "@/lib/connectors/whatsapp";
+import { connectorRateLimit } from "@/lib/security/rate-limit";
 
 /**
  * GET /api/whatsapp/webhook — Meta verification challenge
@@ -104,6 +105,15 @@ async function processWhatsAppMessage(
   }
 
   const { userId, agentId } = phoneLookup;
+
+  // Rate limit by phone
+  if (connectorRateLimit) {
+    const rl = await connectorRateLimit.limit(`whatsapp:${message.phoneNumberId}`);
+    if (!rl.success) {
+      logAppError({ code: "WHATSAPP_RATE_LIMITED", message: "Rate limit exceeded", source: "webhook", severity: "warning", userId, agentId });
+      return;
+    }
+  }
 
   // Get access token
   const accessToken = await getWhatsAppAccessToken(userId, agentId);

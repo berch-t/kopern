@@ -10,6 +10,8 @@ import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
 import { registerApprovalGate } from "@/lib/tools/approval-gate";
 import type { ApprovalRequest } from "@/lib/tools/approval";
 import type { ToolApprovalPolicy } from "@/lib/firebase/firestore";
+import { checkRateLimit, chatRateLimit } from "@/lib/security/rate-limit";
+import { chatRequestSchema, validateBody } from "@/lib/security/validation";
 
 interface ChatRequestBody {
   message: string;
@@ -32,7 +34,16 @@ export async function POST(
   { params }: { params: Promise<{ agentId: string }> }
 ) {
   const { agentId } = await params;
-  const body = (await request.json()) as ChatRequestBody;
+  const raw = await request.json();
+  const parsed = validateBody(chatRequestSchema, raw);
+  if ("error" in parsed) return parsed.error;
+  const body = raw as ChatRequestBody;
+
+  // Rate limiting
+  if (body.userId) {
+    const rl = await checkRateLimit(chatRateLimit, body.userId);
+    if (rl) return rl;
+  }
   const { message, history, agentConfig, userId, connectedRepos } = body;
 
   // Skip plan limits for internal triggers (bug fixer, admin)

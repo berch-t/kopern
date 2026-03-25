@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
+import { bugReportSchema, validateBody } from "@/lib/security/validation";
+import { checkRateLimit, bugReportRateLimit } from "@/lib/security/rate-limit";
 
 const GMAIL_USER = process.env.GMAIL_USER;
 const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
@@ -11,17 +13,16 @@ const BUG_FIXER_OWNER_ID = process.env.BUG_FIXER_OWNER_ID;
 const BUG_FIXER_AGENT_ID = process.env.BUG_FIXER_AGENT_ID;
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { severity, description, pageUrl, reporterEmail } = body as {
-    severity: string;
-    description: string;
-    pageUrl?: string;
-    reporterEmail?: string;
-  };
+  // Rate limit by IP
+  const ip = (req.headers.get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
+  const rl = await checkRateLimit(bugReportRateLimit, `bug:${ip}`);
+  if (rl) return rl;
 
-  if (!severity || !description || description.trim().length < 10) {
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
-  }
+  const raw = await req.json();
+  const parsed = validateBody(bugReportSchema, raw);
+  if ("error" in parsed) return parsed.error;
+
+  const { severity, description, pageUrl, reporterEmail } = parsed.data;
 
   const severityLabel = severity.toUpperCase();
 
