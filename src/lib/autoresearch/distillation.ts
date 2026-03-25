@@ -5,7 +5,7 @@ import { runAgentWithTools } from "@/lib/tools/run-agent";
 import { createEventCollector } from "@/lib/pi-mono/event-collector";
 import { evaluateAllCriteria } from "@/lib/grading/criteria";
 import { calculateTokenCost } from "@/lib/billing/pricing";
-import { getAvailableStudentModels, checkOllamaReachable, resolveProviderKey } from "./available-models";
+import { getAvailableStudentModels, checkOllamaReachable, resolveProviderKey, resolveProviderKeys } from "./available-models";
 import { createRun, completeRun, trackAutoresearchUsage, logIteration, failRun } from "./history";
 import type { DistillationResult, AutoResearchRun } from "./types";
 
@@ -82,9 +82,10 @@ export async function runDistillation(
     // --- PHASE 1: TEACHER evaluation ---
     callbacks.onStatus("evaluating_teacher");
 
-    const teacherKey = await resolveProviderKey(userId, teacherProvider);
+    const teacherKeys = await resolveProviderKeys(userId, teacherProvider);
+    const teacherKey = teacherKeys[0];
     const teacherResult = await evaluateModel(
-      fullPrompt, casesSnap, teacherProvider, teacherModel, userId, agentId, teacherKey
+      fullPrompt, casesSnap, teacherProvider, teacherModel, userId, agentId, teacherKey, teacherKeys
     );
     totalInputTokens += teacherResult.inputTokens;
     totalOutputTokens += teacherResult.outputTokens;
@@ -110,9 +111,10 @@ export async function runDistillation(
       callbacks.onStatus(`evaluating_${student.label.replace(/\s/g, "_").toLowerCase()}`);
 
       try {
-        const studentKey = await resolveProviderKey(userId, student.provider);
+        const studentKeys = await resolveProviderKeys(userId, student.provider);
+        const studentKey = studentKeys[0];
         const studentResult = await evaluateModel(
-          fullPrompt, casesSnap, student.provider, student.model, userId, agentId, studentKey
+          fullPrompt, casesSnap, student.provider, student.model, userId, agentId, studentKey, studentKeys
         );
         totalInputTokens += studentResult.inputTokens;
         totalOutputTokens += studentResult.outputTokens;
@@ -229,7 +231,8 @@ async function evaluateModel(
   model: string,
   userId: string,
   agentId: string,
-  apiKey?: string
+  apiKey?: string,
+  apiKeys?: string[]
 ): Promise<{ score: number; costPerRequest: number; inputTokens: number; outputTokens: number; durationMs: number }> {
   const startTime = Date.now();
   let totalScore = 0;
@@ -249,6 +252,7 @@ async function evaluateModel(
         userId,
         agentId,
         apiKey,
+        apiKeys: apiKeys && apiKeys.length > 1 ? apiKeys : undefined,
         skipOutboundWebhooks: true,
       },
       {

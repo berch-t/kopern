@@ -5,7 +5,7 @@ import { adminDb } from "@/lib/firebase/admin";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
 import { calculateTokenCost } from "@/lib/billing/pricing";
-import { resolveProviderKey } from "@/lib/llm/resolve-key";
+import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
 import { createSessionServer, updateSessionMetrics, appendSessionEvents, endSessionServer } from "@/lib/billing/track-usage-server";
 import { logAppError } from "@/lib/errors/logger";
 
@@ -210,8 +210,10 @@ export async function POST(request: NextRequest) {
         });
       } catch { /* continue without session */ }
 
-      // Resolve API key from user Firestore settings
-      const apiKey = await resolveProviderKey(userId, agentData.modelProvider || "anthropic");
+      // Resolve API key(s) from user Firestore settings
+      const widgetProvider = agentData.modelProvider || "anthropic";
+      const apiKeys = await resolveProviderKeys(userId, widgetProvider);
+      const apiKey = apiKeys[0];
 
       let assistantOutput = "";
       const toolEvents: { type: string; data: Record<string, unknown> }[] = [];
@@ -226,7 +228,9 @@ export async function POST(request: NextRequest) {
           agentId,
           connectedRepos: agentData.connectedRepos || [],
           apiKey,
+          apiKeys: apiKeys.length > 1 ? apiKeys : undefined,
           skipOutboundWebhooks: true, // CRITICAL: anti-loop protection
+          toolApprovalPolicy: (agentData.toolApprovalPolicy as "auto" | "confirm_destructive" | "confirm_all") || "auto",
         },
         {
           onToken: (text) => {

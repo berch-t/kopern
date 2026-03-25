@@ -583,7 +583,9 @@
     "skillsCount": "Skills",
     "createFromSpec": "Créer l'Agent",
     "startOver": "Recommencer",
-    "error": "Échec de la génération. Veuillez réessayer."
+    "error": "Échec de la génération. Veuillez réessayer.",
+    "apiKeyRequired": "Veuillez ajouter votre clé API dans les Paramètres avant d'utiliser le wizard IA. Allez dans Paramètres > Clés API pour configurer votre clé Anthropic.",
+    "demoRateLimited": "Vous avez atteint la limite de démo quotidienne. Inscrivez-vous pour créer des agents illimités avec votre propre clé API !"
   },
   "pricing": {
     "title": "Tarification Simple et Transparente",
@@ -739,7 +741,10 @@
     "githubConnected": "Connecté",
     "githubLinked": "Compte GitHub lié avec succès",
     "githubAlreadyLinked": "GitHub est déjà lié à votre compte",
-    "githubLinkFailed": "Échec de la liaison du compte GitHub"
+    "githubLinkFailed": "Échec de la liaison du compte GitHub",
+    "apiKeysDesc": "Vos clés API sont stockées de manière sécurisée. Ajoutez plusieurs clés par provider pour un failover automatique en cas de rate limit.",
+    "failoverKey": "Clé de secours",
+    "addFailoverKey": "Ajouter une clé de secours"
   },
   "apiKeys": {
     "title": "Endpoints API",

@@ -3,8 +3,12 @@ import { createSSEStream, sseResponse } from "@/lib/utils/sse";
 import { streamLLM, type LLMMessage } from "@/lib/llm/client";
 import { META_AGENT_SYSTEM_PROMPT } from "@/data/meta-agent-template";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
-import { resolveProviderKey } from "@/lib/llm/resolve-key";
+import { resolveUserKey } from "@/lib/llm/resolve-key";
+import { adminDb } from "@/lib/firebase/admin";
+import { FieldValue } from "firebase-admin/firestore";
 import type { AgentSpec } from "@/lib/meta-agent/types";
+
+const DEMO_RATE_LIMIT = 2; // max calls per IP per day
 
 interface MetaCreateBody {
   description: string;
@@ -35,14 +39,73 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Rate limit anonymous demo usage by IP
+  if (!userId) {
+    const ip = (request.headers.get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const ref = adminDb.doc(`rateLimits/${ip.replace(/[./]/g, "_")}`);
+    const snap = await ref.get();
+    const data = snap.data();
+
+    if (data && data.date === today && (data.count ?? 0) >= DEMO_RATE_LIMIT) {
+      return NextResponse.json(
+        { error: "DEMO_RATE_LIMITED" },
+        { status: 429 }
+      );
+    }
+
+    // Increment counter
+    if (data?.date === today) {
+      await ref.update({ count: FieldValue.increment(1) });
+    } else {
+      await ref.set({ date: today, count: 1 });
+    }
+  }
+
   const { stream, send, close } = createSSEStream();
 
   (async () => {
     try {
       send("status", { status: "analyzing" });
 
-      // Resolve API key from user Firestore settings (if userId available)
-      const apiKey = userId ? await resolveProviderKey(userId, modelProvider || "anthropic") : undefined;
+      // Resolve API key
+      let apiKey: string | undefined;
+      let resolvedProvider = modelProvider || "anthropic";
+      let resolvedModel = modelId || "claude-sonnet-4-6";
+
+      if (userId) {
+        // Authenticated user: try requested provider first, then fallback to any available key
+        const providerFallbacks: { provider: string; model: string }[] = [
+          { provider: resolvedProvider, model: resolvedModel },
+          { provider: "anthropic", model: "claude-sonnet-4-6" },
+          { provider: "openai", model: "gpt-4o" },
+          { provider: "google", model: "gemini-2.5-flash" },
+          { provider: "mistral", model: "mistral-large-latest" },
+        ];
+        // Deduplicate (requested provider already in list)
+        const seen = new Set<string>();
+        for (const fb of providerFallbacks) {
+          if (seen.has(fb.provider)) continue;
+          seen.add(fb.provider);
+          const key = await resolveUserKey(userId, fb.provider);
+          if (key) {
+            apiKey = key;
+            resolvedProvider = fb.provider;
+            resolvedModel = fb.model;
+            break;
+          }
+        }
+        if (!apiKey) {
+          send("error", { message: "API_KEY_REQUIRED" });
+          close();
+          return;
+        }
+      } else {
+        // Anonymous demo: use env var demo key only
+        const envMap: Record<string, string> = { anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY", google: "GOOGLE_AI_API_KEY" };
+        const envKey = envMap[resolvedProvider] ? process.env[envMap[resolvedProvider]] : undefined;
+        apiKey = envKey && envKey.length >= 8 ? envKey : undefined;
+      }
 
       const messages: LLMMessage[] = [
         {
@@ -55,8 +118,8 @@ export async function POST(request: NextRequest) {
 
       await streamLLM(
         {
-          provider: modelProvider || "anthropic",
-          model: modelId || "claude-sonnet-4-6",
+          provider: resolvedProvider,
+          model: resolvedModel,
           systemPrompt: META_AGENT_SYSTEM_PROMPT,
           messages,
           apiKey,

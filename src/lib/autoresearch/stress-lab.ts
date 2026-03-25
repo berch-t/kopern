@@ -7,7 +7,7 @@ import { evaluateAllCriteria } from "@/lib/grading/criteria";
 import { streamLLM } from "@/lib/llm/client";
 import { generateAdversarialCases, hardenPrompt } from "./analyzer";
 import { createRun, logIteration, completeRun, trackAutoresearchUsage, failRun } from "./history";
-import { resolveProviderKey } from "@/lib/llm/resolve-key";
+import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
 import type {
   AdversarialCase,
   StressLabVulnerability,
@@ -63,8 +63,9 @@ export async function runStressLab(
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
 
-    // Resolve API keys from user Firestore settings
-    const apiKey = await resolveProviderKey(userId, provider);
+    // Resolve API key(s) from user Firestore settings
+    const apiKeys = await resolveProviderKeys(userId, provider);
+    const apiKey = apiKeys[0];
     // Judge always uses anthropic — resolve separately if provider differs
     const judgeApiKey = provider === "anthropic" ? apiKey : await resolveProviderKey(userId, "anthropic");
 
@@ -116,6 +117,7 @@ export async function runStressLab(
           userId,
           agentId,
           apiKey,
+          apiKeys: apiKeys.length > 1 ? apiKeys : undefined,
           skipOutboundWebhooks: true,
         },
         {
@@ -206,6 +208,7 @@ export async function runStressLab(
             userId,
             agentId,
             apiKey,
+            apiKeys: apiKeys.length > 1 ? apiKeys : undefined,
           },
           {
             onToken: (text) => collector.addToken(text),

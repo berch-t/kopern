@@ -25,7 +25,7 @@ import { providers } from "@/lib/pi-mono/providers";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { toast } from "sonner";
-import { Eye, EyeOff, Github, Check, Shield, Download, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Github, Check, Shield, Download, Trash2, Plus, X } from "lucide-react";
 import { useDictionary } from "@/providers/LocaleProvider";
 import { LocalizedLink } from "@/components/LocalizedLink";
 
@@ -140,36 +140,93 @@ export default function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle>{t.settings.apiKeys}</CardTitle>
+          <CardDescription>{t.settings.apiKeysDesc}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {providers.map((p) => (
-            <div key={p.id} className="space-y-1">
-              <Label>{p.name} API Key</Label>
-              <div className="flex gap-2">
-                <Input
-                  type={showKeys[p.id] ? "text" : "password"}
-                  value={apiKeys[p.id] || ""}
-                  onChange={(e) =>
-                    setApiKeys({ ...apiKeys, [p.id]: e.target.value })
-                  }
-                  placeholder={`Enter your ${p.name} API key...`}
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() =>
-                    setShowKeys({ ...showKeys, [p.id]: !showKeys[p.id] })
-                  }
-                >
-                  {showKeys[p.id] ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
+          {providers.map((p) => {
+            // Collect all keys for this provider: primary + _2, _3, _4, _5
+            const extraKeys = [2, 3, 4, 5].filter((i) => apiKeys[`${p.id}_${i}`] !== undefined);
+
+            return (
+              <div key={p.id} className="space-y-2">
+                <Label>{p.name} API Key</Label>
+                {/* Primary key */}
+                <div className="flex gap-2">
+                  <Input
+                    type={showKeys[p.id] ? "text" : "password"}
+                    value={apiKeys[p.id] || ""}
+                    onChange={(e) =>
+                      setApiKeys({ ...apiKeys, [p.id]: e.target.value })
+                    }
+                    placeholder={`Enter your ${p.name} API key...`}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() =>
+                      setShowKeys({ ...showKeys, [p.id]: !showKeys[p.id] })
+                    }
+                  >
+                    {showKeys[p.id] ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                {/* Extra keys for failover */}
+                {extraKeys.map((i) => (
+                  <div key={`${p.id}_${i}`} className="flex gap-2 pl-4">
+                    <Input
+                      type={showKeys[`${p.id}_${i}`] ? "text" : "password"}
+                      value={apiKeys[`${p.id}_${i}`] || ""}
+                      onChange={(e) =>
+                        setApiKeys({ ...apiKeys, [`${p.id}_${i}`]: e.target.value })
+                      }
+                      placeholder={`${t.settings.failoverKey} ${i}...`}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() =>
+                        setShowKeys({ ...showKeys, [`${p.id}_${i}`]: !showKeys[`${p.id}_${i}`] })
+                      }
+                    >
+                      {showKeys[`${p.id}_${i}`] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        const next = { ...apiKeys };
+                        delete next[`${p.id}_${i}`];
+                        setApiKeys(next);
+                      }}
+                    >
+                      <X className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </div>
+                ))}
+                {/* Add failover key button */}
+                {apiKeys[p.id] && extraKeys.length < 4 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-muted-foreground pl-4"
+                    onClick={() => {
+                      const nextIndex = extraKeys.length > 0 ? extraKeys[extraKeys.length - 1] + 1 : 2;
+                      if (nextIndex <= 5) {
+                        setApiKeys({ ...apiKeys, [`${p.id}_${nextIndex}`]: "" });
+                      }
+                    }}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    {t.settings.addFailoverKey}
+                  </Button>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </CardContent>
       </Card>
 

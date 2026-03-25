@@ -1,4 +1,6 @@
-// Multi-provider LLM streaming client with tool calling support
+// Multi-provider LLM streaming client with tool calling support + key rotation
+
+import { executeWithKeyRotation } from "./key-rotation";
 
 export interface LLMMessage {
   role: "user" | "assistant" | "system";
@@ -45,6 +47,8 @@ export interface LLMConfig {
   tools?: ToolDefinition[];
   /** Override API key (from user Firestore settings). Falls back to process.env if not provided. */
   apiKey?: string;
+  /** Multiple API keys for rotation/failover. If provided and > 1, enables automatic retry on 429. */
+  apiKeys?: string[];
 }
 
 /** Resolve tool name from tool_use_id by scanning assistant messages */
@@ -63,20 +67,66 @@ function resolveToolName(messages: LLMMessage[], toolUseId?: string): string {
 }
 
 export async function streamLLM(config: LLMConfig, callbacks: LLMStreamCallbacks) {
-  switch (config.provider) {
-    case "anthropic":
-      return streamAnthropic(config, callbacks);
-    case "openai":
-      return streamOpenAI(config, callbacks);
-    case "google":
-      return streamGoogle(config, callbacks);
-    case "mistral":
-      return streamMistral(config, callbacks);
-    case "ollama":
-      return streamOllama(config, callbacks);
-    default:
-      callbacks.onError(new Error(`Unknown provider: ${config.provider}`));
+  // Key rotation: if multiple keys provided, retry on rate limit errors
+  const keys = config.apiKeys && config.apiKeys.length > 1 ? config.apiKeys : null;
+  if (keys) {
+    try {
+      await executeWithKeyRotation(
+        keys,
+        (key) => streamLLMSingle({ ...config, apiKey: key }, callbacks),
+      );
+    } catch {
+      // Error already forwarded via callbacks.onError inside streamLLMSingle
+    }
+    return;
   }
+
+  // Single key (or no key) — direct call
+  return streamLLMSingle(config, callbacks);
+}
+
+async function streamLLMSingle(config: LLMConfig, callbacks: LLMStreamCallbacks) {
+  // Wrap in a promise so key rotation can catch errors
+  return new Promise<void>((resolve, reject) => {
+    const wrappedCallbacks: LLMStreamCallbacks = {
+      onToken: callbacks.onToken,
+      onToolCall: callbacks.onToolCall,
+      onDone: (stopReason) => {
+        callbacks.onDone(stopReason);
+        resolve();
+      },
+      onError: (error) => {
+        // For key rotation: reject so executeWithKeyRotation can retry
+        reject(error);
+      },
+    };
+
+    const run = () => {
+      switch (config.provider) {
+        case "anthropic":
+          return streamAnthropic(config, wrappedCallbacks);
+        case "openai":
+          return streamOpenAI(config, wrappedCallbacks);
+        case "google":
+          return streamGoogle(config, wrappedCallbacks);
+        case "mistral":
+          return streamMistral(config, wrappedCallbacks);
+        case "ollama":
+          return streamOllama(config, wrappedCallbacks);
+        default:
+          wrappedCallbacks.onError(new Error(`Unknown provider: ${config.provider}`));
+      }
+    };
+
+    run()?.catch(reject);
+  }).catch((error) => {
+    // If not in rotation mode (single key), forward error to original callback
+    if (!config.apiKeys || config.apiKeys.length <= 1) {
+      callbacks.onError(error instanceof Error ? error : new Error(String(error)));
+    } else {
+      throw error; // Re-throw for key rotation to handle
+    }
+  });
 }
 
 // --- Anthropic (native tool calling) ---

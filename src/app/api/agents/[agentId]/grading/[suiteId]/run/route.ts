@@ -9,7 +9,7 @@ import { reportUsageToStripe } from "@/lib/stripe/server";
 import { logAppError } from "@/lib/errors/logger";
 import { buildCriterionConfig } from "@/lib/grading/build-criterion-config";
 import { generateImprovementNotes } from "@/lib/grading/improvement-notes";
-import { resolveProviderKey } from "@/lib/llm/resolve-key";
+import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
 
 export async function POST(
   request: NextRequest,
@@ -106,8 +106,9 @@ export async function POST(
         runId = runRef.id;
       }
 
-      // Resolve API key from user Firestore settings
-      const apiKey = userId ? await resolveProviderKey(userId, modelProvider) : undefined;
+      // Resolve API key(s) from user Firestore settings
+      const apiKeys = userId ? await resolveProviderKeys(userId, modelProvider) : [];
+      const apiKey = apiKeys[0];
 
       send("status", { status: "running", totalCases: cases.length, runId });
 
@@ -140,6 +141,7 @@ export async function POST(
             agentId,
             connectedRepos,
             apiKey,
+            apiKeys: apiKeys.length > 1 ? apiKeys : undefined,
             skipOutboundWebhooks: true,
           },
           {

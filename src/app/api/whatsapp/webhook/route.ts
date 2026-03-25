@@ -4,7 +4,7 @@ import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
 import type { LLMMessage } from "@/lib/llm/client";
 import { logAppError } from "@/lib/errors/logger";
-import { resolveProviderKey } from "@/lib/llm/resolve-key";
+import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
 import { createSessionServer, updateSessionMetrics, appendSessionEvents, endSessionServer } from "@/lib/billing/track-usage-server";
 import { calculateTokenCost } from "@/lib/billing/pricing";
 import type { AgentRunMetrics } from "@/lib/tools/run-agent";
@@ -166,7 +166,9 @@ async function processWhatsAppMessage(
   }
 
   const messages: LLMMessage[] = [{ role: "user", content: message.text }];
-  const apiKey = await resolveProviderKey(userId, (agentData.modelProvider as string) || "anthropic");
+  const whatsappProvider = (agentData.modelProvider as string) || "anthropic";
+  const apiKeys = await resolveProviderKeys(userId, whatsappProvider);
+  const apiKey = apiKeys[0];
 
   // Create session
   let sessionId = "";
@@ -195,7 +197,9 @@ async function processWhatsAppMessage(
         agentId,
         connectedRepos: (agentData.connectedRepos as string[]) || [],
         apiKey,
+        apiKeys: apiKeys.length > 1 ? apiKeys : undefined,
         skipOutboundWebhooks: true, // CRITICAL: anti-loop protection
+        toolApprovalPolicy: (agentData.toolApprovalPolicy as "auto" | "confirm_destructive" | "confirm_all") || "auto",
       },
       {
         onToken: (text) => { fullResponse += text; },

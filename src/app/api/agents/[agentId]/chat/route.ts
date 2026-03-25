@@ -6,7 +6,7 @@ import { adminDb } from "@/lib/firebase/admin";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { logAppError } from "@/lib/errors/logger";
-import { resolveProviderKey } from "@/lib/llm/resolve-key";
+import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
 import { registerApprovalGate } from "@/lib/tools/approval-gate";
 import type { ApprovalRequest } from "@/lib/tools/approval";
 import type { ToolApprovalPolicy } from "@/lib/firebase/firestore";
@@ -127,8 +127,9 @@ You MUST maintain a task list for this session. Before executing any action:
 
       send("status", { status: "thinking" });
 
-      // Resolve API key from user Firestore settings
-      const apiKey = userId ? await resolveProviderKey(userId, agentConfig.modelProvider) : undefined;
+      // Resolve API keys from user Firestore settings (supports multiple keys for failover)
+      const apiKeys = userId ? await resolveProviderKeys(userId, agentConfig.modelProvider) : [];
+      const apiKey = apiKeys[0];
 
       // Load tool approval policy from agent doc
       let toolApprovalPolicy: ToolApprovalPolicy = "auto";
@@ -162,6 +163,7 @@ You MUST maintain a task list for this session. Before executing any action:
           agentId,
           connectedRepos,
           apiKey,
+          apiKeys: apiKeys.length > 1 ? apiKeys : undefined,
           toolApprovalPolicy,
           skipOutboundWebhooks: isInternalTrigger,
         },

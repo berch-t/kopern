@@ -4,7 +4,7 @@ import { resolveApiKey } from "@/lib/mcp/auth";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { trackUsage } from "@/lib/mcp/token-counter";
 import { logAppError } from "@/lib/errors/logger";
-import { resolveProviderKey } from "@/lib/llm/resolve-key";
+import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
 import { runAgentWithTools, type AgentRunMetrics } from "@/lib/tools/run-agent";
 import type { LLMMessage } from "@/lib/llm/client";
 import { createSessionServer, updateSessionMetrics, appendSessionEvents, endSessionServer } from "@/lib/billing/track-usage-server";
@@ -137,8 +137,10 @@ async function executeChat(
     { role: "user" as const, content: message },
   ];
 
-  // Resolve API key from user Firestore settings
-  const apiKey = await resolveProviderKey(userId, agent.modelProvider as string);
+  // Resolve API key(s) from user Firestore settings
+  const mcpProvider = agent.modelProvider as string;
+  const apiKeys = await resolveProviderKeys(userId, mcpProvider);
+  const apiKey = apiKeys[0];
 
   // Create session for MCP tracking
   let sessionId = "";
@@ -168,7 +170,9 @@ async function executeChat(
           agentId,
           connectedRepos: (agent.connectedRepos as string[]) || [],
           apiKey,
+          apiKeys: apiKeys.length > 1 ? apiKeys : undefined,
           skipOutboundWebhooks: true, // CRITICAL: anti-loop protection
+          toolApprovalPolicy: (agent.toolApprovalPolicy as "auto" | "confirm_destructive" | "confirm_all") || "auto",
         },
         {
           onToken: (text) => { fullResponse += text; },

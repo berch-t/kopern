@@ -8,7 +8,7 @@ import { evaluateAllCriteria } from "@/lib/grading/criteria";
 import { PLAN_LIMITS, type PlanTier } from "@/lib/billing/pricing";
 import { applyMutation } from "./strategies";
 import { getAvailableModelsForUser, checkOllamaReachable } from "./available-models";
-import { resolveProviderKey } from "@/lib/llm/resolve-key";
+import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
 import {
   createRun,
   logIteration,
@@ -79,8 +79,9 @@ export async function runAutoTune(
   const provider = agentData.modelProvider || "anthropic";
   const model = agentData.modelId || "claude-sonnet-4-6";
 
-  // Resolve API key from user Firestore settings
-  const apiKey = await resolveProviderKey(userId, provider);
+  // Resolve API key(s) from user Firestore settings
+  const apiKeys = await resolveProviderKeys(userId, provider);
+  const apiKey = apiKeys[0];
 
   // Load cases
   const casesSnap = await adminDb
@@ -139,7 +140,8 @@ export async function runAutoTune(
       model,
       userId,
       agentId,
-      apiKey
+      apiKey,
+      apiKeys
     );
 
     const baselineIteration: AutoResearchIteration = {
@@ -206,7 +208,8 @@ export async function runAutoTune(
         model,
         userId,
         agentId,
-        apiKey
+        apiKey,
+        apiKeys
       );
 
       run.totalTokensUsed.input += result.tokensUsed.input;
@@ -295,7 +298,8 @@ async function runGradingSuiteOnPrompt(
   model: string,
   userId: string,
   agentId: string,
-  apiKey?: string
+  apiKey?: string,
+  apiKeys?: string[]
 ): Promise<{
   score: number;
   criteriaBreakdown: Record<string, number>;
@@ -323,6 +327,7 @@ async function runGradingSuiteOnPrompt(
         userId,
         agentId,
         apiKey,
+        apiKeys: apiKeys && apiKeys.length > 1 ? apiKeys : undefined,
         skipOutboundWebhooks: true,
       },
       {
@@ -390,8 +395,9 @@ async function getLatestGradingResults(
   model: string,
   userId: string,
   agentId: string,
-  apiKey?: string
+  apiKey?: string,
+  apiKeys?: string[]
 ) {
-  const result = await runGradingSuiteOnPrompt(systemPrompt, casesSnap, provider, model, userId, agentId, apiKey);
+  const result = await runGradingSuiteOnPrompt(systemPrompt, casesSnap, provider, model, userId, agentId, apiKey, apiKeys);
   return result.gradingResults;
 }

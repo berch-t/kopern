@@ -147,6 +147,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Rate Limits (admin SDK only — no client access)
+    match /rateLimits/{ipHash} {
+      allow read, write: if false;
+    }
+
     // Error Logs (admin read via client SDK, writes via admin SDK only)
     match /errorLogs/{logId} {
       allow read: if request.auth != null;

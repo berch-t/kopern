@@ -583,7 +583,9 @@
     "skillsCount": "Skills",
     "createFromSpec": "Create Agent",
     "startOver": "Start Over",
-    "error": "Generation failed. Please try again."
+    "error": "Generation failed. Please try again.",
+    "apiKeyRequired": "Please add your API key in Settings before using the AI wizard. Go to Settings > API Keys to configure your Anthropic key.",
+    "demoRateLimited": "You've reached the daily demo limit. Sign up to create unlimited agents with your own API key!"
   },
   "pricing": {
     "title": "Simple, Transparent Pricing",
@@ -739,7 +741,10 @@
     "githubConnected": "Connected",
     "githubLinked": "GitHub account linked successfully",
     "githubAlreadyLinked": "GitHub is already linked to your account",
-    "githubLinkFailed": "Failed to link GitHub account"
+    "githubLinkFailed": "Failed to link GitHub account",
+    "apiKeysDesc": "Your API keys are stored securely. Add multiple keys per provider for automatic failover on rate limits.",
+    "failoverKey": "Failover key",
+    "addFailoverKey": "Add failover key"
   },
   "apiKeys": {
     "title": "API Endpoints",

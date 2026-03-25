@@ -4,7 +4,7 @@ import { resolveApiKey } from "@/lib/mcp/auth";
 import { countTokens, trackUsage } from "@/lib/mcp/token-counter";
 import { streamLLM, type LLMMessage } from "@/lib/llm/client";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
-import { resolveProviderKey } from "@/lib/llm/resolve-key";
+import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
 
 interface JsonRpcRequest {
   jsonrpc: "2.0";
@@ -132,8 +132,9 @@ export async function POST(request: NextRequest) {
       const inputText = systemPrompt + messages.map((m) => m.content).join("");
       const inputTokens = countTokens(inputText);
 
-      // Resolve API key from user Firestore settings
-      const userApiKey = await resolveProviderKey(resolved.userId, agent.modelProvider);
+      // Resolve API key(s) from user Firestore settings
+      const userApiKeys = await resolveProviderKeys(resolved.userId, agent.modelProvider);
+      const userApiKey = userApiKeys[0];
 
       // Call LLM and collect full response
       let fullResponse = "";
@@ -147,6 +148,7 @@ export async function POST(request: NextRequest) {
               systemPrompt,
               messages,
               apiKey: userApiKey,
+              apiKeys: userApiKeys.length > 1 ? userApiKeys : undefined,
             },
             {
               onToken: (text) => {

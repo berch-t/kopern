@@ -180,13 +180,18 @@ export default function LandingPage() {
           description: heroDescription.trim(),
           modelProvider: "anthropic",
           modelId: "claude-sonnet-4-6",
+          userId: user?.uid,
         }),
         signal: controller.signal,
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Request failed" }));
-        throw new Error(err.error || `HTTP ${res.status}`);
+        const code = err.error || `HTTP ${res.status}`;
+        if (code === "DEMO_RATE_LIMITED") {
+          throw new Error(t.metaAgent.demoRateLimited);
+        }
+        throw new Error(code);
       }
 
       const reader = res.body?.getReader();
@@ -222,7 +227,7 @@ export default function LandingPage() {
               } else if (evt === "done") {
                 setHeroStep("review");
               } else if (evt === "error") {
-                throw new Error(data.message);
+                throw new Error(data.message === "API_KEY_REQUIRED" ? t.metaAgent.apiKeyRequired : data.message);
               }
             } catch (e) {
               if (e instanceof SyntaxError) continue;

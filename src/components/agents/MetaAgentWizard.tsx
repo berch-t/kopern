@@ -72,6 +72,7 @@ export function MetaAgentWizard({ userId, onCreated }: MetaAgentWizardProps) {
           description: description.trim(),
           modelProvider: "anthropic",
           modelId: "claude-sonnet-4-6",
+          userId,
         }),
         signal: controller.signal,
       });
@@ -114,7 +115,7 @@ export function MetaAgentWizard({ userId, onCreated }: MetaAgentWizardProps) {
               } else if (evt === "done") {
                 setStep("review");
               } else if (evt === "error") {
-                throw new Error(data.message);
+                throw new Error(data.message === "API_KEY_REQUIRED" ? t.metaAgent.apiKeyRequired : data.message);
               }
             } catch (e) {
               if (e instanceof SyntaxError) continue;

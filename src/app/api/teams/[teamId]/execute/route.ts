@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSSEStream, sseResponse } from "@/lib/utils/sse";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
-import { resolveProviderKey } from "@/lib/llm/resolve-key";
+import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
 
 interface TeamExecuteBody {
   prompt: string;
@@ -75,8 +75,9 @@ export async function POST(
 
         let result = "";
 
-        // Resolve API key per agent's provider
-        const apiKey = userId ? await resolveProviderKey(userId, agent.modelProvider) : undefined;
+        // Resolve API key(s) per agent's provider
+        const apiKeys = userId ? await resolveProviderKeys(userId, agent.modelProvider) : [];
+        const apiKey = apiKeys[0];
 
         await runAgentWithTools(
           {
@@ -87,6 +88,7 @@ export async function POST(
             userId,
             agentId: agent.agentId,
             apiKey,
+            apiKeys: apiKeys.length > 1 ? apiKeys : undefined,
             skipOutboundWebhooks: true,
           },
           {

@@ -38,6 +38,8 @@ export interface AgentRunConfig {
   connectedRepos?: string[];
   /** Override API key (from user Firestore settings). Falls back to process.env if not provided. */
   apiKey?: string;
+  /** Multiple API keys for rotation/failover on 429. */
+  apiKeys?: string[];
   /** Tool approval policy — defaults to "auto" (no approval needed) */
   toolApprovalPolicy?: ApprovalPolicy;
   /** Skip outbound webhooks — MUST be true for inbound webhook, Telegram, WhatsApp, Slack routes (anti-loop) */
@@ -224,6 +226,7 @@ export async function runAgentWithTools(
           messages: truncatedMessages,
           tools: tools.length > 0 ? tools : undefined,
           apiKey: config.apiKey,
+          apiKeys: config.apiKeys,
         },
         {
           onToken: (text) => {
@@ -253,21 +256,36 @@ export async function runAgentWithTools(
                 for (const tc of pendingToolCalls) {
                   // Tool approval check
                   const isDestructive = isDestructiveBuiltin(tc.name) || destructiveCustomTools.has(tc.name);
-                  if (policy !== "auto" && requiresApproval(policy, tc.name, isDestructive) && callbacks.onApprovalRequest) {
-                    const decision = await callbacks.onApprovalRequest({
-                      toolCallId: tc.id,
-                      toolName: tc.name,
-                      args: tc.input,
-                      isDestructive,
-                    });
-                    if (decision === "denied") {
+                  if (policy !== "auto" && requiresApproval(policy, tc.name, isDestructive)) {
+                    if (callbacks.onApprovalRequest) {
+                      // Interactive context (Playground/Widget) — ask user
+                      const decision = await callbacks.onApprovalRequest({
+                        toolCallId: tc.id,
+                        toolName: tc.name,
+                        args: tc.input,
+                        isDestructive,
+                      });
+                      if (decision === "denied") {
+                        toolResults.push({
+                          type: "tool_result",
+                          tool_use_id: tc.id,
+                          content: "Tool execution denied by operator.",
+                          is_error: true,
+                        });
+                        callbacks.onToolEnd?.({ name: tc.name, result: "Tool execution denied by operator.", isError: true });
+                        continue;
+                      }
+                    } else {
+                      // Headless context (Telegram, WhatsApp, Slack, Webhook, MCP, etc.)
+                      // No interactive approval possible — auto-deny with explanation
+                      const denyMsg = `Tool "${tc.name}" requires approval but this channel does not support interactive approval. Use the Kopern Playground to execute this action, or set the agent's Tool Approval Policy to "Automatic".`;
                       toolResults.push({
                         type: "tool_result",
                         tool_use_id: tc.id,
-                        content: "Tool execution denied by operator.",
+                        content: denyMsg,
                         is_error: true,
                       });
-                      callbacks.onToolEnd?.({ name: tc.name, result: "Tool execution denied by operator.", isError: true });
+                      callbacks.onToolEnd?.({ name: tc.name, result: denyMsg, isError: true });
                       continue;
                     }
                   }

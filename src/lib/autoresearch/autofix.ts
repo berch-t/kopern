@@ -7,7 +7,7 @@ import { createEventCollector } from "@/lib/pi-mono/event-collector";
 import { evaluateAllCriteria } from "@/lib/grading/criteria";
 import { analyzeFailures, type GradingFailure } from "./analyzer";
 import { createRun, logIteration, completeRun, trackAutoresearchUsage, failRun } from "./history";
-import { resolveProviderKey } from "@/lib/llm/resolve-key";
+import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
 import type { AutoFixResult, AutoResearchRun, AutoResearchIteration } from "./types";
 
 export interface AutoFixConfig {
@@ -42,8 +42,9 @@ export async function runAutoFix(
     const provider = agentData.modelProvider || "anthropic";
     const model = agentData.modelId || "claude-sonnet-4-6";
 
-    // Resolve API key from user Firestore settings
-    const apiKey = await resolveProviderKey(userId, provider);
+    // Resolve API key(s) from user Firestore settings
+    const apiKeys = await resolveProviderKeys(userId, provider);
+    const apiKey = apiKeys[0];
 
     // 2. Load grading run results (failed cases)
     const resultsSnap = await adminDb
@@ -179,6 +180,7 @@ export async function runAutoFix(
           userId,
           agentId,
           apiKey,
+          apiKeys: apiKeys.length > 1 ? apiKeys : undefined,
           skipOutboundWebhooks: true,
         },
         {

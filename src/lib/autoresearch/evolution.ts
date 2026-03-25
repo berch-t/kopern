@@ -5,7 +5,7 @@ import { runAgentWithTools } from "@/lib/tools/run-agent";
 import { createEventCollector } from "@/lib/pi-mono/event-collector";
 import { evaluateAllCriteria } from "@/lib/grading/criteria";
 import { thinkingLevels } from "@/lib/pi-mono/providers";
-import { getAvailableModelsForUser, checkOllamaReachable, resolveProviderKey, type AvailableModel } from "./available-models";
+import { getAvailableModelsForUser, checkOllamaReachable, resolveProviderKey, resolveProviderKeys, type AvailableModel } from "./available-models";
 import { proposeMutation } from "./analyzer";
 import { createRun, completeRun, trackAutoresearchUsage, logIteration, failRun } from "./history";
 import type {
@@ -47,8 +47,9 @@ export async function runEvolution(
     const provider = agentData.modelProvider || "anthropic";
     const model = agentData.modelId || "claude-sonnet-4-6";
 
-    // Resolve API key from user Firestore settings
-    const apiKey = await resolveProviderKey(userId, provider);
+    // Resolve API key(s) from user Firestore settings
+    const apiKeys = await resolveProviderKeys(userId, provider);
+    const apiKey = apiKeys[0];
 
     // Load skills
     let skillsXml = "";
@@ -291,7 +292,8 @@ async function evaluateCandidate(
   const provider = candidate.config.modelProvider || "anthropic";
   const model = candidate.config.modelId || "claude-sonnet-4-6";
   const prompt = (candidate.config.systemPrompt || "") + skillsXml;
-  const apiKey = await resolveProviderKey(userId, provider);
+  const candidateApiKeys = await resolveProviderKeys(userId, provider);
+  const apiKey = candidateApiKeys[0];
 
   let totalScore = 0;
   let totalInputTokens = 0;
@@ -312,6 +314,7 @@ async function evaluateCandidate(
         userId,
         agentId,
         apiKey,
+        apiKeys: candidateApiKeys.length > 1 ? candidateApiKeys : undefined,
         skipOutboundWebhooks: true,
       },
       {

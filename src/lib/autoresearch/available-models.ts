@@ -3,7 +3,7 @@
 // Used by evolution, tournament, and distillation to avoid testing unreachable models
 
 import { adminDb } from "@/lib/firebase/admin";
-export { resolveProviderKey } from "@/lib/llm/resolve-key";
+export { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
 
 export interface AvailableModel {
   provider: string;

@@ -9,7 +9,7 @@ import {
   logWebhookExecution,
 } from "@/lib/connectors/webhook";
 import { logAppError } from "@/lib/errors/logger";
-import { resolveProviderKey } from "@/lib/llm/resolve-key";
+import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
 import { createSessionServer, updateSessionMetrics, appendSessionEvents, endSessionServer } from "@/lib/billing/track-usage-server";
 import { calculateTokenCost } from "@/lib/billing/pricing";
 
@@ -152,8 +152,10 @@ export async function POST(
 
   const messages: LLMMessage[] = [{ role: "user", content: userMessage }];
 
-  // 9. Resolve API key from user Firestore settings
-  const apiKey = await resolveProviderKey(userId, (agent.modelProvider as string) || "anthropic");
+  // 9. Resolve API key(s) from user Firestore settings
+  const webhookProvider = (agent.modelProvider as string) || "anthropic";
+  const apiKeys = await resolveProviderKeys(userId, webhookProvider);
+  const apiKey = apiKeys[0];
 
   // 10. Run agent synchronously (collect all output)
   let sessionId = "";
@@ -183,7 +185,9 @@ export async function POST(
           agentId,
           connectedRepos: (agent.connectedRepos as string[]) || [],
           apiKey,
+          apiKeys: apiKeys.length > 1 ? apiKeys : undefined,
           skipOutboundWebhooks: true, // CRITICAL: anti-loop protection
+          toolApprovalPolicy: (agent.toolApprovalPolicy as "auto" | "confirm_destructive" | "confirm_all") || "auto",
         },
         {
           onToken: (text) => {

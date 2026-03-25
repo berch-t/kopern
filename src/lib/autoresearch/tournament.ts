@@ -9,7 +9,7 @@ import { providers } from "@/lib/pi-mono/providers";
 import { createRun, completeRun, trackAutoresearchUsage, logIteration, failRun } from "./history";
 import { generateTournamentCandidates } from "./strategies";
 import { getAvailableModelsForUser, checkOllamaReachable } from "./available-models";
-import { resolveProviderKey } from "@/lib/llm/resolve-key";
+import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
 import type {
   TournamentCandidate,
   TournamentResult,
@@ -124,8 +124,9 @@ export async function runTournament(
         const model = candidate.config.modelId || "claude-sonnet-4-6";
         const prompt = (candidate.config.systemPrompt || "") + skillsXml;
 
-        // Resolve API key per candidate's provider
-        const apiKey = await resolveProviderKey(userId, provider);
+        // Resolve API key(s) per candidate's provider
+        const apiKeys = await resolveProviderKeys(userId, provider);
+        const apiKey = apiKeys[0];
 
         let caseScore = 0;
         let caseInputTokens = 0;
@@ -145,6 +146,7 @@ export async function runTournament(
               userId,
               agentId,
               apiKey,
+              apiKeys: apiKeys.length > 1 ? apiKeys : undefined,
               skipOutboundWebhooks: true,
             },
             {
