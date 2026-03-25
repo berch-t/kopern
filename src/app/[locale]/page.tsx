@@ -817,7 +817,7 @@ export default function LandingPage() {
               {t.deploySection.title}{" "}
               <span className="text-primary">{t.deploySection.titleAccent}</span>
             </h2>
-            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto whitespace-pre-line">
               {t.deploySection.subtitle}
             </p>
           </motion.div>
@@ -854,16 +854,52 @@ export default function LandingPage() {
             </div>
           </motion.div>
 
-          {/* Row 1 — 3 cards with brand logos */}
+          {/* 3x3 uniform grid */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="grid gap-6 sm:grid-cols-3"
+            className="grid gap-4 sm:grid-cols-3"
           >
-            {/* GitHub */}
-            <BorderGlow className="bg-card" glowRadius={30}>
+            {/* Row 1: WhatsApp, Telegram, Slack */}
+            <BorderGlow className="bg-card" glowRadius={28}>
+              <div className="p-6 space-y-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#25D366]/10">
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="#25D366" aria-label="WhatsApp"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+                </div>
+                <h3 className="font-semibold">{t.deploySection.whatsapp.title}</h3>
+                <p className="text-sm text-muted-foreground">{t.deploySection.whatsapp.description}</p>
+              </div>
+            </BorderGlow>
+
+            <BorderGlow className="bg-card" glowRadius={28}>
+              <div className="p-6 space-y-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#26A5E4]/10">
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="#26A5E4" aria-label="Telegram"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                </div>
+                <h3 className="font-semibold">{t.deploySection.telegram.title}</h3>
+                <p className="text-sm text-muted-foreground">{t.deploySection.telegram.description}</p>
+              </div>
+            </BorderGlow>
+
+            <BorderGlow className="bg-card" glowRadius={28}>
+              <div className="p-6 space-y-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#4A154B]/10">
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+                    <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z" fill="#E01E5A"/>
+                    <path d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z" fill="#36C5F0"/>
+                    <path d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zm-1.27 0a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.163 0a2.528 2.528 0 0 1 2.523 2.522v6.312z" fill="#2EB67D"/>
+                    <path d="M15.163 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.163 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zm0-1.27a2.527 2.527 0 0 1-2.52-2.523 2.527 2.527 0 0 1 2.52-2.52h6.315A2.528 2.528 0 0 1 24 15.163a2.528 2.528 0 0 1-2.522 2.523h-6.315z" fill="#ECB22E"/>
+                  </svg>
+                </div>
+                <h3 className="font-semibold">{t.deploySection.slack.title}</h3>
+                <p className="text-sm text-muted-foreground">{t.deploySection.slack.description}</p>
+              </div>
+            </BorderGlow>
+
+            {/* Row 2: GitHub, Automation, MCP */}
+            <BorderGlow className="bg-card" glowRadius={28}>
               <div className="p-6 space-y-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-foreground/5">
                   <svg className="h-5 w-5 text-foreground" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
@@ -873,10 +909,9 @@ export default function LandingPage() {
               </div>
             </BorderGlow>
 
-            {/* Automation Platforms — n8n / Zapier / Make */}
-            <BorderGlow className="bg-card" glowRadius={30}>
+            <BorderGlow className="bg-card" glowRadius={28}>
               <div className="p-6 space-y-3">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#EA4B71]/10">
                     <svg className="h-5 w-5 text-[#EA4B71]" viewBox="0 0 24 24" fill="currentColor" aria-label="n8n"><path d="M21.4737 5.6842c-1.1772 0-2.1663.8051-2.4468 1.8947h-2.8955c-1.235 0-2.289.893-2.492 2.111l-.1038.623a1.263 1.263 0 0 1-1.246 1.0555H11.289c-.2805-1.0896-1.2696-1.8947-2.4468-1.8947s-2.1663.8051-2.4467 1.8947H4.973c-.2805-1.0896-1.2696-1.8947-2.4468-1.8947C1.1311 9.4737 0 10.6047 0 12s1.131 2.5263 2.5263 2.5263c1.1772 0 2.1663-.8051 2.4468-1.8947h1.4223c.2804 1.0896 1.2696 1.8947 2.4467 1.8947 1.1772 0 2.1663-.8051 2.4468-1.8947h1.0008a1.263 1.263 0 0 1 1.2459 1.0555l.1038.623c.203 1.218 1.257 2.111 2.492 2.111h.3692c.2804 1.0895 1.2696 1.8947 2.4468 1.8947 1.3952 0 2.5263-1.131 2.5263-2.5263s-1.131-2.5263-2.5263-2.5263c-1.1772 0-2.1664.805-2.4468 1.8947h-.3692a1.263 1.263 0 0 1-1.246-1.0555l-.1037-.623A2.52 2.52 0 0 0 13.9607 12a2.52 2.52 0 0 0 .821-1.4794l.1038-.623a1.263 1.263 0 0 1 1.2459-1.0555h2.8955c.2805 1.0896 1.2696 1.8947 2.4468 1.8947 1.3952 0 2.5263-1.131 2.5263-2.5263s-1.131-2.5263-2.5263-2.5263m0 1.2632a1.263 1.263 0 0 1 1.2631 1.2631 1.263 1.263 0 0 1-1.2631 1.2632 1.263 1.263 0 0 1-1.2632-1.2632 1.263 1.263 0 0 1 1.2632-1.2631M2.5263 10.7368A1.263 1.263 0 0 1 3.7895 12a1.263 1.263 0 0 1-1.2632 1.2632A1.263 1.263 0 0 1 1.2632 12a1.263 1.263 0 0 1 1.2631-1.2632m6.3158 0A1.263 1.263 0 0 1 10.1053 12a1.263 1.263 0 0 1-1.2632 1.2632A1.263 1.263 0 0 1 7.579 12a1.263 1.263 0 0 1 1.2632-1.2632m10.1053 3.7895a1.263 1.263 0 0 1 1.2631 1.2632 1.263 1.263 0 0 1-1.2631 1.2631 1.263 1.263 0 0 1-1.2632-1.2631 1.263 1.263 0 0 1 1.2632-1.2632"/></svg>
                   </div>
@@ -892,92 +927,115 @@ export default function LandingPage() {
               </div>
             </BorderGlow>
 
-            {/* Slack Bot */}
-            <BorderGlow className="bg-card" glowRadius={30}>
+            <BorderGlow className="bg-card" glowRadius={28}>
               <div className="p-6 space-y-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#4A154B]/10">
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
-                    <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z" fill="#E01E5A"/>
-                    <path d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z" fill="#36C5F0"/>
-                    <path d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zm-1.27 0a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.163 0a2.528 2.528 0 0 1 2.523 2.522v6.312z" fill="#2EB67D"/>
-                    <path d="M15.163 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.163 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zm0-1.27a2.527 2.527 0 0 1-2.52-2.523 2.527 2.527 0 0 1 2.52-2.52h6.315A2.528 2.528 0 0 1 24 15.163a2.528 2.528 0 0 1-2.522 2.523h-6.315z" fill="#ECB22E"/>
-                  </svg>
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
+                  <Plug className="h-5 w-5 text-blue-500" />
                 </div>
-                <h3 className="font-semibold">{t.deploySection.slack.title}</h3>
-                <p className="text-sm text-muted-foreground">{t.deploySection.slack.description}</p>
-              </div>
-            </BorderGlow>
-          </motion.div>
-
-          {/* Row 2 — 4 smaller cards with icons */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="grid gap-4 grid-cols-2 lg:grid-cols-3 mt-4"
-          >
-            <BorderGlow className="bg-card" glowRadius={24}>
-              <div className="p-4 space-y-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10">
-                  <Plug className="h-4 w-4 text-blue-500" />
-                </div>
-                <h3 className="text-sm font-semibold">{t.integrations.mcp.title}</h3>
-                <p className="text-xs text-muted-foreground">{t.integrations.mcp.description}</p>
+                <h3 className="font-semibold">{t.integrations.mcp.title}</h3>
+                <p className="text-sm text-muted-foreground">{t.integrations.mcp.description}</p>
               </div>
             </BorderGlow>
 
-            <BorderGlow className="bg-card" glowRadius={24}>
-              <div className="p-4 space-y-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/10">
-                  <MessageSquare className="h-4 w-4 text-sky-500" />
+            {/* Row 3: Widget, Webhook, Workflows */}
+            <BorderGlow className="bg-card" glowRadius={28}>
+              <div className="p-6 space-y-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-500/10">
+                  <MessageSquare className="h-5 w-5 text-sky-500" />
                 </div>
-                <h3 className="text-sm font-semibold">{t.deploySection.widget.title}</h3>
-                <p className="text-xs text-muted-foreground">{t.deploySection.widget.description}</p>
+                <h3 className="font-semibold">{t.deploySection.widget.title}</h3>
+                <p className="text-sm text-muted-foreground">{t.deploySection.widget.description}</p>
               </div>
             </BorderGlow>
 
-            <BorderGlow className="bg-card" glowRadius={24}>
-              <div className="p-4 space-y-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10">
-                  <Webhook className="h-4 w-4 text-amber-500" />
+            <BorderGlow className="bg-card" glowRadius={28}>
+              <div className="p-6 space-y-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
+                  <Webhook className="h-5 w-5 text-amber-500" />
                 </div>
-                <h3 className="text-sm font-semibold">{t.deploySection.webhooks.title}</h3>
-                <p className="text-xs text-muted-foreground">{t.deploySection.webhooks.description}</p>
+                <h3 className="font-semibold">{t.deploySection.webhooks.title}</h3>
+                <p className="text-sm text-muted-foreground">{t.deploySection.webhooks.description}</p>
               </div>
             </BorderGlow>
 
-            <BorderGlow className="bg-card" glowRadius={24}>
-              <div className="p-4 space-y-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/10">
-                  <Workflow className="h-4 w-4 text-purple-500" />
+            <BorderGlow className="bg-card" glowRadius={28}>
+              <div className="p-6 space-y-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10">
+                  <Workflow className="h-5 w-5 text-purple-500" />
                 </div>
-                <h3 className="text-sm font-semibold">{t.integrations.workflow.title}</h3>
-                <p className="text-xs text-muted-foreground">{t.integrations.workflow.description}</p>
-              </div>
-            </BorderGlow>
-
-            <BorderGlow className="bg-card" glowRadius={24}>
-              <div className="p-4 space-y-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-400/10">
-                  <Send className="h-4 w-4 text-sky-400" />
-                </div>
-                <h3 className="text-sm font-semibold">{t.deploySection.telegram.title}</h3>
-                <p className="text-xs text-muted-foreground">{t.deploySection.telegram.description}</p>
-              </div>
-            </BorderGlow>
-
-            <BorderGlow className="bg-card" glowRadius={24}>
-              <div className="p-4 space-y-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/10">
-                  <Phone className="h-4 w-4 text-green-500" />
-                </div>
-                <h3 className="text-sm font-semibold">{t.deploySection.whatsapp.title}</h3>
-                <p className="text-xs text-muted-foreground">{t.deploySection.whatsapp.description}</p>
+                <h3 className="font-semibold">{t.integrations.workflow.title}</h3>
+                <p className="text-sm text-muted-foreground">{t.integrations.workflow.description}</p>
               </div>
             </BorderGlow>
           </motion.div>
         </div>
+      </div>
+
+        {/* Features */}
+        <div style={{ background: "var(--landing-section-alt)" }}>
+      <div className="max-w-6xl mx-auto px-6">
+        <motion.section
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="pt-10 pb-24"
+        >
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold sm:text-4xl">
+              {t.landing.features.title}{" "}
+              <span className="text-primary">{t.landing.features.titleAccent}</span>
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+              {t.landing.features.subtitle}
+            </p>
+          </div>
+
+          {/* Compliance Badges */}
+          <div className="flex flex-wrap items-center justify-center gap-6 mb-14">
+            <img src="/soc2.png" alt="SOC 2" className="h-[10rem] opacity-80 hover:opacity-100 transition-opacity" />
+            <img src="/iso27001.png" alt="ISO 27001" className="h-[10rem] opacity-80 hover:opacity-100 transition-opacity" />
+            <img src="/iso42001.png" alt="ISO 42001" className="h-[10rem] opacity-80 hover:opacity-100 transition-opacity" />
+            <img src="/gdpr.png" alt="GDPR" className="h-[10rem] opacity-80 hover:opacity-100 transition-opacity" />
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            {
+              icon: Bot,
+              title: t.landing.features.agentBuilder.title,
+              description: t.landing.features.agentBuilder.description,
+            },
+            {
+              icon: ClipboardCheck,
+              title: t.landing.features.grading.title,
+              description: t.landing.features.grading.description,
+            },
+            {
+              icon: Cable,
+              title: t.landing.features.api.title,
+              description: t.landing.features.api.description,
+            },
+            {
+              icon: Shield,
+              title: t.landing.features.security.title,
+              description: t.landing.features.security.description,
+            },
+          ].map((feature) => (
+            <div key={feature.title} className="gradient-border-wrap h-full">
+              <div className="bg-card p-6 space-y-3 h-full">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <feature.icon className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="font-semibold">{feature.title}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {feature.description}
+                </p>
+              </div>
+            </div>
+          ))}
+          </div>
+        </motion.section>
+      </div>
       </div>
 
         {/* Orchestration & Teams */}
@@ -987,7 +1045,7 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.6 }}
-          className="py-24"
+          className="py-12"
         >
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold sm:text-4xl">
@@ -1113,62 +1171,6 @@ export default function LandingPage() {
         </motion.section>
       </div>
 
-        {/* Features */}
-        <div style={{ background: "var(--landing-section-alt)" }}>
-      <div className="max-w-6xl mx-auto px-6">
-        <motion.section
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="py-24"
-        >
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold sm:text-4xl">
-              {t.landing.features.title}{" "}
-              <span className="text-primary">{t.landing.features.titleAccent}</span>
-            </h2>
-          </div>
-
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            {
-              icon: Bot,
-              title: t.landing.features.agentBuilder.title,
-              description: t.landing.features.agentBuilder.description,
-            },
-            {
-              icon: ClipboardCheck,
-              title: t.landing.features.grading.title,
-              description: t.landing.features.grading.description,
-            },
-            {
-              icon: Cable,
-              title: t.landing.features.api.title,
-              description: t.landing.features.api.description,
-            },
-            {
-              icon: Shield,
-              title: t.landing.features.security.title,
-              description: t.landing.features.security.description,
-            },
-          ].map((feature) => (
-            <div key={feature.title} className="gradient-border-wrap h-full">
-              <div className="bg-card p-6 space-y-3 h-full">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <feature.icon className="h-5 w-5 text-primary" />
-                </div>
-                <h3 className="font-semibold">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {feature.description}
-                </p>
-              </div>
-            </div>
-          ))}
-          </div>
-        </motion.section>
-      </div>
-      </div>
-
         {/* Observability & Billing */}
       <div className="max-w-6xl mx-auto px-6">
         <motion.section
@@ -1226,8 +1228,28 @@ export default function LandingPage() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t py-8">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col items-center gap-4">
+      <footer className="border-t py-12">
+        <div className="max-w-6xl mx-auto px-6 flex flex-col items-center gap-8">
+          {/* Links */}
+          <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
+            <LocalizedLink href="/privacy" className="hover:text-foreground transition-colors">
+              {t.footer?.privacy ?? "Privacy Policy"}
+            </LocalizedLink>
+            <span className="hidden sm:inline text-muted-foreground/40">|</span>
+            <LocalizedLink href="/terms" className="hover:text-foreground transition-colors">
+              {t.footer?.terms ?? "Terms of Service"}
+            </LocalizedLink>
+          </div>
+
+          {/* Compliance Badges */}
+          <div className="flex flex-wrap items-center justify-center gap-6">
+            <img src="/soc2.png" alt="SOC 2" className="h-[7rem] opacity-80 hover:opacity-100 transition-opacity" />
+            <img src="/iso27001.png" alt="ISO 27001" className="h-[7rem] opacity-80 hover:opacity-100 transition-opacity" />
+            <img src="/iso42001.png" alt="ISO 42001" className="h-[7rem] opacity-80 hover:opacity-100 transition-opacity" />
+            <img src="/gdpr.png" alt="GDPR" className="h-[7rem] opacity-80 hover:opacity-100 transition-opacity" />
+          </div>
+
+          {/* Social */}
           <div className="flex items-center gap-4">
             <a
               href="https://github.com/berch-t/kopern"

@@ -32,6 +32,7 @@
     "features": {
       "title": "Conçu pour la",
       "titleAccent": "Production",
+      "subtitle": "Sécurité enterprise-grade, conformité EU AI Act et infrastructure éprouvée dès le premier jour.",
       "agentBuilder": { "title": "Constructeur d'Agents", "description": "Configurez des agents avec des prompts système, des skills, des tools et des extensions. Support multi-modèle." },
       "grading": { "title": "Notation Déterministe", "description": "6 types de critères : correspondance de sortie, validation de schéma, utilisation de tools, vérification de sécurité, juge LLM et plus." },
       "api": { "title": "Endpoints API", "description": "Exposez vos agents comme endpoints JSON-RPC avec authentification par clé API, limitation de débit et suivi d'utilisation." },
@@ -784,7 +785,7 @@
   "deploySection": {
     "title": "Connectez Tout,",
     "titleAccent": "Déployez Partout",
-    "subtitle": "De vos repos GitHub à vos channels Slack, des webhooks aux widgets embarqués — vos agents se branchent sur toute votre stack.",
+    "subtitle": "WhatsApp, Telegram, Slack, GitHub, webhooks, MCP, widgets embarqués \n 9 connecteurs pour déployer vos agents là où vos utilisateurs travaillent déjà.",
     "widget": {
       "title": "Widget Chat",
       "description": "Intégrez une bulle de chat IA complète sur n'importe quel site avec une seule balise script. Isolation Shadow DOM, streaming SSE, responsive mobile."
@@ -1252,5 +1253,9 @@
     "deleting": "Suppression...",
     "deleteSuccess": "Compte supprimé",
     "deleteError": "Échec de la suppression du compte"
+  },
+  "footer": {
+    "privacy": "Politique de Confidentialité",
+    "terms": "Conditions Générales de Vente"
   }
 }

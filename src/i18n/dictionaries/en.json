@@ -32,6 +32,7 @@
     "features": {
       "title": "Built for",
       "titleAccent": "Production",
+      "subtitle": "Enterprise-grade security, EU AI Act compliance, and battle-tested infrastructure from day one.",
       "agentBuilder": { "title": "Agent Builder", "description": "Configure agents with system prompts, skills, tools and extensions. Multi-model support." },
       "grading": { "title": "Deterministic Grading", "description": "6 criterion types: output match, schema validation, tool usage, safety check, LLM judge and more." },
       "api": { "title": "API Endpoints", "description": "Expose agents as JSON-RPC endpoints with API key auth, rate limiting and usage tracking." },
@@ -784,7 +785,7 @@
   "deploySection": {
     "title": "Connect Everything,",
     "titleAccent": "Deploy Anywhere",
-    "subtitle": "From GitHub repos to Slack channels, from webhooks to embedded widgets — your agents plug into your entire stack.",
+    "subtitle": "WhatsApp, Telegram, Slack, GitHub, webhooks, MCP, embedded widgets \n 9 connectors to deploy your agents where your users already work.",
     "widget": {
       "title": "Chat Widget",
       "description": "Embed a fully-featured AI chat bubble on any website with a single script tag. Shadow DOM isolation, SSE streaming, mobile-ready."
@@ -1252,5 +1253,9 @@
     "deleting": "Deleting...",
     "deleteSuccess": "Account deleted",
     "deleteError": "Failed to delete account"
+  },
+  "footer": {
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service"
   }
 }
