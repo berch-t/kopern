@@ -50,6 +50,8 @@ export interface LLMConfig {
   apiKey?: string;
   /** Multiple API keys for rotation/failover. If provided and > 1, enables automatic retry on 429. */
   apiKeys?: string[];
+  /** Override max output tokens (default 8192). */
+  maxTokens?: number;
 }
 
 /** Resolve tool name from tool_use_id by scanning assistant messages */
@@ -152,7 +154,7 @@ async function streamAnthropic(config: LLMConfig, callbacks: LLMStreamCallbacks)
 
   const body: Record<string, unknown> = {
     model: config.model,
-    max_tokens: 8192,
+    max_tokens: config.maxTokens || 8192,
     system: config.systemPrompt || undefined,
     messages,
     stream: true,
@@ -251,8 +253,13 @@ async function streamAnthropic(config: LLMConfig, callbacks: LLMStreamCallbacks)
               break;
 
             case "message_delta":
-              if (event.delta?.stop_reason === "tool_use") {
-                stopReason = "tool_use";
+              if (event.delta?.stop_reason) {
+                console.log(`[streamLLM] Anthropic stop_reason: ${event.delta.stop_reason}, usage:`, event.usage);
+                if (event.delta.stop_reason === "tool_use") {
+                  stopReason = "tool_use";
+                } else if (event.delta.stop_reason === "max_tokens") {
+                  console.warn(`[streamLLM] HIT MAX TOKENS — output was truncated`);
+                }
               }
               break;
           }
@@ -305,6 +312,7 @@ async function streamOpenAI(config: LLMConfig, callbacks: LLMStreamCallbacks) {
     model: config.model,
     messages,
     stream: true,
+    max_completion_tokens: config.maxTokens || 8192,
   };
 
   if (config.tools && config.tools.length > 0) {
@@ -460,7 +468,10 @@ async function streamGoogle(config: LLMConfig, callbacks: LLMStreamCallbacks) {
     }
   }
 
-  const body: Record<string, unknown> = { contents };
+  const body: Record<string, unknown> = {
+    contents,
+    generationConfig: { maxOutputTokens: config.maxTokens || 8192 },
+  };
   if (config.systemPrompt) {
     body.systemInstruction = { parts: [{ text: config.systemPrompt }] };
   }

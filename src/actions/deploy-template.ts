@@ -14,6 +14,7 @@ import {
 import { hydratePrompt, extractAgentName } from "@/lib/templates/hydrate";
 import type { VerticalTemplate } from "@/data/vertical-templates";
 
+
 /**
  * Deploy a vertical template as a fully configured agent in one shot.
  * Creates: agent + skills + tools + grading suite + grading cases.

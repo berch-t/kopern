@@ -1,25 +1,38 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { LocalizedLink } from "@/components/LocalizedLink";
-import { useDictionary } from "@/providers/LocaleProvider";
+import { useDictionary, useLocale } from "@/providers/LocaleProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { useCollection } from "@/hooks/useFirestore";
 import { agentsCollection, type AgentDoc } from "@/lib/firebase/firestore";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
 import { StaggerChildren, staggerItem } from "@/components/motion/StaggerChildren";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { AgentCard } from "@/components/agents/AgentCard";
 import { MetaAgentWizard } from "@/components/agents/MetaAgentWizard";
+import { WelcomeWizard } from "@/components/onboarding/WelcomeWizard";
 import { motion } from "framer-motion";
 
 export default function AgentsPage() {
   const { user } = useAuth();
   const t = useDictionary();
+  const locale = useLocale();
+  const isFr = locale === "fr";
   const { data: agents, loading } = useCollection<AgentDoc>(
     user ? agentsCollection(user.uid) : null,
     "updatedAt"
   );
+
+  const [wizardOpen, setWizardOpen] = useState(false);
+
+  // Auto-open wizard when user has no agents (first visit)
+  useEffect(() => {
+    if (!loading && agents.length === 0 && user) {
+      setWizardOpen(true);
+    }
+  }, [loading, agents.length, user]);
 
   return (
     <div className="space-y-6">
@@ -27,6 +40,10 @@ export default function AgentsPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">{t.agents.title}</h1>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setWizardOpen(true)}>
+              <Sparkles className="mr-2 h-4 w-4" />
+              {isFr ? "Assistant rapide" : "Quick assistant"}
+            </Button>
             {user && <MetaAgentWizard userId={user.uid} />}
             <LocalizedLink href="/agents/new">
               <Button>
@@ -51,12 +68,17 @@ export default function AgentsPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               {t.agents.noAgentsDesc}
             </p>
-            <LocalizedLink href="/agents/new">
-              <Button className="mt-4">
-                <Plus className="mr-2 h-4 w-4" />
+            <div className="flex gap-3 mt-4">
+              <Button onClick={() => setWizardOpen(true)}>
                 {t.agents.createAgent}
               </Button>
-            </LocalizedLink>
+              <LocalizedLink href="/agents/new">
+                <Button variant="outline">
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t.agents.newAgent}
+                </Button>
+              </LocalizedLink>
+            </div>
           </div>
         </SlideUp>
       ) : (
@@ -68,6 +90,9 @@ export default function AgentsPage() {
           ))}
         </StaggerChildren>
       )}
+
+      {/* Welcome Wizard — onboarding for new users */}
+      <WelcomeWizard open={wizardOpen} onOpenChange={setWizardOpen} />
     </div>
   );
 }

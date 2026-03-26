@@ -98,7 +98,7 @@
       }
     },
     "hero": {
-      "tagline": "Not just another AI agent. Mine.",
+      "tagline": "Tailored agentic AI",
       "placeholder": "e.g. I need an agent that reviews PRs for security vulnerabilities, checks OWASP Top 10, and generates fix suggestions...",
       "generate": "Generate my Agent",
       "generating": "Designing your agent...",

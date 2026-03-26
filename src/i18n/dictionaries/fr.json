@@ -98,7 +98,7 @@
       }
     },
     "hero": {
-      "tagline": "Pas un énième agent IA. Le mien.",
+      "tagline": "Agentique IA sur mesure",
       "placeholder": "ex. J'ai besoin d'un agent qui revoit les PRs pour les vulnérabilités de sécurité, vérifie l'OWASP Top 10 et génère des suggestions de correctifs...",
       "generate": "Générer mon Agent",
       "generating": "Conception de votre agent...",

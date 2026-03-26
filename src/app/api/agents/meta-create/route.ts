@@ -10,6 +10,9 @@ import type { AgentSpec } from "@/lib/meta-agent/types";
 import { metaCreateSchema, validateBody } from "@/lib/security/validation";
 import { checkRateLimit, chatRateLimit } from "@/lib/security/rate-limit";
 
+// Allow long-running generation (default Vercel timeout is 60s)
+export const maxDuration = 300;
+
 const DEMO_RATE_LIMIT = 2; // max calls per IP per day
 
 interface MetaCreateBody {
@@ -119,6 +122,9 @@ export async function POST(request: NextRequest) {
       ];
 
       let fullResponse = "";
+      let tokenCount = 0;
+
+      console.log(`[meta-create] Starting generation: provider=${resolvedProvider}, model=${resolvedModel}, maxTokens=32768, descLength=${description.length}`);
 
       await streamLLM(
         {
@@ -127,25 +133,36 @@ export async function POST(request: NextRequest) {
           systemPrompt: META_AGENT_SYSTEM_PROMPT,
           messages,
           apiKey,
+          maxTokens: 32768,
         },
         {
           onToken: (text) => {
             fullResponse += text;
+            tokenCount++;
             send("token", { text });
           },
           onDone: () => {
-            const spec = parseAgentSpec(fullResponse);
-            send("spec", spec);
-            send("done", { success: true });
+            console.log(`[meta-create] Stream complete: ${tokenCount} chunks, ${fullResponse.length} chars (~${Math.ceil(fullResponse.length / 4)} tokens)`);
+            try {
+              const spec = parseAgentSpec(fullResponse);
+              console.log(`[meta-create] Parsed spec: name=${spec.name}, skills=${spec.skills.length}, tools=${spec.tools.length}, extensions=${spec.extensions.length}, grading=${spec.gradingCases.length}`);
+              send("spec", spec);
+              send("done", { success: true });
+            } catch (parseErr) {
+              console.error(`[meta-create] Parse error:`, parseErr);
+              send("error", { message: `Spec parse failed: ${(parseErr as Error).message}` });
+            }
             close();
           },
           onError: (error) => {
+            console.error(`[meta-create] Stream error after ${tokenCount} chunks, ${fullResponse.length} chars:`, error.message);
             send("error", { message: error.message });
             close();
           },
         }
       );
     } catch (err) {
+      console.error(`[meta-create] Uncaught error:`, (err as Error).message);
       send("error", { message: (err as Error).message });
       close();
     }
