@@ -146,10 +146,12 @@ function sanitizeKey(key: string): string {
 }
 
 /**
- * Ensures a tool schema is valid for the Anthropic API:
+ * Ensures a tool schema is valid for the Anthropic API (JSON Schema draft 2020-12):
  * - Top-level must be { type: "object", properties: { ... } }
  * - Handles flat schemas where properties are at the top level
  * - Sanitizes all property keys to match ^[a-zA-Z0-9_.-]{1,64}$
+ * - Strips fields that Anthropic rejects ($schema, default, examples, $defs, $ref, etc.)
+ * - Ensures `required` only references properties that exist
  * Used as the single source of truth for schema normalization across all code paths.
  */
 export function ensureValidToolSchema(raw: Record<string, unknown>): Record<string, unknown> {
@@ -161,7 +163,48 @@ export function ensureValidToolSchema(raw: Record<string, unknown>): Record<stri
   if (!schema.properties) {
     schema.properties = {};
   }
+  // Strip top-level fields that invalidate JSON Schema for Anthropic
+  schema = stripInvalidSchemaFields(schema) as Record<string, unknown>;
+  // Ensure each property has a valid `type`
+  if (schema.properties && typeof schema.properties === "object") {
+    const props = schema.properties as Record<string, Record<string, unknown>>;
+    for (const [key, prop] of Object.entries(props)) {
+      if (prop && typeof prop === "object" && !prop.type) {
+        props[key] = { ...prop, type: "string" };
+      }
+    }
+  }
+  // Ensure `required` only lists existing properties
+  if (Array.isArray(schema.required) && schema.properties && typeof schema.properties === "object") {
+    const propKeys = new Set(Object.keys(schema.properties as Record<string, unknown>));
+    schema.required = (schema.required as string[]).filter((k) => propKeys.has(k));
+    if ((schema.required as string[]).length === 0) delete schema.required;
+  }
   return sanitizeSchemaKeys(schema) as Record<string, unknown>;
+}
+
+/** Keys that Anthropic rejects or that break JSON Schema validation */
+const STRIPPED_SCHEMA_KEYS = new Set([
+  "$schema", "$id", "$defs", "$ref", "$comment",
+  "default", "examples", "example",
+  "$anchor", "$dynamicRef", "$dynamicAnchor",
+  "if", "then", "else",
+  "dependentRequired", "dependentSchemas",
+  "contentEncoding", "contentMediaType", "contentSchema",
+  "deprecated", "readOnly", "writeOnly",
+]);
+
+/** Recursively strip fields that Anthropic API rejects from a JSON Schema */
+function stripInvalidSchemaFields(obj: unknown): unknown {
+  if (obj === null || obj === undefined || typeof obj !== "object") return obj;
+  if (Array.isArray(obj)) return obj.map(stripInvalidSchemaFields);
+
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+    if (STRIPPED_SCHEMA_KEYS.has(key)) continue;
+    result[key] = stripInvalidSchemaFields(value);
+  }
+  return result;
 }
 
 /** Recursively sanitize all property keys in a JSON Schema to match Anthropic's pattern */

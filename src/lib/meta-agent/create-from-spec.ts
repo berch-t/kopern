@@ -104,8 +104,8 @@ export async function createAgentFromSpec(
   // Create grading suite + cases
   if (spec.gradingCases?.length) {
     const suiteId = await createGradingSuite(userId, agentId, {
-      name: "Auto-generated Suite",
-      description: `Generated for: ${agentName}`,
+      name: `Suite de tests — ${agentName}`,
+      description: `Tests de qualité pour ${agentName} (${agentDomain})`,
     });
     await Promise.all(
       spec.gradingCases.map((c, i) =>

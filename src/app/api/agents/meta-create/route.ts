@@ -344,6 +344,7 @@ function parseSkills(sections: { key: string; inline: string; body: string }[]):
 
   const mainSection = skillSections.find((s) => s.key === "skills" || s.key === "skill");
   if (mainSection) {
+    // 1. Check sub-headings (### Skill 1: Name)
     const subSkills = skillSections.filter((s) => s !== mainSection);
     if (subSkills.length > 0) {
       for (const sub of subSkills) {
@@ -353,18 +354,9 @@ function parseSkills(sections: { key: string; inline: string; body: string }[]):
       }
     }
 
+    // 2. Numbered list: 1. **Name** content... (try first — most specific)
     if (skills.length === 0 && mainSection.body) {
-      const boldPattern = /\*\*(.+?)\*\*[:\s]*([\s\S]*?)(?=\n\s*\*\*[^*]|\n#{2,}|$)/g;
-      let match;
-      while ((match = boldPattern.exec(mainSection.body)) !== null) {
-        const sName = match[1].trim();
-        const sContent = match[2].trim();
-        if (sName && sContent) skills.push({ name: sName, content: sContent });
-      }
-    }
-
-    if (skills.length === 0 && mainSection.body) {
-      const itemPattern = /(?:^|\n)\d+\.\s+\*\*(.+?)\*\*[:\s]*([\s\S]*?)(?=\n\d+\.\s+\*\*|\n#{2,}|$)/g;
+      const itemPattern = /(?:^|\n)\s*\d+\.\s+\*\*(.+?)\*\*[:\s]*([\s\S]*?)(?=\n\s*\d+\.\s+\*\*|\n#{2,}|$)/g;
       let match;
       while ((match = itemPattern.exec(mainSection.body)) !== null) {
         const sName = match[1].trim();
@@ -373,6 +365,29 @@ function parseSkills(sections: { key: string; inline: string; body: string }[]):
       }
     }
 
+    // 3. Bold items: **Name** content... (with fixed lookahead for numbered/bullet prefixes)
+    if (skills.length === 0 && mainSection.body) {
+      const boldPattern = /\*\*(.+?)\*\*[:\s]*([\s\S]*?)(?=\n\s*(?:\d+\.\s+)?\*\*[^*]|\n\s*[-•]\s+\*\*|\n#{2,}|$)/g;
+      let match;
+      while ((match = boldPattern.exec(mainSection.body)) !== null) {
+        const sName = match[1].trim();
+        const sContent = match[2].trim();
+        if (sName && sContent) skills.push({ name: sName, content: sContent });
+      }
+    }
+
+    // 4. Bullet list: - **Name** content...
+    if (skills.length === 0 && mainSection.body) {
+      const bulletPattern = /(?:^|\n)\s*[-•]\s+\*\*(.+?)\*\*[:\s]*([\s\S]*?)(?=\n\s*[-•]\s+\*\*|\n#{2,}|$)/g;
+      let match;
+      while ((match = bulletPattern.exec(mainSection.body)) !== null) {
+        const sName = match[1].trim();
+        const sContent = match[2].trim();
+        if (sName && sContent) skills.push({ name: sName, content: sContent });
+      }
+    }
+
+    // 5. Final fallback: entire body as one skill
     if (skills.length === 0 && mainSection.body.length > 20) {
       const sName = cleanInline(mainSection.inline) || "Main Skill";
       skills.push({ name: sName, content: extractFromCodeBlock(mainSection.body) || mainSection.body });
@@ -447,8 +462,8 @@ function isJSON(s: string): boolean {
 // Extensions parser
 // ---------------------------------------------------------------------------
 
-function parseExtensions(sections: { key: string; inline: string; body: string }[]): { name: string; description: string; code: string }[] {
-  const extensions: { name: string; description: string; code: string }[] = [];
+function parseExtensions(sections: { key: string; inline: string; body: string }[]): { name: string; description: string; code: string; events: string[] }[] {
+  const extensions: { name: string; description: string; code: string; events: string[] }[] = [];
 
   const extSections = sections.filter((s) => s.key.includes("extension"));
   if (extSections.length === 0) return extensions;
@@ -471,12 +486,59 @@ function parseExtensions(sections: { key: string; inline: string; body: string }
       const code = codeBlocks.length > 0 ? codeBlocks[0][1].trim() : "";
 
       if (code) {
-        extensions.push({ name, description, code });
+        const events = detectExtensionEvents(code, name, description);
+        extensions.push({ name, description, code, events });
       }
     }
   }
 
   return extensions;
+}
+
+/** Auto-detect which events an extension should listen to based on its code and metadata */
+function detectExtensionEvents(code: string, name: string, description: string): string[] {
+  const combined = `${code} ${name} ${description}`.toLowerCase();
+  const events: string[] = [];
+
+  // Check for explicit event type references in code
+  const eventTypeMap: Record<string, string[]> = {
+    "message:before": ["message:before", "message_before"],
+    "message:after": ["message:after", "message_after"],
+    "message_sent": ["message_sent"],
+    "tool_call:before": ["tool_call:before", "tool_call_before"],
+    "tool_call:after": ["tool_call:after", "tool_call_after"],
+    "tool_call_start": ["tool_call_start"],
+    "tool_call_end": ["tool_call_end"],
+    "tool_call_error": ["tool_call_error"],
+    "session:start": ["session:start", "session_start"],
+    "session:end": ["session:end", "session_end"],
+    "error": ["error"],
+  };
+
+  for (const [event, patterns] of Object.entries(eventTypeMap)) {
+    if (patterns.some((p) => combined.includes(p))) {
+      events.push(event);
+    }
+  }
+
+  // Heuristic fallbacks if no explicit event found
+  if (events.length === 0) {
+    const lower = combined;
+    if (lower.includes("safety") || lower.includes("pii") || lower.includes("block") || lower.includes("filter") || lower.includes("sécurité")) {
+      events.push("message:before", "message:after");
+    } else if (lower.includes("log") || lower.includes("audit") || lower.includes("track")) {
+      events.push("message_sent", "tool_call_end");
+    } else if (lower.includes("cost") || lower.includes("token") || lower.includes("limit") || lower.includes("coût")) {
+      events.push("message:before");
+    } else if (lower.includes("tool")) {
+      events.push("tool_call:before", "tool_call:after");
+    } else {
+      // Default: trigger on message sent
+      events.push("message_sent");
+    }
+  }
+
+  return events;
 }
 
 // ---------------------------------------------------------------------------
@@ -494,7 +556,7 @@ function parseGrading(sections: { key: string; inline: string; body: string }[])
   for (const section of gradingSections) {
     const v = section.body;
 
-    // Pattern: **Test name**: Input: ... | Expected: ... | Criteria: ...
+    // 1. Pipe format: **Name**: Input: ... | Expected: ... | Criteria: ...
     const pipePattern = /\*\*(.+?)\*\*[:\s]*(?:Input|Entrée|Prompt)[:\s]*(.+?)\s*\|\s*(?:Expected|Attendu|Behavior)[:\s]*(.+?)\s*\|\s*(?:Criteria|Critère|Type)[:\s]*(.+?)(?:\n|$)/gi;
     let match;
     while ((match = pipePattern.exec(v)) !== null) {
@@ -506,17 +568,36 @@ function parseGrading(sections: { key: string; inline: string; body: string }[])
       });
     }
 
-    // Fallback: bullet or numbered items with bold names
+    // 2. Numbered/bullet items with bold names (fixed: \s* between items handles blank lines)
     if (cases.length === 0) {
-      const bulletPattern = /(?:[-•]|\d+\.)\s+\*\*(.+?)\*\*[:\s]*([\s\S]*?)(?=\n(?:[-•]|\d+\.)\s+\*\*|\n#{2,}|$)/g;
+      const bulletPattern = /(?:^|\n)\s*(?:[-•]|\d+\.)\s+\*\*(.+?)\*\*[:\s]*([\s\S]*?)(?=\n\s*(?:[-•]|\d+\.)\s+\*\*|\n#{2,}|$)/g;
       while ((match = bulletPattern.exec(v)) !== null) {
         const cName = match[1].trim();
         const cBody = match[2].trim();
-        const inputMatch = cBody.match(/(?:Input|Entrée|Prompt)[:\s]*(.+?)(?:\n|$)/i);
-        const expectedMatch = cBody.match(/(?:Expected|Attendu|Behavior)[:\s]*(.+?)(?:\n|$)/i);
+        const inputMatch = cBody.match(/(?:Input|Entrée|Prompt)[:\s]*([\s\S]*?)(?=\s*[-•]\s*(?:Expected|Attendu|Behavior|Criteria|Critère)|$)/i);
+        const expectedMatch = cBody.match(/(?:Expected|Attendu|Behavior)[:\s]*([\s\S]*?)(?=\s*[-•]\s*(?:Criteria|Critère|Type)|$)/i);
+        const criteriaMatch = cBody.match(/(?:Criteria|Critère|Type)[:\s]*(.+?)(?:\n|$)/i);
         cases.push({
           name: cName,
-          input: inputMatch?.[1]?.trim() || cBody.slice(0, 200),
+          input: inputMatch?.[1]?.trim() || cBody.split("\n")[0]?.trim() || cBody.slice(0, 200),
+          expected: expectedMatch?.[1]?.trim() || "Agent responds appropriately",
+          criterionType: criteriaMatch ? normalizeCriterionType(criteriaMatch[1].trim()) : "llm_judge",
+        });
+      }
+    }
+
+    // 3. Bold-only items without numbered/bullet prefix
+    if (cases.length === 0) {
+      const boldPattern = /\*\*(.+?)\*\*[:\s]*([\s\S]*?)(?=\n\s*(?:\d+\.\s+)?\*\*[^*]|\n#{2,}|$)/g;
+      while ((match = boldPattern.exec(v)) !== null) {
+        const cName = match[1].trim();
+        const cBody = match[2].trim();
+        if (!cBody || cBody.length < 5) continue;
+        const inputMatch = cBody.match(/(?:Input|Entrée|Prompt)[:\s]*([\s\S]*?)(?=\s*(?:Expected|Attendu|Behavior|Criteria|Critère)|\n\n|$)/i);
+        const expectedMatch = cBody.match(/(?:Expected|Attendu|Behavior)[:\s]*([\s\S]*?)(?=\s*(?:Criteria|Critère|Type)|\n\n|$)/i);
+        cases.push({
+          name: cName,
+          input: inputMatch?.[1]?.trim() || cBody.split("\n")[0]?.trim() || cBody.slice(0, 200),
           expected: expectedMatch?.[1]?.trim() || "Agent responds appropriately",
           criterionType: "llm_judge",
         });
