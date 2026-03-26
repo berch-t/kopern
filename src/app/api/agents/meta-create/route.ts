@@ -431,7 +431,22 @@ function parseTools(sections: { key: string; inline: string; body: string }[]): 
         const code = cb[2].trim();
 
         if (lang === "json" || (!lang && isJSON(code))) {
-          parametersSchema = code;
+          // LLM sometimes outputs the full tool definition as JSON instead of just the schema
+          // Extract only the parametersSchema if that's the case
+          try {
+            const parsed = JSON.parse(code);
+            if (parsed.parametersSchema && typeof parsed.parametersSchema === "object") {
+              parametersSchema = JSON.stringify(parsed.parametersSchema);
+            } else if (parsed.input_schema && typeof parsed.input_schema === "object") {
+              parametersSchema = JSON.stringify(parsed.input_schema);
+            } else if (parsed.parameters && typeof parsed.parameters === "object" && typeof parsed.name === "string") {
+              parametersSchema = JSON.stringify(parsed.parameters);
+            } else {
+              parametersSchema = code;
+            }
+          } catch {
+            parametersSchema = code;
+          }
         } else {
           executeCode = code;
         }

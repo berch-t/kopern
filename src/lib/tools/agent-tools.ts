@@ -245,6 +245,10 @@ export function getCustomToolDefinitions(
         schema = { type: "object", properties: {} };
       }
     }
+    // Meta-agent sometimes stores full tool definition as parametersSchema
+    // e.g. { name, description, parametersSchema: { type: "object", ... } }
+    // Extract the inner schema if that's the case
+    schema = unwrapNestedSchema(schema);
     schema = ensureValidToolSchema(schema);
     return {
       name: sanitizeToolName(t.name),
@@ -252,6 +256,23 @@ export function getCustomToolDefinitions(
       input_schema: schema,
     };
   });
+}
+
+/** If the parsed schema is actually a full tool definition, extract the real schema */
+function unwrapNestedSchema(obj: Record<string, unknown>): Record<string, unknown> {
+  // Pattern: { name: "...", description: "...", parametersSchema: { type: "object", ... } }
+  if (obj.parametersSchema && typeof obj.parametersSchema === "object" && !Array.isArray(obj.parametersSchema)) {
+    return obj.parametersSchema as Record<string, unknown>;
+  }
+  // Pattern: { name: "...", description: "...", input_schema: { type: "object", ... } }
+  if (obj.input_schema && typeof obj.input_schema === "object" && !Array.isArray(obj.input_schema)) {
+    return obj.input_schema as Record<string, unknown>;
+  }
+  // Pattern: { name: "...", description: "...", parameters: { type: "object", ... } }
+  if (obj.parameters && typeof obj.parameters === "object" && !Array.isArray(obj.parameters) && typeof obj.name === "string") {
+    return obj.parameters as Record<string, unknown>;
+  }
+  return obj;
 }
 
 // --- Tool Execution ---
