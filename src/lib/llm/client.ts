@@ -162,10 +162,16 @@ async function streamAnthropic(config: LLMConfig, callbacks: LLMStreamCallbacks)
 
   if (config.tools && config.tools.length > 0) {
     // Final safety net — ensure every tool schema is valid for Anthropic API
-    body.tools = config.tools.map((t) => ({
-      ...t,
-      input_schema: ensureValidToolSchema(t.input_schema),
-    }));
+    body.tools = config.tools.map((t) => {
+      const safeSchema = (t.input_schema && typeof t.input_schema === "object")
+        ? t.input_schema
+        : { type: "object", properties: {} };
+      return {
+        name: t.name,
+        description: t.description,
+        input_schema: ensureValidToolSchema(safeSchema),
+      };
+    });
   }
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -180,6 +186,10 @@ async function streamAnthropic(config: LLMConfig, callbacks: LLMStreamCallbacks)
 
   if (!response.ok) {
     const errorBody = await response.text();
+    // Log the exact tools payload to diagnose schema issues
+    if (response.status === 400 && body.tools) {
+      console.error(`[Anthropic 400] Tools payload:`, JSON.stringify(body.tools, null, 2));
+    }
     callbacks.onError(new Error(`Anthropic API error ${response.status}: ${errorBody}`));
     return;
   }

@@ -83,7 +83,7 @@ export async function runAgentWithTools(
   }
 
   const tools: ToolDefinition[] = [];
-  const customToolDocs: { name: string; description: string; parametersSchema: string; executeCode: string }[] = [];
+  const customToolDocs: { name: string; description: string; parametersSchema: string | Record<string, unknown>; executeCode: string }[] = [];
   const destructiveCustomTools = new Set<string>();
   const connectedRepos = [...(config.connectedRepos || [])];
   const policy = config.toolApprovalPolicy || "auto";

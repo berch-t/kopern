@@ -231,14 +231,19 @@ function sanitizeSchemaKeys(obj: unknown): unknown {
 }
 
 export function getCustomToolDefinitions(
-  tools: { name: string; description: string; parametersSchema: string }[]
+  tools: { name: string; description: string; parametersSchema: string | Record<string, unknown> }[]
 ): ToolDefinition[] {
   return tools.filter((t) => t.name).map((t) => {
     let schema: Record<string, unknown>;
-    try {
-      schema = JSON.parse(t.parametersSchema);
-    } catch {
-      schema = { type: "object", properties: {} };
+    // parametersSchema can be a JSON string (normal) or a Firestore Map object (meta-agent created tools)
+    if (typeof t.parametersSchema === "object" && t.parametersSchema !== null) {
+      schema = t.parametersSchema as Record<string, unknown>;
+    } else {
+      try {
+        schema = JSON.parse(t.parametersSchema as string);
+      } catch {
+        schema = { type: "object", properties: {} };
+      }
     }
     schema = ensureValidToolSchema(schema);
     return {
@@ -254,7 +259,7 @@ export function getCustomToolDefinitions(
 export interface ToolExecutionContext {
   userId: string;
   connectedRepos: string[];
-  customTools: { name: string; description: string; parametersSchema: string; executeCode: string }[];
+  customTools: { name: string; description: string; parametersSchema: string | Record<string, unknown>; executeCode: string }[];
   slackBotToken?: string;
 }
 
