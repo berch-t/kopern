@@ -29,6 +29,10 @@
     "cta": "Get Started",
     "ctaDashboard": "Go to Dashboard",
     "examples": "Workflow Examples",
+    "customAgentCard": {
+      "title": "Your Tailored Agent",
+      "subtitle": "Describe your business, we handle the rest. Agent ready in 5 minutes."
+    },
     "features": {
       "title": "Built for",
       "titleAccent": "Production",

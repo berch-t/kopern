@@ -29,6 +29,10 @@
     "cta": "Commencer",
     "ctaDashboard": "Aller au Tableau de bord",
     "examples": "Exemples de Workflows",
+    "customAgentCard": {
+      "title": "Votre Agent Sur Mesure",
+      "subtitle": "Décrivez votre activité, on s'occupe du reste. Agent prêt en 5 minutes."
+    },
     "features": {
       "title": "Conçu pour la",
       "titleAccent": "Production",

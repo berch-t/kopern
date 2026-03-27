@@ -20,6 +20,8 @@ import { toast } from "sonner";
 import type { AgentSpec } from "@/lib/meta-agent/types";
 import { buildCriterionConfig } from "@/lib/grading/build-criterion-config";
 import BorderGlow from "@/components/motion/BorderGlow";
+import { WelcomeWizard } from "@/components/onboarding/WelcomeWizard";
+import { AuthProvider } from "@/providers/AuthProvider";
 import {
   ArrowRight,
   BookOpen,
@@ -112,6 +114,9 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(true);
   const t = useDictionary();
   const router = useLocalizedRouter();
+
+  // Landing WelcomeWizard state
+  const [landingWizardOpen, setLandingWizardOpen] = useState(false);
 
   // Hero agent creator state
   const [heroStep, setHeroStep] = useState<HeroStep>("input");
@@ -461,34 +466,51 @@ export default function LandingPage() {
       </div>
 
       {/* Hero */}
-      <div className="relative overflow-hidden" style={{ background: "var(--landing-section-hero)" }}>
-        {/* MagicRings background */}
-        <Suspense fallback={null}>
-          <MagicRings
-            color="#d394ff"
-            colorTwo="#1a1a1a"
-            ringCount={8}
-            speed={0.5}
-            attenuation={7}
-            lineThickness={2}
-            baseRadius={0.5}
-            radiusStep={0.1}
-            scaleRate={0.15}
-            opacity={0.9}
-            noiseAmount={0.05}
-            rotation={-25}
-            ringGap={3.5}
-            fadeIn={0.5}
-            fadeOut={0.5}
-            followMouse
-            mouseInfluence={0.03}
-            hoverScale={1.03}
-            parallax={0.05}
-            clickBurst
-            className="absolute inset-0 w-full h-full"
-            style={{ zIndex: 0, pointerEvents: "auto" }}
+      <div className="relative overflow-hidden min-h-screen" style={{ background: "var(--landing-section-hero)"}}>
+        {/* BG layer — fixed to viewport height, isolated from content */}
+        <div className="absolute inset-0 w-full h-screen pointer-events-none" style={{ zIndex: 0 }}>
+          <div
+            style={{
+              backgroundImage: 'url("/suit2-4.png")',
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center",
+              backgroundSize: "contain",
+              position: "absolute",
+              left: "51%",
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+              width: "100%",
+              height: "100%",
+              opacity: 0.31,
+            }}
           />
-        </Suspense>
+          <Suspense fallback={null}>
+            <MagicRings
+              color="#d394ff"
+              colorTwo="#1a1a1a"
+              ringCount={10}
+              speed={.5}
+              attenuation={7}
+              lineThickness={1}
+              baseRadius={0.4}
+              radiusStep={0.1}
+              scaleRate={0.15}
+              opacity={0.2}
+              noiseAmount={0.05}
+              rotation={-0}
+              ringGap={3.5}
+              fadeIn={0.5}
+              fadeOut={0.5}
+              followMouse
+              mouseInfluence={0.03}
+              hoverScale={1.03}
+              parallax={0.05}
+              clickBurst
+              className="absolute inset-0 w-full h-full"
+              style={{ pointerEvents: "auto" }}
+            />
+          </Suspense>
+        </div>
 
       <main className="relative z-10 max-w-6xl mx-auto px-6">
         <motion.section
@@ -804,8 +826,68 @@ export default function LandingPage() {
               </Button>
             </LocalizedLink>
           </div>
+
+          {/* Custom Agent CTA Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8, duration: 0.5 }}
+            className="mt-10 w-full max-w-[30rem] mx-auto p-4"
+          >
+            <BorderGlow className="bg-card/80 backdrop-blur-sm" glowRadius={32}>
+              <button
+                type="button"
+                onClick={() => setLandingWizardOpen(true)}
+                className="w-full p-5 text-left cursor-pointer group hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">
+                      {t.landing.customAgentCard.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                      {t.landing.customAgentCard.subtitle}
+                    </p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                </div>
+              </button>
+            </BorderGlow>
+          </motion.div>
         </motion.section>
       </main>
+
+      {/* Scroll down indicator */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.5, duration: 0.8 }}
+        className="absolute bottom-[5rem] left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 cursor-pointer"
+        onClick={() => window.scrollTo({ top: window.innerHeight, behavior: "smooth" })}
+      >
+        <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/50 font-medium">
+          Scroll
+        </span>
+        <motion.div
+          animate={{ y: [0, 6, 0] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <svg width="20" height="28" viewBox="0 0 20 28" fill="none" className="text-muted-foreground/40">
+            <rect x="1" y="1" width="18" height="26" rx="9" stroke="currentColor" strokeWidth="1.5" />
+            <motion.circle
+              cx="10"
+              cy="8"
+              r="2.5"
+              fill="currentColor"
+              animate={{ cy: [8, 16, 8] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            />
+          </svg>
+        </motion.div>
+      </motion.div>
       </div>
 
         {/* Deploy Everywhere */}
@@ -1283,6 +1365,13 @@ export default function LandingPage() {
           </p>
         </div>
       </footer>
+
+      {/* WelcomeWizard triggered from landing CTA card */}
+      {landingWizardOpen && (
+        <AuthProvider>
+          <WelcomeWizard open={landingWizardOpen} onOpenChange={setLandingWizardOpen} />
+        </AuthProvider>
+      )}
     </div>
   );
 }
