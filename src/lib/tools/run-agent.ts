@@ -239,8 +239,8 @@ export async function runAgentWithTools(
   let iteration = 0;
   let totalToolCalls = 0;
 
-  // Inject agent memory into system prompt + read compaction config
-  let effectiveSystemPrompt = config.systemPrompt;
+  // Inject current date + agent memory into system prompt + read compaction config
+  let effectiveSystemPrompt = config.systemPrompt + `\n\nCurrent date and time: ${new Date().toISOString()}`;
   let compactionThreshold = 0;
   if (hasMemory && config.userId && config.agentId) {
     try {
