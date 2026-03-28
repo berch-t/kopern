@@ -21,10 +21,13 @@ const SCOPE_MAP: Record<string, string[]> = {
 };
 
 function getRedirectUri() {
-  const base = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000";
-  return `${base}/api/oauth/google`;
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return `${process.env.NEXT_PUBLIC_SITE_URL}/api/oauth/google`;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}/api/oauth/google`;
+  }
+  return "http://localhost:3000/api/oauth/google";
 }
 
 export async function GET(req: NextRequest) {
@@ -113,6 +116,6 @@ export async function GET(req: NextRequest) {
   });
 
   // Redirect back to dashboard with success
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}` || "http://localhost:3000";
+  const appUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${process.env.VERCEL_URL}` || "http://localhost:3000";
   return NextResponse.redirect(`${appUrl}/agents?oauth=google&status=success`);
 }

@@ -20,7 +20,7 @@ const SCOPE_MAP: Record<string, string[]> = {
 };
 
 function getRedirectUri() {
-  const base = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
+  const base = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : "http://localhost:3000";
   return `${base}/api/oauth/microsoft`;
@@ -114,6 +114,6 @@ export async function GET(req: NextRequest) {
     scopes: allScopes.filter((s) => !["offline_access", "openid", "email"].includes(s)),
   });
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}` || "http://localhost:3000";
+  const appUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${process.env.VERCEL_URL}` || "http://localhost:3000";
   return NextResponse.redirect(`${appUrl}/agents?oauth=microsoft&status=success`);
 }
