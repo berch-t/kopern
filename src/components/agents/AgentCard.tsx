@@ -6,6 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { type AgentDoc } from "@/lib/firebase/firestore";
 import { AnimatedCounter } from "@/components/motion/AnimatedCounter";
 import { AgentAvatar } from "@/components/agents/AgentAvatar";
+import { useDictionary } from "@/providers/LocaleProvider";
+import { useLocalizedRouter } from "@/hooks/useLocalizedRouter";
+import { LayoutDashboard } from "lucide-react";
 
 interface AgentCardProps {
   agent: AgentDoc & { id: string };
@@ -22,6 +25,8 @@ const domainColors: Record<string, string> = {
 
 export function AgentCard({ agent }: AgentCardProps) {
   const colorClass = domainColors[agent.domain] || domainColors.default;
+  const t = useDictionary();
+  const router = useLocalizedRouter();
 
   return (
     <LocalizedLink href={`/agents/${agent.id}`}>
@@ -40,7 +45,21 @@ export function AgentCard({ agent }: AgentCardProps) {
             {agent.description || "No description"}
           </p>
           <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-            <span>v{agent.version}</span>
+            <div className="flex items-center gap-2">
+              <span>v{agent.version}</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  router.push(`/agents/${agent.id}/operator`);
+                }}
+                className="flex items-center gap-1 rounded-md bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-green-700 dark:text-green-400 hover:bg-green-500/20 transition-colors cursor-pointer"
+              >
+                <LayoutDashboard className="h-3 w-3" />
+                {t.agents.detail.operatorView}
+              </button>
+            </div>
             {agent.latestGradingScore !== null && (
               <span className="flex items-center gap-1">
                 Score:{" "}

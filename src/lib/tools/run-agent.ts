@@ -15,10 +15,13 @@ import {
 import { getBugTools, executeBugTool, isBugTool } from "@/lib/tools/bug-tools";
 import { getDatagouvTools, executeDatagouvTool, isDatagouvTool } from "@/lib/tools/datagouv-tools";
 import { getPisteTools, executePisteTool, isPisteTool } from "@/lib/tools/piste-tools";
+import { getMemoryTools, executeMemoryTool, isMemoryTool, injectMemoryContext } from "@/lib/tools/memory-tools";
+import { getEmailTools, getCalendarTools, executeServiceTool, isServiceTool } from "@/lib/tools/service-tools";
 import { runExtensions } from "@/lib/extensions/extension-runner";
 import { fireOutboundWebhooks } from "@/lib/connectors/webhook";
 import type { ExtensionEventType } from "@/lib/firebase/firestore";
 import { truncateToolResults } from "@/lib/context/truncate";
+import { shouldCompact, compactMessages } from "@/lib/context/compact";
 import {
   requiresApproval,
   isDestructiveBuiltin,
@@ -86,6 +89,7 @@ export async function runAgentWithTools(
   const customToolDocs: { name: string; description: string; parametersSchema: string | Record<string, unknown>; executeCode: string }[] = [];
   const destructiveCustomTools = new Set<string>();
   const connectedRepos = [...(config.connectedRepos || [])];
+  const agentBuiltinTools: string[] = [];
   const policy = config.toolApprovalPolicy || "auto";
 
   // Load tools from Firestore
@@ -115,41 +119,32 @@ export async function runAgentWithTools(
       // Skip
     }
 
-    // Load connected repos from agent doc if not provided
-    if (connectedRepos.length === 0) {
-      try {
-        const agentSnap = await adminDb
-          .doc(`users/${config.userId}/agents/${config.agentId}`)
-          .get();
-        if (agentSnap.exists) {
-          const agentData = agentSnap.data()!;
-          if (agentData.connectedRepos?.length) {
-            connectedRepos.push(...agentData.connectedRepos);
-          }
-        }
-      } catch {
-        // Skip
-      }
-    }
-  }
-
-  // Check agent's builtinTools for special capabilities
-  let hasBugManagement = false;
-  let hasGitHubWrite = false;
-  let hasDatagouv = false;
-  let hasPiste = false;
-  if (config.userId && config.agentId) {
+    // Load agent doc (single read for repos + builtinTools)
     try {
-      const agentSnap = await adminDb.doc(`users/${config.userId}/agents/${config.agentId}`).get();
-      const builtinTools: string[] = agentSnap.data()?.builtinTools || [];
-      hasBugManagement = builtinTools.includes("bug_management");
-      hasGitHubWrite = builtinTools.includes("github_write");
-      hasDatagouv = builtinTools.includes("datagouv");
-      hasPiste = builtinTools.includes("piste");
+      const agentSnap = await adminDb
+        .doc(`users/${config.userId}/agents/${config.agentId}`)
+        .get();
+      if (agentSnap.exists) {
+        const agentData = agentSnap.data()!;
+        if (connectedRepos.length === 0 && agentData.connectedRepos?.length) {
+          connectedRepos.push(...agentData.connectedRepos);
+        }
+        const bt: string[] = agentData.builtinTools || [];
+        agentBuiltinTools.push(...bt);
+      }
     } catch {
       // Skip
     }
   }
+
+  // Agent builtin tools (populated above from single agent doc read)
+  const hasBugManagement = agentBuiltinTools.includes("bug_management");
+  const hasGitHubWrite = agentBuiltinTools.includes("github_write");
+  const hasDatagouv = agentBuiltinTools.includes("datagouv");
+  const hasPiste = agentBuiltinTools.includes("piste");
+  const hasMemory = agentBuiltinTools.includes("memory");
+  const hasServiceEmail = agentBuiltinTools.includes("service_email");
+  const hasServiceCalendar = agentBuiltinTools.includes("service_calendar");
 
   // GitHub tools (with write access if agent has github_write builtin)
   if (connectedRepos.length > 0) {
@@ -169,6 +164,21 @@ export async function runAgentWithTools(
   // PISTE / Légifrance tools (6 tools via OAuth2 + HTTP to PISTE API)
   if (hasPiste) {
     tools.push(...getPisteTools());
+  }
+
+  // Agent memory tools (remember, recall, forget, search_sessions)
+  if (hasMemory) {
+    tools.push(...getMemoryTools());
+  }
+
+  // Service connector tools — email (Gmail/Outlook)
+  if (hasServiceEmail) {
+    tools.push(...getEmailTools());
+  }
+
+  // Service connector tools — calendar (Google/Outlook)
+  if (hasServiceCalendar) {
+    tools.push(...getCalendarTools());
   }
 
   // Slack tools (loaded when agent has a Slack connection with valid bot token)
@@ -229,14 +239,43 @@ export async function runAgentWithTools(
   let iteration = 0;
   let totalToolCalls = 0;
 
+  // Inject agent memory into system prompt + read compaction config
+  let effectiveSystemPrompt = config.systemPrompt;
+  let compactionThreshold = 0;
+  if (hasMemory && config.userId && config.agentId) {
+    try {
+      const agSnap = await adminDb.doc(`users/${config.userId}/agents/${config.agentId}`).get();
+      const mc = agSnap.data()?.memoryConfig;
+      if (mc?.enabled) {
+        compactionThreshold = mc.compactionThreshold || 80_000;
+        // Inject top 20 memories into system prompt
+        effectiveSystemPrompt = await injectMemoryContext(effectiveSystemPrompt, config.userId, config.agentId);
+      }
+    } catch { /* skip */ }
+  }
+
   // Token tracking
-  const inputText = config.systemPrompt + messages.map((m) =>
+  const inputText = effectiveSystemPrompt + messages.map((m) =>
     typeof m.content === "string" ? m.content : JSON.stringify(m.content)
   ).join(" ");
   let inputTokens = estimateTokens(inputText);
   let outputTokens = 0;
 
-  const runIteration = (): Promise<void> => {
+  const runIteration = async (): Promise<void> => {
+    // Context compaction: if messages exceed threshold, summarize older ones
+    if (compactionThreshold > 0 && shouldCompact(messages, compactionThreshold)) {
+      try {
+        const { messages: compacted, tokensBefore, tokensAfter } = await compactMessages(
+          messages,
+          config.apiKey,
+          config.apiKeys?.length ? config.apiKeys : undefined
+        );
+        messages.length = 0;
+        messages.push(...compacted);
+        logAppError({ code: "CONTEXT_COMPACTION", message: `Compacted ${tokensBefore} → ${tokensAfter} tokens`, source: "compaction", userId: config.userId, agentId: config.agentId });
+      } catch { /* compaction failed, continue with original messages */ }
+    }
+
     return new Promise((resolve, reject) => {
       const pendingToolCalls: ToolCallResult[] = [];
 
@@ -247,7 +286,7 @@ export async function runAgentWithTools(
         {
           provider: config.provider,
           model: config.model,
-          systemPrompt: config.systemPrompt,
+          systemPrompt: effectiveSystemPrompt,
           messages: truncatedMessages,
           tools: tools.length > 0 ? tools : undefined,
           apiKey: config.apiKey,
@@ -315,13 +354,17 @@ export async function runAgentWithTools(
                     }
                   }
 
-                  const result = isBugTool(tc.name)
-                    ? await executeBugTool(tc.name, tc.input, config.userId || "")
-                    : isDatagouvTool(tc.name)
-                      ? await executeDatagouvTool(tc.name, tc.input)
-                      : isPisteTool(tc.name)
-                        ? await executePisteTool(tc.name, tc.input)
-                        : await executeTool(tc, toolCtx);
+                  const result = isMemoryTool(tc.name)
+                    ? await executeMemoryTool(tc.name, tc.input, config.userId || "", config.agentId || "")
+                    : isServiceTool(tc.name)
+                      ? await executeServiceTool(tc.name, tc.input, config.userId || "")
+                      : isBugTool(tc.name)
+                        ? await executeBugTool(tc.name, tc.input, config.userId || "")
+                        : isDatagouvTool(tc.name)
+                          ? await executeDatagouvTool(tc.name, tc.input)
+                          : isPisteTool(tc.name)
+                            ? await executePisteTool(tc.name, tc.input)
+                            : await executeTool(tc, toolCtx);
                   // Count tool result tokens as additional input
                   inputTokens += estimateTokens(result.result);
                   callbacks.onToolEnd?.({

@@ -10,6 +10,12 @@ const DESTRUCTIVE_BUILTIN_TOOLS = new Set([
   "create_pull_request",
   "send_thank_you_email",
   "update_bug_status",
+  // Service connector write operations
+  "send_email",
+  "reply_email",
+  "create_event",
+  "update_event",
+  "cancel_event",
 ]);
 
 export function isDestructiveBuiltin(toolName: string): boolean {

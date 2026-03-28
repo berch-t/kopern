@@ -78,8 +78,28 @@ export interface AgentDoc {
   toolApprovalPolicy?: ToolApprovalPolicy;
   riskLevel?: RiskLevel;
   auditLog?: boolean;
+  templateId?: string;
+  templateVariables?: Record<string, string>;
+  memoryConfig?: MemoryConfig;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+export interface MemoryConfig {
+  enabled: boolean;
+  maxEntries: number;
+  compactionThreshold: number;
+  autoRemember: boolean;
+}
+
+export interface MemoryEntryDoc {
+  key: string;
+  value: string;
+  category?: "fact" | "preference" | "context" | "custom";
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  lastAccessedAt: Timestamp;
+  accessCount: number;
 }
 
 export interface SkillDoc {
@@ -697,6 +717,41 @@ export interface WhatsAppPhoneIndexDoc {
   agentId: string;
 }
 
+// --- Service Connectors (OAuth: Gmail, Calendar, Microsoft) ---
+
+export type ServiceProvider = "google" | "microsoft";
+
+export interface ServiceConnectorDoc {
+  provider: ServiceProvider;
+  /** AES-256-GCM encrypted access token */
+  accessToken: string;
+  /** AES-256-GCM encrypted refresh token */
+  refreshToken: string;
+  /** Granted OAuth scopes */
+  scopes: string[];
+  /** Token expiry (epoch ms) */
+  expiresAt: number;
+  /** User email associated with this OAuth grant */
+  email: string;
+  enabled: boolean;
+  /** Daily email send count (resets at midnight UTC) */
+  dailySendCount: number;
+  dailySendDate: string; // YYYY-MM-DD
+  /** Daily calendar create count */
+  dailyCreateCount: number;
+  dailyCreateDate: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export function serviceConnectorDoc(userId: string, provider: ServiceProvider) {
+  return doc(db, "users", userId, "serviceConnectors", provider);
+}
+
+export function serviceConnectorsCollection(userId: string) {
+  return typedCollection<ServiceConnectorDoc>(`users/${userId}/serviceConnectors`);
+}
+
 // --- GDPR Consent ---
 
 export interface ConsentDoc {
@@ -734,6 +789,8 @@ export type ErrorSource =
   | "meta_agent"
   | "plan_guard"
   | "openai_compat"
+  | "compaction"
+  | "service_connector"
   | "system";
 
 export interface ErrorLogDoc {
@@ -789,6 +846,16 @@ export function telegramConnectorDoc(userId: string, agentId: string) {
 
 export function whatsappConnectorDoc(userId: string, agentId: string) {
   return doc(db, "users", userId, "agents", agentId, "connectors", "whatsapp");
+}
+
+// --- Agent Memory ---
+
+export function memoryCollection(userId: string, agentId: string) {
+  return collection(db, "users", userId, "agents", agentId, "memory") as CollectionReference<MemoryEntryDoc>;
+}
+
+export function memoryEntryDoc(userId: string, agentId: string, memoryId: string) {
+  return doc(db, "users", userId, "agents", agentId, "memory", memoryId);
 }
 
 // --- GDPR Consent ---

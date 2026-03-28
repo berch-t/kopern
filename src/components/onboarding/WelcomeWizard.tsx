@@ -174,6 +174,8 @@ export function WelcomeWizard({ open, onOpenChange }: WelcomeWizardProps) {
   const [botName, setBotName] = useState("");
   const [botAvatar, setBotAvatar] = useState("🤖");
   const [channel, setChannel] = useState<"telegram" | "whatsapp" | "widget">("telegram");
+  const [wantEmail, setWantEmail] = useState(false);
+  const [wantCalendar, setWantCalendar] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [promptExpanded, setPromptExpanded] = useState(false);
 
@@ -305,11 +307,14 @@ export function WelcomeWizard({ open, onOpenChange }: WelcomeWizardProps) {
       if (nameKey && botName.trim()) {
         finalAnswers[nameKey] = botName.trim();
       }
-      const agentId = await deployFromTemplate(user.uid, selectedTemplate, finalAnswers, locale);
+      const extraTools: string[] = [];
+      if (wantEmail) extraTools.push("service_email");
+      if (wantCalendar) extraTools.push("service_calendar");
+      const agentId = await deployFromTemplate(user.uid, selectedTemplate, finalAnswers, locale, extraTools.length ? extraTools : undefined);
 
       toast.success(isFr ? "Agent cree avec succes !" : "Agent created successfully!");
       onOpenChange(false);
-      router.push(`/agents/${agentId}/connectors`);
+      router.push(`/agents/${agentId}/operator`);
     } catch {
       toast.error(isFr ? "Erreur lors de la creation" : "Failed to create agent");
       setStep("review");
@@ -441,6 +446,14 @@ export function WelcomeWizard({ open, onOpenChange }: WelcomeWizardProps) {
         finalSpec.name = botName.trim();
       }
 
+      // Append service connector builtin tools if selected during onboarding
+      const serviceTools: string[] = [];
+      if (wantEmail) serviceTools.push("service_email");
+      if (wantCalendar) serviceTools.push("service_calendar");
+      if (serviceTools.length) {
+        finalSpec.builtinTools = [...(finalSpec.builtinTools || []), ...serviceTools];
+      }
+
       const agentId = await createAgentFromSpec(
         user!.uid,
         finalSpec,
@@ -449,7 +462,7 @@ export function WelcomeWizard({ open, onOpenChange }: WelcomeWizardProps) {
 
       toast.success(isFr ? "Agent cree avec succes !" : "Agent created successfully!");
       onOpenChange(false);
-      router.push(`/agents/${agentId}/connectors`);
+      router.push(`/agents/${agentId}/operator`);
     } catch {
       toast.error(isFr ? "Erreur lors de la creation" : "Failed to create agent");
       setStep("review");
@@ -829,6 +842,36 @@ export function WelcomeWizard({ open, onOpenChange }: WelcomeWizardProps) {
                     </button>
                   ))}
                 </div>
+                {/* Service connectors — email & calendar */}
+                <div className="space-y-2 pt-2 border-t">
+                  <p className="text-sm font-medium">{isFr ? "Services connectes (optionnel)" : "Connected services (optional)"}</p>
+                  <p className="text-xs text-muted-foreground">{isFr ? "Vous pourrez les configurer plus tard dans les parametres." : "You can configure these later in settings."}</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setWantEmail(!wantEmail)}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg border px-3 py-2 transition-all text-sm",
+                        wantEmail ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:border-muted-foreground/30"
+                      )}
+                    >
+                      <span>📧</span>
+                      <span>{isFr ? "Email" : "Email"}</span>
+                      {wantEmail && <Check className="h-3.5 w-3.5 text-primary" />}
+                    </button>
+                    <button
+                      onClick={() => setWantCalendar(!wantCalendar)}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg border px-3 py-2 transition-all text-sm",
+                        wantCalendar ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:border-muted-foreground/30"
+                      )}
+                    >
+                      <span>📅</span>
+                      <span>{isFr ? "Calendrier" : "Calendar"}</span>
+                      {wantCalendar && <Check className="h-3.5 w-3.5 text-primary" />}
+                    </button>
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between pt-2">
                   <Button variant="ghost" onClick={() => setStep("personalize")}>
                     <ArrowLeft className="h-4 w-4 mr-1" />

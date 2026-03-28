@@ -217,7 +217,8 @@
       "deleteAgent": "Supprimer l'agent",
       "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cet agent ? Tous les skills, tools, extensions, sessions, suites de notation et serveurs MCP seront définitivement perdus.",
       "deleteSuccess": "Agent supprimé avec succès",
-      "deleting": "Suppression..."
+      "deleting": "Suppression...",
+      "operatorView": "Tableau de bord"
     },
     "form": {
       "name": "Nom",
@@ -1272,6 +1273,84 @@
     "deleting": "Suppression...",
     "deleteSuccess": "Compte supprimé",
     "deleteError": "Échec de la suppression du compte"
+  },
+  "operator": {
+    "title": "Tableau de bord",
+    "subtitle": "Vue simplifiée de votre agent",
+    "messagesThisMonth": "Messages ce mois",
+    "resolutionRate": "Taux de résolution",
+    "avgSatisfaction": "Satisfaction",
+    "monthlyCost": "Coût du mois",
+    "trendUp": "+{value}%",
+    "trendDown": "{value}%",
+    "trendNew": "Nouveau",
+    "conversations": {
+      "title": "Conversations récentes",
+      "empty": "Aucune conversation pour le moment",
+      "viewAll": "Voir toutes les sessions"
+    },
+    "improve": {
+      "button": "Améliorer mon agent",
+      "running": "Analyse en cours...",
+      "done": "{count} amélioration(s) trouvée(s) et appliquée(s)",
+      "noSuite": "Aucune suite de tests configurée",
+      "error": "Erreur lors de l'analyse"
+    },
+    "comingSoon": "Bientôt",
+    "expertMode": "Mode expert",
+    "connectors": {
+      "title": "Canaux connectés",
+      "notConnected": "Votre agent n'est pas encore connecté",
+      "configure": "Configurer",
+      "active": "Connecté",
+      "inactive": "Non connecté"
+    },
+    "editForm": {
+      "title": "Personnaliser votre agent",
+      "description": "Modifiez les informations de votre activité pour mettre à jour votre agent.",
+      "save": "Enregistrer les modifications",
+      "saving": "Mise à jour...",
+      "saved": "Agent mis à jour avec succès",
+      "error": "Erreur lors de la mise à jour",
+      "noTemplate": "Cet agent n'a pas été créé depuis un modèle. Utilisez le mode expert pour le personnaliser."
+    }
+  },
+  "memory": {
+    "title": "Mémoire de l'agent",
+    "subtitle": "Faits retenus par votre agent entre les conversations",
+    "empty": "Aucune mémoire enregistrée",
+    "add": "Ajouter",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "key": "Clé",
+    "value": "Valeur",
+    "category": "Catégorie",
+    "usage": "{count}/{max} mémoires",
+    "notEnabled": "La mémoire n'est pas activée pour cet agent.",
+    "enableHint": "Activez l'outil 'Memory' dans les paramètres de l'agent.",
+    "addDialog": {
+      "title": "Ajouter une mémoire",
+      "save": "Enregistrer"
+    },
+    "deleted": "Mémoire supprimée",
+    "saved": "Mémoire enregistrée",
+    "error": "Erreur",
+    "categories": {
+      "fact": "Fait",
+      "preference": "Préférence",
+      "context": "Contexte",
+      "custom": "Autre"
+    }
+  },
+  "serviceConnectors": {
+    "title": "Services connectés",
+    "loading": "Chargement...",
+    "disconnect": "Déconnecter",
+    "emailActive": "Email actif",
+    "calendarActive": "Calendrier actif",
+    "tokenExpired": "Token expiré.",
+    "reconnect": "Reconnecter",
+    "notConnected": "Connectez votre compte Google ou Microsoft pour activer les outils email et calendrier."
   },
   "footer": {
     "privacy": "Politique de Confidentialité",

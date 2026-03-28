@@ -5,6 +5,7 @@ import {
   getDocs,
   getDoc,
   serverTimestamp,
+  increment,
   query,
   orderBy,
   type CollectionReference,
@@ -23,6 +24,7 @@ import {
   autoresearchRunsCollection,
   webhooksCollection,
   webhookLogsCollection,
+  memoryCollection,
   type AgentDoc,
 } from "@/lib/firebase/firestore";
 
@@ -77,12 +79,16 @@ export async function updateAgent(
       | "toolApprovalPolicy"
       | "riskLevel"
       | "auditLog"
+      | "templateId"
+      | "templateVariables"
+      | "memoryConfig"
     >
   >
 ) {
   await updateDoc(agentDoc(userId, agentId), {
     ...data,
     updatedAt: serverTimestamp(),
+    ...(data.systemPrompt !== undefined ? { version: increment(1) } : {}),
   });
 }
 
@@ -105,6 +111,7 @@ export async function deleteAgent(userId: string, agentId: string) {
     deleteCollection(autoresearchRunsCollection(userId, agentId)),
     deleteCollection(webhooksCollection(userId, agentId)),
     deleteCollection(webhookLogsCollection(userId, agentId)),
+    deleteCollection(memoryCollection(userId, agentId)),
   ]);
   // Delete grading suites + their nested cases/runs
   const suites = await getDocs(gradingSuitesCollection(userId, agentId));

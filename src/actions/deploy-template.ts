@@ -23,7 +23,8 @@ export async function deployFromTemplate(
   userId: string,
   template: VerticalTemplate,
   answers: Record<string, string>,
-  locale: string
+  locale: string,
+  extraBuiltinTools?: string[]
 ): Promise<string> {
   const agentName = extractAgentName(template, answers, locale);
   const systemPrompt = hydratePrompt(template.systemPromptTemplate, answers);
@@ -38,7 +39,7 @@ export async function deployFromTemplate(
     modelProvider: template.modelProvider,
     modelId: template.modelId,
     thinkingLevel: "off",
-    builtinTools: [],
+    builtinTools: extraBuiltinTools || [],
     connectedRepos: [],
     version: 1,
     isPublished: false,
@@ -47,6 +48,8 @@ export async function deployFromTemplate(
     tillDone: null,
     branding: null,
     toolOverrides: [],
+    templateId: template.slug,
+    templateVariables: answers,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   } as unknown as AgentDoc);

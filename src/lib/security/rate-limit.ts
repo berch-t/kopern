@@ -68,6 +68,14 @@ export const bugReportRateLimit = redis
     })
   : null;
 
+export const serviceConnectorRateLimit = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(60, "1 m"),
+      prefix: "rl:service",
+    })
+  : null;
+
 export const defaultRateLimit = redis
   ? new Ratelimit({
       redis,

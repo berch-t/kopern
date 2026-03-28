@@ -217,7 +217,8 @@
       "deleteAgent": "Delete Agent",
       "deleteConfirm": "Are you sure you want to delete this agent? All skills, tools, extensions, sessions, grading suites, and MCP servers will be permanently lost.",
       "deleteSuccess": "Agent deleted successfully",
-      "deleting": "Deleting..."
+      "deleting": "Deleting...",
+      "operatorView": "Dashboard"
     },
     "form": {
       "name": "Name",
@@ -1272,6 +1273,84 @@
     "deleting": "Deleting...",
     "deleteSuccess": "Account deleted",
     "deleteError": "Failed to delete account"
+  },
+  "operator": {
+    "title": "Dashboard",
+    "subtitle": "Simplified view of your agent",
+    "messagesThisMonth": "Messages this month",
+    "resolutionRate": "Resolution rate",
+    "avgSatisfaction": "Satisfaction",
+    "monthlyCost": "Monthly cost",
+    "trendUp": "+{value}%",
+    "trendDown": "{value}%",
+    "trendNew": "New",
+    "conversations": {
+      "title": "Recent conversations",
+      "empty": "No conversations yet",
+      "viewAll": "View all sessions"
+    },
+    "improve": {
+      "button": "Improve my agent",
+      "running": "Analyzing...",
+      "done": "{count} improvement(s) found and applied",
+      "noSuite": "No test suite configured",
+      "error": "Error during analysis"
+    },
+    "comingSoon": "Coming soon",
+    "expertMode": "Expert mode",
+    "connectors": {
+      "title": "Connected channels",
+      "notConnected": "Your agent is not connected yet",
+      "configure": "Configure",
+      "active": "Connected",
+      "inactive": "Not connected"
+    },
+    "editForm": {
+      "title": "Customize your agent",
+      "description": "Edit your business information to update your agent.",
+      "save": "Save changes",
+      "saving": "Updating...",
+      "saved": "Agent updated successfully",
+      "error": "Error updating agent",
+      "noTemplate": "This agent was not created from a template. Use expert mode to customize it."
+    }
+  },
+  "memory": {
+    "title": "Agent Memory",
+    "subtitle": "Facts remembered by your agent across conversations",
+    "empty": "No memories saved yet",
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "key": "Key",
+    "value": "Value",
+    "category": "Category",
+    "usage": "{count}/{max} memories",
+    "notEnabled": "Memory is not enabled for this agent.",
+    "enableHint": "Enable the 'Memory' tool in agent settings.",
+    "addDialog": {
+      "title": "Add a memory",
+      "save": "Save"
+    },
+    "deleted": "Memory deleted",
+    "saved": "Memory saved",
+    "error": "Error",
+    "categories": {
+      "fact": "Fact",
+      "preference": "Preference",
+      "context": "Context",
+      "custom": "Other"
+    }
+  },
+  "serviceConnectors": {
+    "title": "Connected Services",
+    "loading": "Loading...",
+    "disconnect": "Disconnect",
+    "emailActive": "Email active",
+    "calendarActive": "Calendar active",
+    "tokenExpired": "Token expired.",
+    "reconnect": "Reconnect",
+    "notConnected": "Connect your Google or Microsoft account to enable email and calendar tools."
   },
   "footer": {
     "privacy": "Privacy Policy",

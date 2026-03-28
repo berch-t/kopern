@@ -16,6 +16,9 @@ export const BUILTIN_TOOLS = [
   { id: "slack_read", name: "Slack Read", description: "Read messages and list channels from connected Slack workspace" },
   { id: "datagouv", name: "data.gouv.fr", description: "Search, explore, and query 50,000+ French open datasets (DVF, LEGI, cadastre, DGFiP, etc.)" },
   { id: "piste", name: "Légifrance (PISTE)", description: "Search and read French legal texts — codes, laws, decrees, and collective agreements via the official Légifrance API" },
+  { id: "memory", name: "Agent Memory", description: "Remember facts across conversations, recall context, and search past sessions" },
+  { id: "service_email", name: "Email (Gmail/Outlook)", description: "Read, send, and reply to emails via connected Google or Microsoft account" },
+  { id: "service_calendar", name: "Calendar (Google/Outlook)", description: "List events, check availability, create/update/cancel calendar events" },
 ] as const;
 
 export function buildCustomTool(toolDoc: ToolDoc): BuiltTool {

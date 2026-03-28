@@ -54,6 +54,7 @@ export async function DELETE(request: Request) {
     await deleteCollection(`users/${userId}/agentTeams`);
     await deleteCollection(`users/${userId}/usage`);
     await deleteCollection(`users/${userId}/bugs`);
+    await deleteCollection(`users/${userId}/serviceConnectors`);
     await deleteCollection(`users/${userId}/consent`);
 
     // Delete the user document itself

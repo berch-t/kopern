@@ -30,6 +30,7 @@ import {
   FlaskConical,
   Plug,
   Trash2,
+  LayoutDashboard,
 } from "lucide-react";
 
 export default function AgentDetailPage({
@@ -70,6 +71,7 @@ export default function AgentDetailPage({
   }
 
   const links = [
+    { href: `/agents/${agentId}/operator`, label: t.agents.detail.operatorView, icon: LayoutDashboard, accent: "text-green-500", bg: "bg-green-500/10" },
     { href: `/agents/${agentId}/edit`, label: t.agents.detail.editConfig, icon: Pencil, accent: "text-slate-500", bg: "bg-slate-500/10" },
     { href: `/agents/${agentId}/skills`, label: t.agents.detail.skills, icon: BookOpen, accent: "text-blue-500", bg: "bg-blue-500/10" },
     { href: `/agents/${agentId}/tools`, label: t.agents.detail.tools, icon: Wrench, accent: "text-amber-500", bg: "bg-amber-500/10" },
