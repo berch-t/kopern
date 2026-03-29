@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/logo_small.png" alt="Kopern" width="80" />
+  <img src="public/logo_small.png" alt="Kopern" width="180" />
 </p>
 
 <h1 align="center">Kopern</h1>
