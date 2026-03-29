@@ -238,7 +238,10 @@
         "bug_management": "Suivre, mettre à jour et répondre aux rapports de bugs (admin)",
         "slack_read": "Lire les messages et lister les canaux du workspace Slack connecté",
         "datagouv": "Rechercher, explorer et interroger 50 000+ jeux de données ouverts français (DVF, LEGI, cadastre, DGFiP, etc.)",
-        "piste": "Rechercher et consulter les textes juridiques français — codes, lois, décrets et conventions collectives via l'API officielle Légifrance"
+        "piste": "Rechercher et consulter les textes juridiques français — codes, lois, décrets et conventions collectives via l'API officielle Légifrance",
+        "memory": "Retenir des faits entre les conversations, rappeler le contexte et rechercher dans les sessions passées",
+        "service_email": "Lire, envoyer et répondre aux emails via un compte Google ou Microsoft connecté",
+        "service_calendar": "Consulter les événements, vérifier les disponibilités, créer/modifier/annuler des rendez-vous"
       },
       "save": "Enregistrer l'Agent",
       "create": "Créer l'Agent",

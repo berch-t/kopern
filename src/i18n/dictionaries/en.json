@@ -238,7 +238,10 @@
         "bug_management": "Track, update, and respond to bug reports (admin)",
         "slack_read": "Read messages and list channels from connected Slack workspace",
         "datagouv": "Search, explore, and query 50,000+ French open datasets (DVF, LEGI, cadastre, DGFiP, etc.)",
-        "piste": "Search and read French legal texts — codes, laws, decrees, and collective agreements via the official Légifrance API"
+        "piste": "Search and read French legal texts — codes, laws, decrees, and collective agreements via the official Légifrance API",
+        "memory": "Remember facts across conversations, recall context, and search past sessions",
+        "service_email": "Read, send, and reply to emails via connected Google or Microsoft account",
+        "service_calendar": "List events, check availability, create/update/cancel calendar events"
       },
       "save": "Save Agent",
       "create": "Create Agent",
