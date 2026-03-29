@@ -2,7 +2,6 @@
   <img src="public/logo_small.png" alt="Kopern" width="180" />
 </p>
 
-<h1 align="center">Kopern</h1>
 
 <p align="center">
   <strong>The open-source platform to build, grade, and deploy AI agents — no code required.</strong>
