@@ -201,7 +201,7 @@ export default function OperatorPage({
       {agent && <OperatorEditForm agentId={agentId} agent={agent} />}
 
       {/* Agent Memory */}
-      {agent && <MemoryPanel agentId={agentId} memoryConfig={agent.memoryConfig} />}
+      {agent && <MemoryPanel agentId={agentId} memoryConfig={agent.memoryConfig} builtinTools={agent.builtinTools} />}
 
       {/* Service Connectors (Email/Calendar) */}
       {agent && (

@@ -31,6 +31,7 @@ import { toast } from "sonner";
 interface MemoryPanelProps {
   agentId: string;
   memoryConfig?: MemoryConfig;
+  builtinTools?: string[];
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -40,7 +41,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   custom: "bg-gray-500/10 text-gray-700 dark:text-gray-400",
 };
 
-export default function MemoryPanel({ agentId, memoryConfig }: MemoryPanelProps) {
+export default function MemoryPanel({ agentId, memoryConfig, builtinTools }: MemoryPanelProps) {
   const { user } = useAuth();
   const t = useDictionary();
   const [memories, setMemories] = useState<(MemoryEntryDoc & { id: string })[]>([]);
@@ -51,7 +52,9 @@ export default function MemoryPanel({ agentId, memoryConfig }: MemoryPanelProps)
   const [newCategory, setNewCategory] = useState<string>("fact");
   const [saving, setSaving] = useState(false);
 
-  const isEnabled = memoryConfig?.enabled && (memoryConfig.maxEntries ?? 0) > 0;
+  // Memory is enabled if memoryConfig.enabled OR "memory" is in builtinTools
+  const hasMemoryTool = builtinTools?.includes("memory") ?? false;
+  const isEnabled = (memoryConfig?.enabled || hasMemoryTool) && (memoryConfig?.maxEntries ?? 100) > 0;
   const maxEntries = memoryConfig?.maxEntries || 100;
 
   useEffect(() => {

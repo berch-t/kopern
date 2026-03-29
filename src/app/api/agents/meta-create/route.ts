@@ -8,6 +8,7 @@ import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
 import type { AgentSpec } from "@/lib/meta-agent/types";
 import { metaCreateSchema, validateBody } from "@/lib/security/validation";
+import { parseAgentSpecMarkdown, detectExtensionEvents } from "@/lib/meta-agent/parse-markdown-legacy";
 import { checkRateLimit, chatRateLimit } from "@/lib/security/rate-limit";
 
 // Allow long-running generation (default Vercel timeout is 60s)
@@ -172,544 +173,173 @@ export async function POST(request: NextRequest) {
 }
 
 // ---------------------------------------------------------------------------
-// Section-based parser — extracts ALL Kopern agent configuration
+// JSON-first parser with markdown fallback
 // ---------------------------------------------------------------------------
 
-// Re-export for backward compat
 type ParsedSpec = AgentSpec;
 
-/**
- * Split markdown text into sections by ## or ### headings.
- */
-function splitSections(text: string): { key: string; inline: string; body: string }[] {
-  const result: { key: string; inline: string; body: string }[] = [];
-
-  const headingPattern = /^(#{2,4})\s+(.+)$/gm;
-  const headings: { text: string; start: number; matchEnd: number }[] = [];
-  let m;
-  while ((m = headingPattern.exec(text)) !== null) {
-    headings.push({
-      text: m[2],
-      start: m.index,
-      matchEnd: m.index + m[0].length,
-    });
-  }
-
-  for (let i = 0; i < headings.length; i++) {
-    const h = headings[i];
-    const bodyStart = h.matchEnd;
-    const bodyEnd = i + 1 < headings.length ? headings[i + 1].start : text.length;
-    const body = text.slice(bodyStart, bodyEnd).trim();
-
-    const colonIdx = h.text.indexOf(":");
-    const key = (colonIdx >= 0 ? h.text.slice(0, colonIdx) : h.text).trim().toLowerCase();
-    const inline = colonIdx >= 0 ? h.text.slice(colonIdx + 1).trim() : "";
-
-    result.push({ key, inline, body });
-  }
-
-  return result;
-}
-
-function findSection(sections: { key: string; inline: string; body: string }[], keywords: string[]) {
-  for (const kw of keywords) {
-    for (const s of sections) {
-      if (s.key.includes(kw)) return s;
-    }
-  }
-  return null;
-}
-
 function parseAgentSpec(response: string): ParsedSpec {
-  const sections = splitSections(response);
-
-  // --- Name ---
-  const nameSection = findSection(sections, ["agent name", "name", "nom de l'agent", "nom"]);
-  const name = cleanInline(nameSection?.inline || nameSection?.body.split("\n")[0] || "") || "New Agent";
-
-  // --- Domain ---
-  const domainSection = findSection(sections, ["domain", "domaine"]);
-  const domain = cleanInline(domainSection?.inline || domainSection?.body.split("\n")[0] || "") || "other";
-
-  // --- Model Provider ---
-  const providerSection = findSection(sections, ["model provider", "fournisseur"]);
-  const modelProvider = normalizeProvider(
-    cleanInline(providerSection?.inline || providerSection?.body.split("\n")[0] || "")
-  );
-
-  // --- Model ID ---
-  const modelIdSection = findSection(sections, ["model id", "modèle", "model identifier"]);
-  const modelId = cleanInline(modelIdSection?.inline || modelIdSection?.body.split("\n")[0] || "")
-    || "claude-sonnet-4-6";
-
-  // --- Thinking Level ---
-  const thinkingSection = findSection(sections, ["thinking level", "thinking", "niveau de réflexion"]);
-  const thinkingLevel = normalizeThinking(
-    cleanInline(thinkingSection?.inline || thinkingSection?.body.split("\n")[0] || "")
-  );
-
-  // --- Built-in Tools ---
-  const builtinSection = findSection(sections, ["built-in tools", "builtin tools", "outils intégrés"]);
-  const builtinTools = parseBuiltinTools(
-    cleanInline(builtinSection?.inline || builtinSection?.body.split("\n")[0] || "")
-  );
-
-  // --- System Prompt ---
-  const promptSection = findSection(sections, ["system prompt", "prompt système", "prompt systeme", "prompt syst"]);
-  let systemPrompt = "";
-  if (promptSection) {
-    systemPrompt = extractFromCodeBlock(promptSection.body) || promptSection.body;
-  }
-  if (!systemPrompt) {
-    systemPrompt = response.slice(0, 500);
+  // 1. Try JSON extraction (primary path — new normalized output)
+  const jsonSpec = tryParseJSON(response);
+  if (jsonSpec) {
+    console.log(`[meta-create] JSON parse succeeded`);
+    return jsonSpec;
   }
 
-  // --- Skills ---
-  const skills = parseSkills(sections);
-
-  // --- Tools ---
-  const tools = parseTools(sections);
-
-  // --- Extensions ---
-  const extensions = parseExtensions(sections);
-
-  // --- Grading ---
-  const gradingCases = parseGrading(sections);
-
-  // --- Purpose Gate ---
-  const purposeGate = parsePurposeGate(sections);
-
-  // --- TillDone ---
-  const tillDone = parseTillDone(sections);
-
-  // --- Branding ---
-  const branding = parseBranding(sections);
-
-  return {
-    name, domain, systemPrompt, modelProvider, modelId, thinkingLevel, builtinTools,
-    skills, tools, extensions, gradingCases,
-    purposeGate, tillDone, branding,
-    rawSpec: response,
-  };
+  // 2. Fallback: legacy markdown section-based parser
+  console.log(`[meta-create] JSON parse failed, falling back to markdown parser`);
+  return parseAgentSpecMarkdown(response);
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+/**
+ * Extract and parse JSON from a ```json code block or raw JSON in the response.
+ * Returns null if no valid JSON found.
+ */
+function tryParseJSON(response: string): ParsedSpec | null {
+  // Try ```json code block first
+  const codeBlockMatch = response.match(/```json\s*\n([\s\S]*?)\n```/);
+  const jsonStr = codeBlockMatch?.[1]?.trim();
 
-function cleanInline(s: string): string {
-  return s.replace(/^\*+|\*+$/g, "").replace(/^`+|`+$/g, "").replace(/^#+\s*/, "").trim();
-}
+  // Also try raw JSON (entire response might be JSON)
+  const candidates = jsonStr ? [jsonStr, response.trim()] : [response.trim()];
 
-function extractFromCodeBlock(text: string): string | null {
-  const match = text.match(/```(?:\w*)\s*\n([\s\S]*?)\n```/);
-  return match ? match[1].trim() : null;
-}
+  for (const candidate of candidates) {
+    // Quick check: must start with {
+    if (!candidate.startsWith("{")) continue;
 
-function normalizeProvider(raw: string): string {
-  const lower = raw.toLowerCase();
-  if (lower.includes("openai") || lower.includes("gpt")) return "openai";
-  if (lower.includes("google") || lower.includes("gemini")) return "google";
-  return "anthropic";
-}
+    try {
+      const raw = JSON.parse(candidate);
+      if (!raw || typeof raw !== "object" || !raw.name) continue;
 
-function normalizeThinking(raw: string): string {
-  const lower = raw.toLowerCase();
-  if (lower.includes("high") || lower.includes("élevé")) return "high";
-  if (lower.includes("medium") || lower.includes("moyen")) return "medium";
-  if (lower.includes("low") || lower.includes("bas") || lower.includes("faible")) return "low";
-  if (lower.includes("minimal")) return "minimal";
-  return "off";
-}
+      // Validate and normalize fields
+      const VALID_PROVIDERS = ["anthropic", "openai", "google", "mistral"];
+      const VALID_THINKING = ["off", "low", "medium", "high", "minimal"];
+      const VALID_ICONS = ["Bot", "Brain", "Code", "Shield", "Rocket", "Zap", "Target", "Eye", "Database", "Globe", "Lock", "MessageSquare", "Search", "Terminal", "Wand2"];
+      const VALID_CRITERIA = ["output_match", "schema_validation", "tool_usage", "safety_check", "custom_script", "llm_judge"];
 
-function parseBuiltinTools(raw: string): string[] {
-  const lower = raw.toLowerCase();
-  if (lower === "none" || lower === "aucun" || lower === "[]" || !lower) return [];
-  const tools: string[] = [];
-  if (lower.includes("github") || lower.includes("write") || lower.includes("pr") || lower.includes("branch")) tools.push("github_write");
-  if (lower.includes("bug") || lower.includes("issue")) tools.push("bug_management");
-  if (lower.includes("slack")) tools.push("slack_read");
-  return tools;
-}
+      const modelProvider = VALID_PROVIDERS.includes(raw.modelProvider) ? raw.modelProvider : "anthropic";
+      const thinkingLevel = VALID_THINKING.includes(raw.thinkingLevel) ? raw.thinkingLevel : "off";
 
-// ---------------------------------------------------------------------------
-// Skills parser
-// ---------------------------------------------------------------------------
-
-function parseSkills(sections: { key: string; inline: string; body: string }[]): { name: string; content: string }[] {
-  const skills: { name: string; content: string }[] = [];
-
-  const skillSections = sections.filter((s) => s.key.includes("skill"));
-  if (skillSections.length === 0) return skills;
-
-  const mainSection = skillSections.find((s) => s.key === "skills" || s.key === "skill");
-  if (mainSection) {
-    // 1. Check sub-headings (### Skill 1: Name)
-    const subSkills = skillSections.filter((s) => s !== mainSection);
-    if (subSkills.length > 0) {
-      for (const sub of subSkills) {
-        const name = cleanInline(sub.inline || sub.key.replace("skill", "").replace(/[^a-z0-9\s-]/g, "").trim()) || sub.key;
-        const content = extractFromCodeBlock(sub.body) || sub.body;
-        if (content) skills.push({ name, content });
-      }
-    }
-
-    // 2. Numbered list: 1. **Name** content... (try first — most specific)
-    if (skills.length === 0 && mainSection.body) {
-      const itemPattern = /(?:^|\n)\s*\d+\.\s+\*\*(.+?)\*\*[:\s]*([\s\S]*?)(?=\n\s*\d+\.\s+\*\*|\n#{2,}|$)/g;
-      let match;
-      while ((match = itemPattern.exec(mainSection.body)) !== null) {
-        const sName = match[1].trim();
-        const sContent = match[2].trim();
-        if (sName && sContent) skills.push({ name: sName, content: sContent });
-      }
-    }
-
-    // 3. Bold items: **Name** content... (with fixed lookahead for numbered/bullet prefixes)
-    if (skills.length === 0 && mainSection.body) {
-      const boldPattern = /\*\*(.+?)\*\*[:\s]*([\s\S]*?)(?=\n\s*(?:\d+\.\s+)?\*\*[^*]|\n\s*[-•]\s+\*\*|\n#{2,}|$)/g;
-      let match;
-      while ((match = boldPattern.exec(mainSection.body)) !== null) {
-        const sName = match[1].trim();
-        const sContent = match[2].trim();
-        if (sName && sContent) skills.push({ name: sName, content: sContent });
-      }
-    }
-
-    // 4. Bullet list: - **Name** content...
-    if (skills.length === 0 && mainSection.body) {
-      const bulletPattern = /(?:^|\n)\s*[-•]\s+\*\*(.+?)\*\*[:\s]*([\s\S]*?)(?=\n\s*[-•]\s+\*\*|\n#{2,}|$)/g;
-      let match;
-      while ((match = bulletPattern.exec(mainSection.body)) !== null) {
-        const sName = match[1].trim();
-        const sContent = match[2].trim();
-        if (sName && sContent) skills.push({ name: sName, content: sContent });
-      }
-    }
-
-    // 5. Final fallback: entire body as one skill
-    if (skills.length === 0 && mainSection.body.length > 20) {
-      const sName = cleanInline(mainSection.inline) || "Main Skill";
-      skills.push({ name: sName, content: extractFromCodeBlock(mainSection.body) || mainSection.body });
-    }
-  }
-
-  return skills;
-}
-
-// ---------------------------------------------------------------------------
-// Tools parser
-// ---------------------------------------------------------------------------
-
-function parseTools(sections: { key: string; inline: string; body: string }[]): { name: string; description: string; parametersSchema: string; executeCode: string }[] {
-  const tools: { name: string; description: string; parametersSchema: string; executeCode: string }[] = [];
-
-  const toolSections = sections.filter((s) =>
-    (s.key.includes("tool") || s.key.includes("outil")) &&
-    !s.key.includes("override") && !s.key.includes("built-in") && !s.key.includes("builtin")
-  );
-  if (toolSections.length === 0) return tools;
-
-  for (const section of toolSections) {
-    const blocks = section.body.split(/\n(?=\*\*[^*]+\*\*)/);
-
-    for (const block of blocks) {
-      const nameMatch = block.match(/\*\*(.+?)\*\*/);
-      if (!nameMatch) continue;
-
-      const name = nameMatch[1].trim();
-      const descMatch = block.match(/\*\*.*?\*\*[:\s]*([^\n]*)/);
-      const description = descMatch?.[1]?.trim() || name;
-
-      const codeBlocks = [...block.matchAll(/```(\w*)\s*\n([\s\S]*?)\n```/g)];
-
-      let parametersSchema = '{"type":"object","properties":{}}';
-      let executeCode = "result = JSON.stringify({ error: 'Tool code was not generated. Please edit this tool and add working JavaScript code.', tool: '" + name.replace(/'/g, "") + "' });";
-
-      for (const cb of codeBlocks) {
-        const lang = cb[1].toLowerCase();
-        const code = cb[2].trim();
-
-        if (lang === "json" || (!lang && isJSON(code))) {
-          // LLM sometimes outputs the full tool definition as JSON instead of just the schema
-          // Extract only the parametersSchema if that's the case
-          try {
-            const parsed = JSON.parse(code);
-            if (parsed.parametersSchema && typeof parsed.parametersSchema === "object") {
-              parametersSchema = JSON.stringify(parsed.parametersSchema);
-            } else if (parsed.input_schema && typeof parsed.input_schema === "object") {
-              parametersSchema = JSON.stringify(parsed.input_schema);
-            } else if (parsed.parameters && typeof parsed.parameters === "object" && typeof parsed.name === "string") {
-              parametersSchema = JSON.stringify(parsed.parameters);
-            } else {
-              parametersSchema = code;
-            }
-          } catch {
-            parametersSchema = code;
+      // Parse skills — ensure content is string
+      const skills: ParsedSpec["skills"] = [];
+      if (Array.isArray(raw.skills)) {
+        for (const s of raw.skills) {
+          if (s && typeof s.name === "string" && typeof s.content === "string" && s.content.length > 0) {
+            skills.push({ name: s.name, content: s.content });
           }
-        } else {
-          executeCode = code;
         }
       }
 
-      tools.push({
-        name: name.replace(/\s+/g, "_").toLowerCase(),
-        description,
-        parametersSchema,
-        executeCode,
-      });
-    }
-  }
-
-  return tools;
-}
-
-function isJSON(s: string): boolean {
-  try {
-    JSON.parse(s);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Extensions parser
-// ---------------------------------------------------------------------------
-
-function parseExtensions(sections: { key: string; inline: string; body: string }[]): { name: string; description: string; code: string; events: string[] }[] {
-  const extensions: { name: string; description: string; code: string; events: string[] }[] = [];
-
-  const extSections = sections.filter((s) => s.key.includes("extension"));
-  if (extSections.length === 0) return extensions;
-
-  for (const section of extSections) {
-    // Check for "None" or empty
-    if (section.body.toLowerCase().trim() === "none" || !section.body.trim()) continue;
-
-    const blocks = section.body.split(/\n(?=\*\*[^*]+\*\*)/);
-
-    for (const block of blocks) {
-      const nameMatch = block.match(/\*\*(.+?)\*\*/);
-      if (!nameMatch) continue;
-
-      const name = nameMatch[1].trim();
-      const descMatch = block.match(/\*\*.*?\*\*[:\s]*([^\n]*)/);
-      const description = descMatch?.[1]?.trim() || name;
-
-      const codeBlocks = [...block.matchAll(/```(?:typescript|ts|javascript|js)?\s*\n([\s\S]*?)\n```/g)];
-      const code = codeBlocks.length > 0 ? codeBlocks[0][1].trim() : "";
-
-      if (code) {
-        const events = detectExtensionEvents(code, name, description);
-        extensions.push({ name, description, code, events });
+      // Parse tools — parametersSchema can be object or string
+      const tools: ParsedSpec["tools"] = [];
+      if (Array.isArray(raw.tools)) {
+        for (const t of raw.tools) {
+          if (!t || typeof t.name !== "string") continue;
+          const name = t.name.replace(/\s+/g, "_").toLowerCase();
+          const description = typeof t.description === "string" ? t.description : name;
+          let parametersSchema: string;
+          if (typeof t.parametersSchema === "object" && t.parametersSchema !== null) {
+            parametersSchema = JSON.stringify(t.parametersSchema);
+          } else if (typeof t.parametersSchema === "string") {
+            parametersSchema = t.parametersSchema;
+          } else {
+            parametersSchema = '{"type":"object","properties":{}}';
+          }
+          const executeCode = typeof t.executeCode === "string" && t.executeCode.length > 0
+            ? t.executeCode
+            : `result = JSON.stringify({ error: 'Tool code was not generated. Please edit this tool and add working JavaScript code.', tool: '${name.replace(/'/g, "")}' });`;
+          tools.push({ name, description, parametersSchema, executeCode });
+        }
       }
-    }
-  }
 
-  return extensions;
-}
-
-/** Auto-detect which events an extension should listen to based on its code and metadata */
-function detectExtensionEvents(code: string, name: string, description: string): string[] {
-  const combined = `${code} ${name} ${description}`.toLowerCase();
-  const events: string[] = [];
-
-  // Check for explicit event type references in code
-  const eventTypeMap: Record<string, string[]> = {
-    "message:before": ["message:before", "message_before"],
-    "message:after": ["message:after", "message_after"],
-    "message_sent": ["message_sent"],
-    "tool_call:before": ["tool_call:before", "tool_call_before"],
-    "tool_call:after": ["tool_call:after", "tool_call_after"],
-    "tool_call_start": ["tool_call_start"],
-    "tool_call_end": ["tool_call_end"],
-    "tool_call_error": ["tool_call_error"],
-    "session:start": ["session:start", "session_start"],
-    "session:end": ["session:end", "session_end"],
-    "error": ["error"],
-  };
-
-  for (const [event, patterns] of Object.entries(eventTypeMap)) {
-    if (patterns.some((p) => combined.includes(p))) {
-      events.push(event);
-    }
-  }
-
-  // Heuristic fallbacks if no explicit event found
-  if (events.length === 0) {
-    const lower = combined;
-    if (lower.includes("safety") || lower.includes("pii") || lower.includes("block") || lower.includes("filter") || lower.includes("sécurité")) {
-      events.push("message:before", "message:after");
-    } else if (lower.includes("log") || lower.includes("audit") || lower.includes("track")) {
-      events.push("message_sent", "tool_call_end");
-    } else if (lower.includes("cost") || lower.includes("token") || lower.includes("limit") || lower.includes("coût")) {
-      events.push("message:before");
-    } else if (lower.includes("tool")) {
-      events.push("tool_call:before", "tool_call:after");
-    } else {
-      // Default: trigger on message sent
-      events.push("message_sent");
-    }
-  }
-
-  return events;
-}
-
-// ---------------------------------------------------------------------------
-// Grading parser
-// ---------------------------------------------------------------------------
-
-function parseGrading(sections: { key: string; inline: string; body: string }[]): { name: string; input: string; expected: string; criterionType: string }[] {
-  const cases: { name: string; input: string; expected: string; criterionType: string }[] = [];
-
-  const gradingSections = sections.filter(
-    (s) => s.key.includes("grading") || s.key.includes("test") || s.key.includes("evaluation") || s.key.includes("évaluation")
-  );
-  if (gradingSections.length === 0) return cases;
-
-  for (const section of gradingSections) {
-    const v = section.body;
-
-    // 1. Pipe format: **Name**: Input: ... | Expected: ... | Criteria: ...
-    const pipePattern = /\*\*(.+?)\*\*[:\s]*(?:Input|Entrée|Prompt)[:\s]*(.+?)\s*\|\s*(?:Expected|Attendu|Behavior)[:\s]*(.+?)\s*\|\s*(?:Criteria|Critère|Type)[:\s]*(.+?)(?:\n|$)/gi;
-    let match;
-    while ((match = pipePattern.exec(v)) !== null) {
-      cases.push({
-        name: match[1].trim(),
-        input: match[2].trim(),
-        expected: match[3].trim(),
-        criterionType: normalizeCriterionType(match[4].trim()),
-      });
-    }
-
-    // 2. Numbered/bullet items with bold names (fixed: \s* between items handles blank lines)
-    if (cases.length === 0) {
-      const bulletPattern = /(?:^|\n)\s*(?:[-•]|\d+\.)\s+\*\*(.+?)\*\*[:\s]*([\s\S]*?)(?=\n\s*(?:[-•]|\d+\.)\s+\*\*|\n#{2,}|$)/g;
-      while ((match = bulletPattern.exec(v)) !== null) {
-        const cName = match[1].trim();
-        const cBody = match[2].trim();
-        const inputMatch = cBody.match(/(?:Input|Entrée|Prompt)[:\s]*([\s\S]*?)(?=\s*[-•]\s*(?:Expected|Attendu|Behavior|Criteria|Critère)|$)/i);
-        const expectedMatch = cBody.match(/(?:Expected|Attendu|Behavior)[:\s]*([\s\S]*?)(?=\s*[-•]\s*(?:Criteria|Critère|Type)|$)/i);
-        const criteriaMatch = cBody.match(/(?:Criteria|Critère|Type)[:\s]*(.+?)(?:\n|$)/i);
-        cases.push({
-          name: cName,
-          input: inputMatch?.[1]?.trim() || cBody.split("\n")[0]?.trim() || cBody.slice(0, 200),
-          expected: expectedMatch?.[1]?.trim() || "Agent responds appropriately",
-          criterionType: criteriaMatch ? normalizeCriterionType(criteriaMatch[1].trim()) : "llm_judge",
-        });
+      // Parse extensions — detect events from code
+      const extensions: ParsedSpec["extensions"] = [];
+      if (Array.isArray(raw.extensions)) {
+        for (const e of raw.extensions) {
+          if (!e || typeof e.name !== "string") continue;
+          const code = typeof e.code === "string" ? e.code : "";
+          if (!code) continue;
+          const description = typeof e.description === "string" ? e.description : e.name;
+          const events = detectExtensionEvents(code, e.name, description);
+          extensions.push({ name: e.name, description, code, events });
+        }
       }
-    }
 
-    // 3. Bold-only items without numbered/bullet prefix
-    if (cases.length === 0) {
-      const boldPattern = /\*\*(.+?)\*\*[:\s]*([\s\S]*?)(?=\n\s*(?:\d+\.\s+)?\*\*[^*]|\n#{2,}|$)/g;
-      while ((match = boldPattern.exec(v)) !== null) {
-        const cName = match[1].trim();
-        const cBody = match[2].trim();
-        if (!cBody || cBody.length < 5) continue;
-        const inputMatch = cBody.match(/(?:Input|Entrée|Prompt)[:\s]*([\s\S]*?)(?=\s*(?:Expected|Attendu|Behavior|Criteria|Critère)|\n\n|$)/i);
-        const expectedMatch = cBody.match(/(?:Expected|Attendu|Behavior)[:\s]*([\s\S]*?)(?=\s*(?:Criteria|Critère|Type)|\n\n|$)/i);
-        cases.push({
-          name: cName,
-          input: inputMatch?.[1]?.trim() || cBody.split("\n")[0]?.trim() || cBody.slice(0, 200),
-          expected: expectedMatch?.[1]?.trim() || "Agent responds appropriately",
-          criterionType: "llm_judge",
-        });
+      // Parse grading cases
+      const gradingCases: ParsedSpec["gradingCases"] = [];
+      if (Array.isArray(raw.gradingCases)) {
+        for (const g of raw.gradingCases) {
+          if (!g || typeof g.name !== "string") continue;
+          gradingCases.push({
+            name: g.name,
+            input: typeof g.input === "string" ? g.input : "",
+            expected: typeof g.expected === "string" ? g.expected : "Agent responds appropriately",
+            criterionType: VALID_CRITERIA.includes(g.criterionType) ? g.criterionType : "llm_judge",
+          });
+        }
       }
-    }
 
-    if (cases.length > 0) break;
+      // Purpose gate
+      let purposeGate: ParsedSpec["purposeGate"] = null;
+      if (raw.purposeGate && typeof raw.purposeGate === "object" && raw.purposeGate.enabled) {
+        const q = typeof raw.purposeGate.question === "string" ? raw.purposeGate.question : "";
+        if (q && q.toLowerCase() !== "n/a") {
+          purposeGate = { enabled: true, question: q, injectInSystemPrompt: true };
+        }
+      }
+
+      // TillDone
+      let tillDone: ParsedSpec["tillDone"] = null;
+      if (raw.tillDone && typeof raw.tillDone === "object" && raw.tillDone.enabled) {
+        tillDone = {
+          enabled: true,
+          requireTaskListBeforeExecution: raw.tillDone.requireTaskListBeforeExecution !== false,
+          autoPromptOnIncomplete: raw.tillDone.autoPromptOnIncomplete !== false,
+          confirmBeforeClear: raw.tillDone.confirmBeforeClear !== false,
+        };
+      }
+
+      // Branding
+      let branding: ParsedSpec["branding"] = null;
+      if (raw.branding && typeof raw.branding === "object") {
+        const hexRe = /^#[0-9a-fA-F]{6}$/;
+        const icon = VALID_ICONS.includes(raw.branding.icon) ? raw.branding.icon : "Bot";
+        branding = {
+          themeColor: hexRe.test(raw.branding.themeColor) ? raw.branding.themeColor : "#6366f1",
+          accentColor: hexRe.test(raw.branding.accentColor) ? raw.branding.accentColor : "#f59e0b",
+          icon,
+        };
+      }
+
+      // Builtin tools — filter valid values
+      const VALID_BUILTINS = ["memory", "service_email", "service_calendar", "github_write", "bug_management", "slack_read"];
+      const builtinTools = Array.isArray(raw.builtinTools)
+        ? raw.builtinTools.filter((t: unknown) => typeof t === "string" && VALID_BUILTINS.includes(t as string))
+        : [];
+
+      return {
+        name: String(raw.name || "New Agent"),
+        domain: String(raw.domain || "other"),
+        systemPrompt: String(raw.systemPrompt || ""),
+        modelProvider,
+        modelId: String(raw.modelId || "claude-sonnet-4-6"),
+        thinkingLevel,
+        builtinTools,
+        skills,
+        tools,
+        extensions,
+        gradingCases,
+        purposeGate,
+        tillDone,
+        branding,
+        rawSpec: response,
+      };
+    } catch {
+      // JSON.parse failed, try next candidate
+      continue;
+    }
   }
 
-  return cases;
+  return null;
 }
 
-function normalizeCriterionType(raw: string): string {
-  const lower = raw.toLowerCase();
-  if (lower.includes("output") || lower.includes("match")) return "output_match";
-  if (lower.includes("schema")) return "schema_validation";
-  if (lower.includes("tool")) return "tool_usage";
-  if (lower.includes("safety") || lower.includes("sécurité")) return "safety_check";
-  if (lower.includes("script") || lower.includes("custom")) return "custom_script";
-  return "llm_judge";
-}
-
-// ---------------------------------------------------------------------------
-// Purpose Gate parser
-// ---------------------------------------------------------------------------
-
-function parsePurposeGate(sections: { key: string; inline: string; body: string }[]): ParsedSpec["purposeGate"] {
-  const section = findSection(sections, ["purpose gate", "purpose", "gate de focus"]);
-  if (!section) return null;
-
-  const body = section.body.toLowerCase();
-  if (body.includes("none") && !body.includes("enabled")) return null;
-
-  const enabledMatch = section.body.match(/(?:Enabled|Activé)[:\s]*(yes|oui|true|no|non|false)/i);
-  const enabled = enabledMatch ? /yes|oui|true/i.test(enabledMatch[1]) : false;
-
-  if (!enabled) return null;
-
-  const questionMatch = section.body.match(/(?:Question)[:\s]*(.+?)(?:\n|$)/i);
-  const question = questionMatch?.[1]?.trim().replace(/^["']|["']$/g, "") || "";
-
-  if (!question || question.toLowerCase() === "n/a") return null;
-
-  return { enabled: true, question, injectInSystemPrompt: true };
-}
-
-// ---------------------------------------------------------------------------
-// TillDone parser
-// ---------------------------------------------------------------------------
-
-function parseTillDone(sections: { key: string; inline: string; body: string }[]): ParsedSpec["tillDone"] {
-  const section = findSection(sections, ["tilldone", "till done", "till_done", "mode tilldone"]);
-  if (!section) return null;
-
-  const body = section.body.toLowerCase();
-  if (body.includes("none") && !body.includes("enabled")) return null;
-
-  const enabledMatch = section.body.match(/(?:Enabled|Activé)[:\s]*(yes|oui|true|no|non|false)/i);
-  const enabled = enabledMatch ? /yes|oui|true/i.test(enabledMatch[1]) : false;
-
-  if (!enabled) return null;
-
-  const taskListMatch = section.body.match(/(?:Require Task List|Task List|Liste de tâches)[:\s]*(yes|oui|true|no|non|false)/i);
-  const autoPromptMatch = section.body.match(/(?:Auto Prompt|Auto-Prompt|Relance auto)[:\s]*(yes|oui|true|no|non|false)/i);
-  const confirmMatch = section.body.match(/(?:Confirm Before Clear|Confirm|Confirmation)[:\s]*(yes|oui|true|no|non|false)/i);
-
-  return {
-    enabled: true,
-    requireTaskListBeforeExecution: taskListMatch ? /yes|oui|true/i.test(taskListMatch[1]) : true,
-    autoPromptOnIncomplete: autoPromptMatch ? /yes|oui|true/i.test(autoPromptMatch[1]) : true,
-    confirmBeforeClear: confirmMatch ? /yes|oui|true/i.test(confirmMatch[1]) : true,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Branding parser
-// ---------------------------------------------------------------------------
-
-function parseBranding(sections: { key: string; inline: string; body: string }[]): ParsedSpec["branding"] {
-  const section = findSection(sections, ["branding", "identité visuelle", "visuel"]);
-  if (!section) return null;
-
-  const body = section.body;
-  if (body.toLowerCase().trim() === "none") return null;
-
-  const themeMatch = body.match(/(?:Theme Color|Couleur thème|Theme)[:\s]*(#[0-9a-fA-F]{6})/i);
-  const accentMatch = body.match(/(?:Accent Color|Couleur accent|Accent)[:\s]*(#[0-9a-fA-F]{6})/i);
-  const iconMatch = body.match(/(?:Icon|Icône)[:\s]*(\w+)/i);
-
-  const VALID_ICONS = ["Bot", "Brain", "Code", "Shield", "Rocket", "Zap", "Target", "Eye", "Database", "Globe", "Lock", "MessageSquare", "Search", "Terminal", "Wand2"];
-
-  const icon = iconMatch?.[1] || "Bot";
-  const validIcon = VALID_ICONS.includes(icon) ? icon : "Bot";
-
-  return {
-    themeColor: themeMatch?.[1] || "#6366f1",
-    accentColor: accentMatch?.[1] || "#f59e0b",
-    icon: validIcon,
-  };
-}

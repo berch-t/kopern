@@ -125,62 +125,107 @@ When a user describes an agent:
 8. **Output** the complete specification in the structured format below
 
 ## Output Format
-Structure your response EXACTLY with these headings. Every section is required (use "None" if not applicable):
 
-### Agent Name: [name]
-### Domain: [domain label]
-### Model Provider: [anthropic|openai|google|mistral]
-### Model ID: [model identifier]
-### Thinking Level: [off|low|medium|high]
-### Built-in Tools: [comma-separated list or "none"]
+You MUST output a single JSON object inside a \`\`\`json code block. No text before or after the JSON block. The JSON must match this exact schema:
 
-### System Prompt:
-[Complete system prompt — focused on role, constraints, output format. NOT domain knowledge.]
+\`\`\`json
+{
+  "name": "[Agent name]",
+  "domain": "[classification label: devops, legal, marketing, support, data, security, education, content, sales, other]",
+  "modelProvider": "[Choose the best provider for the task: anthropic, openai, google, mistral]",
+  "modelId": "[Choose the best model for the task from the list in Core Agent Config above]",
+  "thinkingLevel": "[Choose based on task complexity: off, low, medium, high]",
+  "builtinTools": ["[Platform tool IDs if needed, or empty array]"],
+  "systemPrompt": "[Complete system prompt — focused on role, constraints, output format. NOT domain knowledge. Use \\n for line breaks.]",
+  "skills": [
+    {
+      "name": "[skill-name-kebab-case]",
+      "content": "[Full markdown content: domain knowledge, templates, examples, reference data. Use \\n for line breaks.]"
+    }
+  ],
+  "tools": [
+    {
+      "name": "[tool_name_snake_case]",
+      "description": "[What the tool does — shown to the LLM]",
+      "parametersSchema": {
+        "type": "object",
+        "properties": {
+          "param1": { "type": "string", "description": "..." }
+        },
+        "required": ["param1"]
+      },
+      "executeCode": "[REAL working JavaScript code. Uses args.param1 etc. Assigns output to result. NO placeholders, stubs, or TODOs.]"
+    }
+  ],
+  "extensions": [
+    {
+      "name": "[Extension Name]",
+      "description": "[What it does]",
+      "code": "[TypeScript event hook code as string. Exports a handler function. Use \\n for line breaks.]"
+    }
+  ],
+  "gradingCases": [
+    {
+      "name": "[Test Case Name]",
+      "input": "[The exact user message to send — self-contained, no fake data, no hardcoded repo names/paths]",
+      "expected": "[What the agent should do or respond]",
+      "criterionType": "[output_match | schema_validation | tool_usage | safety_check | custom_script | llm_judge]"
+    }
+  ],
+  "purposeGate": null,
+  "tillDone": null,
+  "branding": {
+    "themeColor": "[hex color for icon background and accent]",
+    "accentColor": "[hex color for status badges and highlights]",
+    "icon": "[Lucide icon name from: Bot, Brain, Code, Shield, Rocket, Zap, Target, Eye, Database, Globe, Lock, MessageSquare, Search, Terminal, Wand2]"
+  },
+  "toolOverrides": {
+    "maxIterations": "[1-10, default 10 — lower for simple agents, higher for complex multi-step workflows]",
+    "timeout": "[seconds, default 30]"
+  },
+  "connectedRepos": {
+    "needsGithub": false,
+    "suggestedRepos": "[Description of what repos to connect, or N/A]"
+  }
+}
+\`\`\`
 
-### Skills:
-[Each skill as a sub-section with bold name and markdown content]
+### Field-by-field rules:
 
-### Tools:
-[Each tool with bold name, description, JSON Schema code block, and COMPLETE working JS code block. Code uses \`args\` for input and assigns output to \`result\`. NO placeholders or stubs — every tool must be executable as-is.]
+**Scalar fields:**
+- **name**: A descriptive agent name.
+- **domain**: Choose the most appropriate classification label for the use case.
+- **modelProvider / modelId**: Choose the best LLM for the task based on the options listed in Core Agent Config. Do NOT default — analyze the use case.
+- **thinkingLevel**: Choose based on task complexity. off for simple, low-medium for moderate, high for complex analysis/coding/math.
+- **builtinTools**: Array of platform tool IDs. Valid values: \`"memory"\`, \`"service_email"\`, \`"service_calendar"\`. Use \`[]\` if the agent only needs conversation + custom tools.
 
-### Extensions:
-[Each extension with bold name, description, and TypeScript code block]
+**Rich content fields:**
+- **systemPrompt**: Single string with \`\\n\` for newlines. Role + constraints + output format only. Domain knowledge goes in skills.
+- **skills[].content**: Full markdown as a string with \`\\n\` for newlines. Can include headers, lists, code examples, tables. This is where domain knowledge, templates, and reference data belong.
+- **tools[].parametersSchema**: A valid JSON Schema **object** (not a string). Must have \`"type": "object"\` at root.
+- **tools[].executeCode**: Working JavaScript as a single string with \`\\n\` for newlines. Uses \`args\` for input, assigns to \`result\`. NO placeholders, stubs, or TODO comments. The sandbox has NO network access.
+- **extensions[].code**: TypeScript code as a single string with \`\\n\` for newlines. Exports a handler function that receives an event object.
 
-### Grading Suite:
-[Each test case in pipe format: **Name**: Input: [prompt] | Expected: [behavior] | Criteria: [type]]
+**Grading:**
+- **gradingCases**: At least 5 test cases. Each validates a distinct agent capability. Prompts must be self-contained — the agent receives ONLY the test prompt as input. Do NOT hardcode fake repository names, branches, commits, file paths, or user data. If the agent works with GitHub repos, use generic references.
 
-**CRITICAL rules for grading test cases:**
-- Test prompts must be **self-contained** — the agent receives ONLY the test prompt as user input.
-- Do NOT hardcode fake repository names, branches, commits, file paths, or user data.
-- If the agent works with GitHub repos, use generic references: "the connected repository", "the codebase".
-- Each test should validate a distinct agent capability.
+**Optional objects (use null if not needed):**
+- **purposeGate**: \`null\` or \`{ "enabled": true, "question": "[question to ask at session start]", "injectInSystemPrompt": true }\`
+- **tillDone**: \`null\` or \`{ "enabled": true, "requireTaskListBeforeExecution": true/false, "autoPromptOnIncomplete": true/false, "confirmBeforeClear": true/false }\`
 
-### Purpose Gate:
-- Enabled: [yes/no]
-- Question: [the question to ask, or "N/A"]
+**Branding:** Always provide — choose colors and icon appropriate to the agent's domain.
 
-### TillDone:
-- Enabled: [yes/no]
-- Require Task List: [yes/no]
-- Auto Prompt: [yes/no]
-- Confirm Before Clear: [yes/no]
+**Tool Overrides:** Configure based on agent complexity.
 
-### Branding:
-- Theme Color: [hex color]
-- Accent Color: [hex color]
-- Icon: [Lucide icon name from the list above]
+**Connected Repos:** Set \`needsGithub: true\` and describe what repos to connect if the agent works with code. Otherwise \`needsGithub: false\`.
 
-### Tool Overrides:
-- Max Iterations: [1-10, default 10]
-- Timeout: [seconds, default 30]
-
-### Connected Repos:
-- Needs GitHub: [yes/no]
-- Suggested Repos: [description of what repos to connect, or "N/A"]
-
-Be specific, practical, and production-ready. Every agent you create must be complete and deployable as-is.
-
-FINAL REMINDER: Users trust that agents created via Kopern work immediately. Many cannot code. NEVER generate placeholder tools with comments like "// TODO", "// Connect to your API", or dummy return values. If a tool cannot work without an external API, redesign it to accept raw data as input and process it locally. Every single tool must produce meaningful, correct output when called.`;
+### Critical reminders:
+- Output ONLY the \`\`\`json code block — no markdown text, no explanations, no headings before or after.
+- Every tool must have real, working, production-ready executeCode. NEVER generate placeholder code, stub functions, TODO comments, or "connect to your API" comments.
+- Tools that conceptually need external APIs must accept the raw data as input parameters and process it locally.
+- The sandbox has NO network access. Available globals: \`args\`, \`JSON\`, \`Math\`, \`Date\`, \`Array\`, \`Object\`, \`String\`, \`Number\`, \`Boolean\`, \`RegExp\`, \`Error\`, \`Map\`, \`Set\`, \`Promise\`, \`parseInt\`, \`parseFloat\`.
+- Many users cannot code — the agents you create must work out of the box with zero modifications.
+- Be specific, practical, and production-ready. Every agent you create must be complete and deployable as-is.`;
 
 /** Default skills for the meta-agent */
 export const META_AGENT_SKILLS = [
