@@ -43,12 +43,7 @@ yarn-error.log*
 next-env.d.ts
 
 # Local folders
-/docs/
-/pi-mono/
-CLAUDE.md
 .mcp.json
-PHASE_1_ROADMAP.md
-test-widget.html
 /public/suit.png
 /public/suit2.png
 /public/suit2-2.png
