@@ -4,6 +4,13 @@ import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
 import type { LLMMessage } from "@/lib/llm/client";
 import { logAppError } from "@/lib/errors/logger";
+import {
+  registerConversationalGate,
+  resolveConversationalGate,
+  parseApprovalResponse,
+  hasPendingGate,
+  formatApprovalMessage,
+} from "@/lib/tools/conversational-approval";
 import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
 import { createSessionServer, updateSessionMetrics, appendSessionEvents, endSessionServer } from "@/lib/billing/track-usage-server";
 import { calculateTokenCost } from "@/lib/billing/pricing";
@@ -73,6 +80,22 @@ async function processTelegramMessage(
     const rl = await connectorRateLimit.limit(`telegram:${agentId}`);
     if (!rl.success) {
       logAppError({ code: "TELEGRAM_RATE_LIMITED", message: "Rate limit exceeded", source: "webhook", severity: "warning", userId, agentId });
+      return;
+    }
+  }
+
+  // Check if this message is an approval response for a pending gate
+  const chatIdStr = String(update.chatId);
+  if (hasPendingGate("telegram", chatIdStr)) {
+    const decision = parseApprovalResponse(update.text);
+    if (decision) {
+      resolveConversationalGate("telegram", chatIdStr, decision);
+      await sendTelegramMessage(
+        botToken,
+        update.chatId,
+        decision === "approved" ? "Tool approved. Executing..." : "Tool denied.",
+        update.messageId,
+      );
       return;
     }
   }
@@ -170,6 +193,12 @@ async function processTelegramMessage(
         onToken: (text) => { fullResponse += text; },
         onToolStart: (tc) => { toolEvents.push({ type: "tool_call", data: { name: tc.name, args: tc.args } }); },
         onToolEnd: (result) => { toolEvents.push({ type: "tool_result", data: { name: result.name, result: result.result, isError: result.isError } }); },
+        onConversationalApproval: async (request) => {
+          // Send approval message to Telegram chat and wait for user response
+          const msg = formatApprovalMessage(request.toolName, request.args);
+          await sendTelegramMessage(botToken, update.chatId, msg, update.messageId);
+          return registerConversationalGate("telegram", chatIdStr, request.toolCallId, request.toolName, request.args);
+        },
         onDone: (metrics) => { agentMetrics = metrics; },
         onError: (error) => {
           logAppError({ code: "TELEGRAM_AGENT_ERROR", message: error.message, source: "webhook", userId, agentId });

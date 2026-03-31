@@ -139,9 +139,30 @@ export interface VersionDoc {
   publishedAt: Timestamp;
 }
 
+export interface GradingScheduleConfig {
+  enabled: boolean;
+  cronExpression: string; // e.g. "0 2 * * *" (daily at 2am)
+  timezone: string; // e.g. "Europe/Paris"
+  lastRunAt?: Timestamp;
+  nextRunAt?: Timestamp;
+}
+
+export interface GradingAlertConfig {
+  enabled: boolean;
+  onScoreDrop: boolean; // alert if score drops vs previous run
+  scoreThreshold?: number; // alert if score below this (0-1)
+  channels: {
+    email?: string; // email address
+    slackWebhook?: string; // Slack incoming webhook URL
+    webhookUrl?: string; // custom webhook URL
+  };
+}
+
 export interface GradingSuiteDoc {
   name: string;
   description: string;
+  schedule?: GradingScheduleConfig;
+  alertConfig?: GradingAlertConfig;
   createdAt: Timestamp;
 }
 
@@ -237,11 +258,55 @@ export interface McpUsageDoc {
 
 // --- Agent Teams ---
 
+export type AgentRole =
+  | "coordinator"
+  | "specialist"
+  | "reviewer"
+  | "researcher"
+  | "communicator"
+  | "custom";
+
 export interface AgentTeamMember {
   agentId: string;
   role: string;
+  roleType?: AgentRole;
   order: number;
   description: string;
+  reportsTo?: string; // agentId of supervisor
+  canDelegate?: boolean;
+  maxConcurrentTasks?: number;
+}
+
+// Flow editor node/edge types (serialized to Firestore)
+export interface FlowNodeData {
+  agentId?: string;
+  role?: string;
+  roleType?: AgentRole;
+  label: string;
+  description?: string;
+  condition?: string; // for condition nodes
+  cronExpression?: string; // for trigger nodes
+  triggerType?: "manual" | "cron" | "webhook"; // for trigger nodes
+  aggregation?: "concat" | "last" | "best"; // for output nodes
+  status?: "idle" | "running" | "completed" | "failed"; // runtime status
+  [key: string]: unknown; // allow extra fields for React Flow compat
+}
+
+export interface FlowNode {
+  id: string;
+  type: "agent" | "condition" | "trigger" | "output";
+  position: { x: number; y: number };
+  data: FlowNodeData;
+}
+
+export interface FlowEdge {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle?: string;
+  targetHandle?: string;
+  label?: string;
+  animated?: boolean;
 }
 
 export interface AgentTeamDoc {
@@ -249,6 +314,105 @@ export interface AgentTeamDoc {
   description: string;
   agents: AgentTeamMember[];
   executionMode: "parallel" | "sequential" | "conditional";
+  flowNodes?: FlowNode[];
+  flowEdges?: FlowEdge[];
+  budgetPolicy?: BudgetPolicy;
+  goalId?: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+// --- Team Activity Log ---
+
+export type TeamActivityAction =
+  | "team_created"
+  | "team_updated"
+  | "member_added"
+  | "member_removed"
+  | "flow_updated"
+  | "execution_started"
+  | "execution_completed"
+  | "execution_failed";
+
+export interface TeamActivityDoc {
+  action: TeamActivityAction;
+  actorId: string; // userId or "system"
+  details: Record<string, unknown>;
+  timestamp: Timestamp;
+}
+
+// --- Team Tasks ---
+
+export type TaskStatus = "backlog" | "ready" | "in_progress" | "review" | "done" | "blocked";
+export type TaskPriority = "critical" | "high" | "medium" | "low";
+
+export interface TaskDoc {
+  title: string;
+  description: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  assigneeAgentId?: string;
+  checkedOutBy?: string; // agentId holding atomic checkout
+  checkedOutAt?: Timestamp;
+  parentTaskId?: string;
+  goalId?: string;
+  teamId: string;
+  createdBy: "human" | "agent";
+  creatorAgentId?: string;
+  output?: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  completedAt?: Timestamp;
+}
+
+// --- Team Routines ---
+
+export type ConcurrencyPolicy = "skip_if_active" | "coalesce_if_active" | "always_enqueue";
+
+export interface RoutineDoc {
+  name: string;
+  description: string;
+  cron: string; // 5-field standard cron
+  agentId: string;
+  teamId?: string;
+  prompt: string;
+  concurrencyPolicy: ConcurrencyPolicy;
+  enabled: boolean;
+  lastRunAt?: Timestamp;
+  lastRunStatus?: "success" | "error";
+  lastRunOutput?: string;
+  maxRetries: number;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+// --- Budget Policies ---
+
+export type BudgetScope = "team" | "agent" | "routine";
+export type BudgetWindow = "daily" | "weekly" | "monthly" | "lifetime";
+
+export interface BudgetPolicy {
+  scope: BudgetScope;
+  window: BudgetWindow;
+  maxCostEUR: number;
+  hardStop: boolean;
+  notifyAt?: number; // percentage (e.g. 80)
+}
+
+// --- Goals ---
+
+export type GoalStatus = "not_started" | "in_progress" | "completed" | "cancelled";
+
+export interface GoalDoc {
+  title: string;
+  description: string;
+  status: GoalStatus;
+  progress: number; // 0-100
+  parentGoalId?: string;
+  teamId?: string;
+  agentId?: string;
+  kpis?: { label: string; target: number; current: number }[];
+  dueDate?: Timestamp;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -268,6 +432,8 @@ export interface PipelineDoc {
   name: string;
   description: string;
   steps: PipelineStep[];
+  flowNodes?: FlowNode[];
+  flowEdges?: FlowEdge[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -546,6 +712,34 @@ export function agentTeamsCollection(userId: string) {
 
 export function agentTeamDoc(userId: string, teamId: string) {
   return doc(db, "users", userId, "agentTeams", teamId);
+}
+
+export function teamActivityCollection(userId: string, teamId: string) {
+  return collection(db, "users", userId, "agentTeams", teamId, "activity") as CollectionReference<TeamActivityDoc>;
+}
+
+export function teamTasksCollection(userId: string, teamId: string) {
+  return collection(db, "users", userId, "agentTeams", teamId, "tasks") as CollectionReference<TaskDoc>;
+}
+
+export function teamTaskDoc(userId: string, teamId: string, taskId: string) {
+  return doc(db, "users", userId, "agentTeams", teamId, "tasks", taskId);
+}
+
+export function teamRoutinesCollection(userId: string, teamId: string) {
+  return collection(db, "users", userId, "agentTeams", teamId, "routines") as CollectionReference<RoutineDoc>;
+}
+
+export function teamRoutineDoc(userId: string, teamId: string, routineId: string) {
+  return doc(db, "users", userId, "agentTeams", teamId, "routines", routineId);
+}
+
+export function goalsCollection(userId: string) {
+  return typedCollection<GoalDoc>(`users/${userId}/goals`);
+}
+
+export function goalDoc(userId: string, goalId: string) {
+  return doc(db, "users", userId, "goals", goalId);
 }
 
 // --- Pipelines collections ---

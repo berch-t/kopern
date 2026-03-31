@@ -4,6 +4,13 @@ import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
 import type { LLMMessage } from "@/lib/llm/client";
 import { logAppError } from "@/lib/errors/logger";
+import {
+  registerConversationalGate,
+  resolveConversationalGate,
+  parseApprovalResponse,
+  hasPendingGate,
+  formatSlackApprovalMessage,
+} from "@/lib/tools/conversational-approval";
 import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
 import { createSessionServer, updateSessionMetrics, appendSessionEvents, endSessionServer } from "@/lib/billing/track-usage-server";
 import { calculateTokenCost } from "@/lib/billing/pricing";
@@ -291,6 +298,21 @@ async function processSlackEvent(body: SlackEventPayload): Promise<void> {
     systemPrompt = `${systemPrompt}\n\n<skills>\n${skillsXml}\n</skills>`;
   }
 
+  // Check if this message is an approval response for a pending gate
+  if (hasPendingGate("slack", event.channel)) {
+    const decision = parseApprovalResponse(event.text);
+    if (decision) {
+      resolveConversationalGate("slack", event.channel, decision);
+      await postSlackMessage(
+        botToken,
+        event.channel,
+        decision === "approved" ? "Tool approved. Executing..." : "Tool denied.",
+        event.ts,
+      );
+      return;
+    }
+  }
+
   // Extract message text
   let messageText = event.text;
 
@@ -379,6 +401,11 @@ async function processSlackEvent(body: SlackEventPayload): Promise<void> {
         },
         onToolEnd: (result) => {
           toolEvents.push({ type: "tool_result", data: { name: result.name, result: result.result, isError: result.isError } });
+        },
+        onConversationalApproval: async (request) => {
+          const msg = formatSlackApprovalMessage(request.toolName, request.args);
+          await postSlackMessage(botToken, event.channel, msg, event.ts);
+          return registerConversationalGate("slack", event.channel, request.toolCallId, request.toolName, request.args);
         },
         onDone: (metrics) => {
           agentMetrics = metrics;

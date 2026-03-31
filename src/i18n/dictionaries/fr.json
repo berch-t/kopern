@@ -122,7 +122,7 @@
       "searchPlaceholder": "Rechercher dans la documentation... (ex. tools, notation, MCP)",
       "tocTitle": "Sur cette page",
       "startTemplate": "Partir d'un template",
-      "startTemplateDesc": "Parcourez 15+ agents pré-configurés et adaptez-les à vos besoins.",
+      "startTemplateDesc": "Parcourez 25+ agents pré-configurés pour 9 secteurs d'activité et adaptez-les à vos besoins.",
       "quickStart": "Guide de démarrage",
       "quickStartDesc": "Guide étape par étape pour créer et déployer votre premier agent en minutes.",
       "useWizard": "Utiliser le Wizard IA",
@@ -241,7 +241,8 @@
         "piste": "Rechercher et consulter les textes juridiques français — codes, lois, décrets et conventions collectives via l'API officielle Légifrance",
         "memory": "Retenir des faits entre les conversations, rappeler le contexte et rechercher dans les sessions passées",
         "service_email": "Lire, envoyer et répondre aux emails via un compte Google ou Microsoft connecté",
-        "service_calendar": "Consulter les événements, vérifier les disponibilités, créer/modifier/annuler des rendez-vous"
+        "service_calendar": "Consulter les événements, vérifier les disponibilités, créer/modifier/annuler des rendez-vous",
+        "web_fetch": "Récupérer n'importe quelle URL et extraire le contenu texte — pages web, APIs, flux RSS, robots.txt, sitemaps"
       },
       "save": "Enregistrer l'Agent",
       "create": "Créer l'Agent",
@@ -429,7 +430,52 @@
     "executing": "Exécution de l'équipe...",
     "results": "Résultats de l'Équipe",
     "memberCompleted": "terminé",
-    "memberRunning": "en cours"
+    "memberRunning": "en cours",
+    "flow": {
+      "title": "Editeur de flux",
+      "saveFlow": "Sauvegarder",
+      "saving": "Sauvegarde...",
+      "addAgent": "Agent",
+      "addCondition": "Condition",
+      "addTrigger": "Déclencheur",
+      "addOutput": "Sortie"
+    },
+    "kanban": {
+      "title": "Tâches",
+      "addTask": "Ajouter une tâche",
+      "backlog": "Backlog",
+      "ready": "Prêt",
+      "inProgress": "En cours",
+      "review": "Revue",
+      "done": "Terminé",
+      "blocked": "Bloqué"
+    },
+    "routines": {
+      "title": "Routines",
+      "newRoutine": "Nouvelle routine",
+      "noRoutines": "Aucune routine configurée",
+      "noRoutinesDesc": "Créez une routine pour automatiser des tâches d'agent sur un planning."
+    },
+    "goals": {
+      "title": "Objectifs",
+      "noGoals": "Aucun objectif défini",
+      "noGoalsDesc": "Créez des objectifs pour suivre les résultats de votre équipe."
+    },
+    "activity": {
+      "title": "Activité",
+      "noActivity": "Aucune activité pour le moment"
+    },
+    "orgChart": {
+      "title": "Organigramme"
+    },
+    "roles": {
+      "coordinator": "Coordinateur",
+      "specialist": "Spécialiste",
+      "reviewer": "Réviseur",
+      "researcher": "Chercheur",
+      "communicator": "Communicateur",
+      "custom": "Personnalisé"
+    }
   },
   "pipelines": {
     "title": "Pipelines",

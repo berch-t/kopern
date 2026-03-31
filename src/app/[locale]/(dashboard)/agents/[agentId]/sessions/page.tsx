@@ -265,59 +265,90 @@ export default function SessionsPage({
           </div>
         </SlideUp>
       ) : (
-        <StaggerChildren className="space-y-3">
-          {filteredSessions.map((session) => (
-            <motion.div key={session.id} variants={staggerItem}>
-              <LocalizedLink href={`/agents/${agentId}/sessions/${session.id}`}>
-                <Card className="cursor-pointer transition-shadow hover:shadow-md">
-                  <CardContent className="p-4 space-y-3">
-                    {/* Purpose + date + badges */}
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">
-                          {session.purpose || "Untitled session"}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {formatDate(session.startedAt)}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {session.source && session.source !== "playground" && (
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${SOURCE_COLORS[session.source]}`}>
-                            {SOURCE_LABELS[session.source]}
-                          </span>
-                        )}
-                        <Badge variant={session.endedAt ? "secondary" : "default"}>
-                          {session.endedAt ? "Ended" : "Active"}
-                        </Badge>
-                      </div>
-                    </div>
+        <Card>
+          <CardContent className="p-0 overflow-x-auto">
+            {/* Table header */}
+            <div className="grid grid-cols-[auto_1fr_64px_72px_48px_48px_72px_72px_64px_100px] items-center gap-x-3 px-4 py-2 border-b text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+              <span className="w-2" />
+              <span>Session</span>
+              <span className="text-right">Status</span>
+              <span className="text-right">Source</span>
+              <span className="text-right">Msgs</span>
+              <span className="text-right">Tools</span>
+              <span className="text-right">Tokens</span>
+              <span className="text-right">Cost</span>
+              <span className="text-right">Duration</span>
+              <span className="text-right">Date</span>
+            </div>
+            <StaggerChildren>
+              <div className="divide-y">
+                {filteredSessions.map((session) => {
+                  const hasError = session.events?.some((e) => e.type === "error");
+                  const isActive = !session.endedAt;
+                  return (
+                    <motion.div key={session.id} variants={staggerItem}>
+                      <LocalizedLink href={`/agents/${agentId}/sessions/${session.id}`}>
+                        <div className="grid grid-cols-[auto_1fr_64px_72px_48px_48px_72px_72px_64px_100px] items-center gap-x-3 px-4 py-2 hover:bg-muted/50 transition-colors cursor-pointer">
+                          {/* Status indicator */}
+                          <div className={`h-2 w-2 shrink-0 rounded-full ${isActive ? "bg-blue-500 animate-pulse" : hasError ? "bg-red-500" : "bg-emerald-500"}`} />
 
-                    {/* Metrics row */}
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {formatDuration(session.startedAt, session.endedAt)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <ArrowDownToLine className="h-3 w-3" />
-                        {formatTokens(session.totalTokensIn + session.totalTokensOut)} {t.sessions.tokens}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <DollarSign className="h-3 w-3" />
-                        ${session.totalCost.toFixed(4)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Wrench className="h-3 w-3" />
-                        {session.toolCallCount} {t.sessions.tools}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </LocalizedLink>
-            </motion.div>
-          ))}
-        </StaggerChildren>
+                          {/* Purpose */}
+                          <p className="text-sm truncate min-w-0">
+                            {session.purpose || "Untitled session"}
+                          </p>
+
+                          {/* Status badge */}
+                          <div className="text-right">
+                            <Badge variant={isActive ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
+                              {isActive ? "Active" : "Ended"}
+                            </Badge>
+                          </div>
+
+                          {/* Source */}
+                          <div className="text-right">
+                            <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${SOURCE_COLORS[session.source || "playground"]}`}>
+                              {SOURCE_LABELS[session.source || "playground"]}
+                            </span>
+                          </div>
+
+                          {/* Messages */}
+                          <span className="text-xs text-muted-foreground text-right tabular-nums">
+                            {session.messageCount}
+                          </span>
+
+                          {/* Tool calls */}
+                          <span className="text-xs text-muted-foreground text-right tabular-nums">
+                            {session.toolCallCount || "—"}
+                          </span>
+
+                          {/* Tokens */}
+                          <span className="text-xs text-muted-foreground text-right tabular-nums">
+                            {formatTokens(session.totalTokensIn + session.totalTokensOut)}
+                          </span>
+
+                          {/* Cost */}
+                          <span className="text-xs text-muted-foreground text-right tabular-nums">
+                            ${session.totalCost.toFixed(4)}
+                          </span>
+
+                          {/* Duration */}
+                          <span className="text-xs text-muted-foreground text-right tabular-nums">
+                            {formatDuration(session.startedAt, session.endedAt)}
+                          </span>
+
+                          {/* Date */}
+                          <span className="text-xs text-muted-foreground text-right whitespace-nowrap">
+                            {formatDate(session.startedAt)}
+                          </span>
+                        </div>
+                      </LocalizedLink>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </StaggerChildren>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

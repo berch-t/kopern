@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { TableOfContents } from "@/components/docs/TableOfContents";
-import { docsMarkdown } from "@/components/docs/docs-content";
-import { docsMarkdownFr } from "@/components/docs/docs-content-fr";
+import { docsMarkdownV2 as docsMarkdown } from "@/components/docs/docs-content-v2";
+import { docsMarkdownV2Fr as docsMarkdownFr } from "@/components/docs/docs-content-v2-fr";
 import { MarkdownRenderer } from "@/components/shared/MarkdownRenderer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

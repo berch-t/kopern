@@ -19,6 +19,7 @@ export const BUILTIN_TOOLS = [
   { id: "memory", name: "Agent Memory", description: "Remember facts across conversations, recall context, and search past sessions" },
   { id: "service_email", name: "Email (Gmail/Outlook)", description: "Read, send, and reply to emails via connected Google or Microsoft account" },
   { id: "service_calendar", name: "Calendar (Google/Outlook)", description: "List events, check availability, create/update/cancel calendar events" },
+  { id: "web_fetch", name: "Web Fetch", description: "Fetch any URL and extract text content — web pages, APIs, RSS feeds, robots.txt, sitemaps" },
 ] as const;
 
 export function buildCustomTool(toolDoc: ToolDoc): BuiltTool {

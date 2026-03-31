@@ -118,6 +118,11 @@ export interface ConversationSummary {
   messageCount: number;
   source: SessionDoc["source"];
   resolved: boolean;
+  toolCallCount: number;
+  totalTokens: number;
+  costEUR: number;
+  durationSec: number | null;
+  model: string;
 }
 
 export async function getRecentConversations(
@@ -150,14 +155,22 @@ export async function getRecentConversations(
     const firstMessage = rawMessage.length > 120 ? rawMessage.slice(0, 120) + "..." : rawMessage;
 
     const hasError = session.events?.some((e) => e.type === "error");
+    const startDate = session.startedAt?.toDate?.() ?? new Date();
+    const endDate = session.endedAt?.toDate?.() ?? null;
+    const durationSec = endDate ? Math.round((endDate.getTime() - startDate.getTime()) / 1000) : null;
 
     conversations.push({
       id: doc.id,
       firstMessage: firstMessage || "—",
-      startedAt: session.startedAt?.toDate?.() ?? new Date(),
+      startedAt: startDate,
       messageCount: session.messageCount,
       source: session.source,
       resolved: Boolean(session.endedAt && !hasError),
+      toolCallCount: session.toolCallCount ?? 0,
+      totalTokens: (session.totalTokensIn ?? 0) + (session.totalTokensOut ?? 0),
+      costEUR: (session.totalCost ?? 0) * 0.92,
+      durationSec,
+      model: session.modelUsed ?? "",
     });
   });
 

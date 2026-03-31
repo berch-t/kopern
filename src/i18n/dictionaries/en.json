@@ -122,7 +122,7 @@
       "searchPlaceholder": "Search documentation... (e.g. tools, grading, MCP)",
       "tocTitle": "On this page",
       "startTemplate": "Start from a Template",
-      "startTemplateDesc": "Browse 15+ pre-built agents and customize them for your needs.",
+      "startTemplateDesc": "Browse 25+ pre-built agents across 9 industries and customize them for your needs.",
       "quickStart": "Quick Start Guide",
       "quickStartDesc": "Step-by-step guide to create and deploy your first agent in minutes.",
       "useWizard": "Use the AI Wizard",
@@ -241,7 +241,8 @@
         "piste": "Search and read French legal texts — codes, laws, decrees, and collective agreements via the official Légifrance API",
         "memory": "Remember facts across conversations, recall context, and search past sessions",
         "service_email": "Read, send, and reply to emails via connected Google or Microsoft account",
-        "service_calendar": "List events, check availability, create/update/cancel calendar events"
+        "service_calendar": "List events, check availability, create/update/cancel calendar events",
+        "web_fetch": "Fetch any URL and extract text content — web pages, APIs, RSS feeds, robots.txt, sitemaps"
       },
       "save": "Save Agent",
       "create": "Create Agent",
@@ -429,7 +430,52 @@
     "executing": "Running team...",
     "results": "Team Results",
     "memberCompleted": "completed",
-    "memberRunning": "running"
+    "memberRunning": "running",
+    "flow": {
+      "title": "Flow Editor",
+      "saveFlow": "Save Flow",
+      "saving": "Saving...",
+      "addAgent": "Agent",
+      "addCondition": "Condition",
+      "addTrigger": "Trigger",
+      "addOutput": "Output"
+    },
+    "kanban": {
+      "title": "Tasks",
+      "addTask": "Add Task",
+      "backlog": "Backlog",
+      "ready": "Ready",
+      "inProgress": "In Progress",
+      "review": "Review",
+      "done": "Done",
+      "blocked": "Blocked"
+    },
+    "routines": {
+      "title": "Routines",
+      "newRoutine": "New Routine",
+      "noRoutines": "No routines configured",
+      "noRoutinesDesc": "Create a routine to automate agent tasks on a schedule."
+    },
+    "goals": {
+      "title": "Goals",
+      "noGoals": "No goals defined",
+      "noGoalsDesc": "Create goals to track your team objectives."
+    },
+    "activity": {
+      "title": "Activity",
+      "noActivity": "No activity yet"
+    },
+    "orgChart": {
+      "title": "Organization"
+    },
+    "roles": {
+      "coordinator": "Coordinator",
+      "specialist": "Specialist",
+      "reviewer": "Reviewer",
+      "researcher": "Researcher",
+      "communicator": "Communicator",
+      "custom": "Custom"
+    }
   },
   "pipelines": {
     "title": "Pipelines",

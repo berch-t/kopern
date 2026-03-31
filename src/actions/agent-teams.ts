@@ -35,7 +35,7 @@ export async function createAgentTeam(
 export async function updateAgentTeam(
   userId: string,
   teamId: string,
-  data: Partial<Pick<AgentTeamDoc, "name" | "description" | "agents" | "executionMode">>
+  data: Partial<Pick<AgentTeamDoc, "name" | "description" | "agents" | "executionMode" | "flowNodes" | "flowEdges">>
 ) {
   await updateDoc(agentTeamDoc(userId, teamId), {
     ...data,

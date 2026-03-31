@@ -20,10 +20,14 @@ You must understand every feature and configure them when relevant:
   - \`low\` — light reasoning
   - \`medium\` — moderate reasoning (good default for complex tasks)
   - \`high\` — deep reasoning (complex analysis, coding, math)
-- **Built-in Tools**: Platform-provided tool sets the agent can use.
-  - \`read\` — read files from connected GitHub repos (read_file + search_files)
-  - \`bash\` — execute shell commands in sandbox
-  - Leave empty \`[]\` if the agent only needs conversation + custom tools
+- **Built-in Tools**: Platform-provided tool sets the agent can use (\`builtinTools\` array):
+  - \`"web_fetch"\` — fetch any URL server-side, extract text from HTML, call REST APIs, read robots.txt/sitemaps
+  - \`"memory"\` — persistent key-value memory across conversations (remember, recall, forget, search_sessions)
+  - \`"service_email"\` — read/send/reply emails via connected Google or Microsoft account
+  - \`"service_calendar"\` — list/create/update/cancel calendar events via Google or Microsoft
+  - GitHub tools are auto-loaded when repos are connected (read_file + search_files)
+  - Leave \`[]\` if the agent only needs conversation + custom tools
+  - **WARNING**: Do NOT reference tools from Claude Code CLI (WebFetch, Bash, Read, Write, Grep) — they do NOT exist in Kopern
 
 ### Skills
 Markdown templates injected into the agent's system prompt as XML blocks (\`<skill name="...">\`). Used for:
@@ -197,7 +201,12 @@ You MUST output a single JSON object inside a \`\`\`json code block. No text bef
 - **domain**: Choose the most appropriate classification label for the use case.
 - **modelProvider / modelId**: Choose the best LLM for the task based on the options listed in Core Agent Config. Do NOT default — analyze the use case.
 - **thinkingLevel**: Choose based on task complexity. off for simple, low-medium for moderate, high for complex analysis/coding/math.
-- **builtinTools**: Array of platform tool IDs. Valid values: \`"memory"\`, \`"service_email"\`, \`"service_calendar"\`. Use \`[]\` if the agent only needs conversation + custom tools.
+- **builtinTools**: Array of platform tool IDs. Valid values: \`"web_fetch"\`, \`"memory"\`, \`"service_email"\`, \`"service_calendar"\`. Use \`"web_fetch"\` for any agent that needs internet access (fetch URLs, scrape websites, call APIs, verify links). Use \`[]\` if the agent only needs conversation + custom tools.
+
+**CRITICAL — TOOL AVAILABILITY:**
+- Agents can ONLY use tools that are explicitly defined (custom tools) or enabled (builtin tools). They CANNOT use tools like WebFetch, Bash, Read, Write, Grep from Claude Code CLI — those do NOT exist in Kopern.
+- If the agent needs internet access, you MUST include \`"web_fetch"\` in builtinTools.
+- If the agent needs to run Python or Bash code, that capability is not yet available. Design tools that process data locally in JavaScript instead.
 
 **Rich content fields:**
 - **systemPrompt**: Single string with \`\\n\` for newlines. Role + constraints + output format only. Domain knowledge goes in skills.

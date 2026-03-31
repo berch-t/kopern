@@ -4,6 +4,13 @@ import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
 import type { LLMMessage } from "@/lib/llm/client";
 import { logAppError } from "@/lib/errors/logger";
+import {
+  registerConversationalGate,
+  resolveConversationalGate,
+  parseApprovalResponse,
+  hasPendingGate,
+  formatApprovalMessage,
+} from "@/lib/tools/conversational-approval";
 import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
 import { createSessionServer, updateSessionMetrics, appendSessionEvents, endSessionServer } from "@/lib/billing/track-usage-server";
 import { calculateTokenCost } from "@/lib/billing/pricing";
@@ -129,6 +136,22 @@ async function processWhatsAppMessage(
     return;
   }
 
+  // Check if this message is an approval response for a pending gate
+  const chatKey = `${message.phoneNumberId}:${message.from}`;
+  if (hasPendingGate("whatsapp", chatKey)) {
+    const decision = parseApprovalResponse(message.text);
+    if (decision) {
+      resolveConversationalGate("whatsapp", chatKey, decision);
+      await sendWhatsAppMessage(
+        message.phoneNumberId,
+        accessToken,
+        message.from,
+        decision === "approved" ? "Tool approved. Executing..." : "Tool denied.",
+      );
+      return;
+    }
+  }
+
   // Mark message as read
   await markWhatsAppMessageRead(message.phoneNumberId, accessToken, message.messageId);
 
@@ -216,6 +239,11 @@ async function processWhatsAppMessage(
         onToken: (text) => { fullResponse += text; },
         onToolStart: (tc) => { toolEvents.push({ type: "tool_call", data: { name: tc.name, args: tc.args } }); },
         onToolEnd: (result) => { toolEvents.push({ type: "tool_result", data: { name: result.name, result: result.result, isError: result.isError } }); },
+        onConversationalApproval: async (request) => {
+          const msg = formatApprovalMessage(request.toolName, request.args);
+          await sendWhatsAppMessage(message.phoneNumberId, accessToken, message.from, msg);
+          return registerConversationalGate("whatsapp", chatKey, request.toolCallId, request.toolName, request.args);
+        },
         onDone: (metrics) => { agentMetrics = metrics; },
         onError: (error) => {
           logAppError({ code: "WHATSAPP_AGENT_ERROR", message: error.message, source: "webhook", userId, agentId });

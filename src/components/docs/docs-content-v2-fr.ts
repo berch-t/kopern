@@ -8,15 +8,20 @@ Kopern est un **Constructeur, Orchestrateur et Évaluateur d'Agents IA**. Créez
 **Ce que vous pouvez faire :**
 
 - **Construire des agents** pour tout domaine — support client, juridique, DevOps, ventes, finance, RH, etc.
-- **Assistant IA** — décrivez votre agent en langage naturel, obtenez un agent entièrement configuré généré par l'IA
+- **Assistant IA** — décrivez votre agent en langage naturel, obtenez un agent entièrement configuré (sortie JSON structurée)
+- **Onboarding zéro-code** — choisissez parmi 9 templates métier (BTP, Comptabilité, Immobilier, Restaurant, E-commerce, RH, Beauté, Fitness, Juridique) ou décrivez votre agent en langage naturel
 - **Connecter votre code** — les agents peuvent lire, rechercher et écrire dans vos dépôts GitHub
-- **Valider la qualité** — exécutez des suites de tests avec 6 types de critères (notation déterministe)
-- **Optimiser automatiquement** — Labo d'Optimisation à 6 modes : AutoTune, AutoFix, Stress Lab, Tournoi, Distillation, Évolution
+- **Mémoire d'agent** — mémoire clé-valeur persistante entre conversations avec éviction LRU, injection automatique dans le prompt système
+- **Compaction de contexte** — résumé automatique des anciens messages quand la fenêtre de contexte se remplit
+- **Connecteurs de services** — connectez Gmail, Outlook, Google Calendar et Microsoft Calendar comme outils d'agent via OAuth
+- **Valider la qualité** — suites de tests avec 6 types de critères (notation déterministe)
+- **Optimiser automatiquement** — Labo d'Optimisation à 6 modes : AutoTune, AutoFix (1-clic depuis le tableau de bord opérateur), Stress Lab, Tournoi, Distillation, Évolution
 - **Orchestrer des équipes** — exécution multi-agents parallèle, séquentielle ou conditionnelle avec pipelines et délégation de sous-agents
 - **Déployer partout** — protocole MCP (Claude Code, Cursor), widget de chat intégrable, webhooks (n8n, Zapier, Make), bot Slack, bot Telegram, WhatsApp
-- **Automatiser des workflows** — webhooks entrants/sortants avec protection anti-boucle pour une intégration transparente avec les plateformes externes
-- **Tout suivre** — sessions, chronologie des conversations, utilisation de tokens, coûts, facturation Stripe avec compteurs d'utilisation
-- **Sécurisé par conception** — exécution sandboxée, signatures HMAC pour les webhooks, clés API hashées, application des limites de plan sur toutes les routes
+- **Tableau de bord opérateur** — vue simplifiée pour utilisateurs non-techniques avec KPIs, statut des connecteurs, AutoFix 1-clic, panneau mémoire et tableau de conversations
+- **Automatiser des workflows** — webhooks entrants/sortants avec protection anti-boucle
+- **Tout suivre** — sessions, chronologie des conversations, tokens, coûts, facturation Stripe
+- **Sécurisé par conception** — exécution sandboxée, signatures HMAC, clés API hashées, conformité EU AI Act
 
 ---
 
@@ -404,6 +409,55 @@ Quand tu escalades, fournis toujours :
 - **Testez avec la notation** — créez des cas de test qui vérifient que chaque compétence produit le comportement attendu
 - **Réutilisez entre agents** — les compétences peuvent être copiées entre agents via la galerie d'Exemples
 - **Gardez un volume raisonnable** — trop de compétences longues diluent l'attention du LLM ; privilégiez la concision
+
+---
+
+## Web Fetch (Outil intégré)
+
+L'outil intégré \`web_fetch\` donne à votre agent un **vrai accès internet**. Il récupère n'importe quelle URL côté serveur et retourne le contenu textuel extrait — pages web, APIs JSON, flux XML, robots.txt, sitemaps, etc.
+
+### Activer Web Fetch
+
+1. Ouvrez la page de détail de votre agent
+2. Allez dans la section **Tools**
+3. Activez l'outil intégré **Web Fetch**
+4. Sauvegardez — votre agent peut maintenant appeler \`web_fetch(url)\`
+
+### Ce qu'il peut faire
+
+| Cas d'usage | Exemple |
+|-------------|---------|
+| **Scraper une page web** | \`web_fetch({ url: "https://example.com" })\` → retourne le texte extrait |
+| **Appeler une API REST** | \`web_fetch({ url: "https://api.example.com/data", headers: { "Authorization": "Bearer ..." } })\` |
+| **Vérifier robots.txt** | \`web_fetch({ url: "https://example.com/robots.txt" })\` |
+| **Lire un flux RSS** | \`web_fetch({ url: "https://blog.example.com/feed.xml", extract_text: false })\` |
+| **POST vers une API** | \`web_fetch({ url: "...", method: "POST", body: "{ \\"key\\": \\"value\\" }", headers: { "Content-Type": "application/json" } })\` |
+
+### Paramètres
+
+| Paramètre | Type | Défaut | Description |
+|-----------|------|--------|-------------|
+| \`url\` | string | requis | URL à récupérer (doit commencer par http:// ou https://) |
+| \`method\` | string | "GET" | Méthode HTTP (GET, POST, PUT, DELETE) |
+| \`headers\` | object | {} | Headers HTTP personnalisés |
+| \`body\` | string | — | Corps de la requête (pour POST/PUT) |
+| \`extract_text\` | boolean | true | Extraire le texte lisible du HTML (false pour la réponse brute) |
+| \`max_length\` | number | 50000 | Longueur maximale de la réponse en caractères |
+
+### Fonctionnement
+
+Contrairement aux outils personnalisés qui tournent dans un sandbox VM sans accès réseau, \`web_fetch\` s'exécute **côté serveur** dans la route API Kopern (Node.js sur Vercel). Il a un accès HTTP complet tout en restant sécurisé :
+
+- **Timeout de 30 secondes** par requête
+- **Protection anti-boucle** — ne peut pas récupérer les domaines Kopern
+- **Extraction HTML** — supprime automatiquement scripts, styles et balises, extrait titre + meta description
+- **User-Agent** : \`Kopern-Agent/1.0\`
+
+### Limitations
+
+- **Pas de rendu JavaScript** — \`web_fetch\` récupère le HTML brut. Les sites nécessitant JavaScript (Reddit, YouTube, LinkedIn) retourneront un contenu minimal. Utilisez une API dédiée pour ceux-ci.
+- **Pas de téléchargement de fichiers** — les fichiers binaires (images, PDF) ne sont pas supportés.
+- **Rate limiting** — des récupérations excessives peuvent déclencher des limites sur les serveurs cibles.
 
 ---
 
@@ -1793,6 +1847,229 @@ Retrouvez-les dans **Exemples** → section **Propulsé par data.gouv.fr MCP**.
 
 ---
 
+## Mémoire d'agent
+
+Les agents peuvent mémoriser des faits entre les conversations grâce à une mémoire clé-valeur persistante. Cela permet à votre agent de construire un contexte sur les utilisateurs, leurs préférences et les tâches en cours au fil du temps.
+
+### Activer la mémoire
+
+1. Ouvrez la page de détail de votre agent
+2. Allez dans la section **Tools**
+3. Activez l'outil builtin **Memory** dans le sélecteur d'outils
+4. Sauvegardez — l'agent a maintenant accès à 4 outils mémoire
+
+### Outils mémoire
+
+| Outil | Description |
+|-------|-------------|
+| \`remember\` | Stocker une paire clé-valeur (ex. \`remember("nom_client", "M. Dupont")\`) |
+| \`recall\` | Rechercher dans les mémoires par mot-clé avec scoring de pertinence et décroissance temporelle |
+| \`forget\` | Supprimer une mémoire spécifique par clé |
+| \`search_sessions\` | Rechercher dans les sessions passées par mot-clé |
+
+### Fonctionnement
+
+- **Stockage persistant** : Les mémoires sont stockées dans Firestore à \`users/{userId}/agents/{agentId}/memory/{key}\`
+- **Injection automatique** : Les 20 mémoires les plus récemment consultées sont automatiquement injectées dans le prompt système sous forme de balises XML \`<agent-memory>\` — l'agent a toujours le contexte critique sans appeler \`recall()\`
+- **Éviction LRU** : Quand la limite est atteinte (défaut 100, max 500), la mémoire la moins récemment consultée est automatiquement supprimée
+- **Scoring de pertinence** : \`recall()\` utilise la correspondance par mots-clés avec décroissance temporelle (\`score *= Math.exp(-ageEnJours / 30)\`) — les mémoires récentes sont mieux classées
+- **Suivi d'accès** : Chaque recall met à jour \`lastAccessedAt\` et \`accessCount\` pour améliorer les décisions LRU
+
+### Mémoire dans le tableau de bord opérateur
+
+Le **Panneau Mémoire** dans le tableau de bord opérateur affiche toutes les mémoires stockées avec :
+- Paires clé-valeur avec badges de catégorie (Fait, Préférence, Contexte, Autre)
+- Indicateur d'utilisation (ex. « 12/100 mémoires »)
+- Boutons ajouter/supprimer pour la gestion manuelle
+
+### Compaction de contexte
+
+Quand les conversations deviennent très longues, Kopern compacte automatiquement les anciens messages pour rester dans la fenêtre de contexte du modèle :
+
+1. **Détection** : Avant chaque itération, le système estime le nombre total de tokens
+2. **Seuil** : Si les tokens dépassent le seuil configuré (défaut 80 000), la compaction se déclenche
+3. **Résumé** : Les anciens messages sont envoyés à un modèle rapide (Haiku/Flash) avec un prompt de résumé
+4. **Préservation** : Les 4 derniers tours de conversation sont conservés intacts
+5. **Remplacement** : Les anciens messages sont remplacés par un résumé compact \`[Contexte de la conversation précédente]\`
+
+La compaction est transparente pour toutes les routes — chat, widget, webhook, connecteurs et MCP en bénéficient automatiquement.
+
+---
+
+## Connecteurs de services (Email et Calendrier)
+
+Donnez à vos agents la capacité de lire et envoyer des emails, gérer des événements de calendrier et vérifier les disponibilités — le tout via des connexions OAuth sécurisées.
+
+### Fournisseurs supportés
+
+| Fournisseur | Email | Calendrier |
+|-------------|-------|------------|
+| **Google** (Gmail + Google Calendar) | Oui | Oui |
+| **Microsoft** (Outlook + Microsoft Calendar) | Oui | Oui |
+
+### Configuration
+
+1. Ouvrez le **Tableau de bord opérateur** de votre agent
+2. Dans la section **Connecteurs de services**, cliquez **Connecter** à côté de Google ou Microsoft
+3. Complétez le flux OAuth — Kopern ne demande que les permissions nécessaires
+4. Activez les outils builtin \`service_email\` et/ou \`service_calendar\` dans les paramètres de l'agent
+5. Sauvegardez — l'agent peut maintenant utiliser les outils email et calendrier
+
+### Outils email
+
+| Outil | Description | Destructif |
+|-------|-------------|------------|
+| \`read_emails\` | Lister les emails récents (sujet, expéditeur, date, extrait) | Non |
+| \`send_email\` | Envoyer un nouvel email | Oui |
+| \`reply_email\` | Répondre à un fil d'emails existant | Oui |
+
+### Outils calendrier
+
+| Outil | Description | Destructif |
+|-------|-------------|------------|
+| \`list_events\` | Lister les événements à venir | Non |
+| \`check_availability\` | Vérifier les créneaux libres/occupés | Non |
+| \`create_event\` | Créer un nouvel événement | Oui |
+| \`update_event\` | Modifier un événement (heure, titre, participants) | Oui |
+| \`cancel_event\` | Annuler/supprimer un événement | Oui |
+
+### Sécurité et limites
+
+- **Tokens OAuth** chiffrés en AES-256-GCM avant stockage (via la variable d'environnement \`ENCRYPTION_KEY\`)
+- **Rafraîchissement auto** : Les tokens expirés sont automatiquement renouvelés
+- **Limites quotidiennes** : 20 envois d'emails et 10 créations d'événements par jour par fournisseur
+- **Approbation d'outils** : Tous les outils destructifs nécessitent l'approbation de l'utilisateur quand la politique d'approbation est \`confirm_destructive\`
+- **Nettoyage RGPD** : Déconnecter un fournisseur supprime tous les tokens et réinitialise les compteurs
+
+---
+
+## Tableau de bord opérateur
+
+Le tableau de bord opérateur est une interface de gestion simplifiée conçue pour les utilisateurs non-techniques qui doivent surveiller et configurer leurs agents sans toucher aux paramètres avancés.
+
+### Accès
+
+Naviguez vers n'importe quel agent et cliquez **Tableau de bord** sur la carte de l'agent, ou accédez directement à \`/agents/{agentId}/operator\`.
+
+### Cartes KPI
+
+Quatre métriques en temps réel affichées en haut :
+
+| Carte | Métrique | Détails |
+|-------|----------|---------|
+| **Messages** | Total des messages ce mois | Avec tendance mois sur mois en pourcentage |
+| **Taux de résolution** | Pourcentage de conversations terminées sans erreurs | Basé sur l'état de fin de session |
+| **Satisfaction** | Satisfaction moyenne des utilisateurs | Bientôt disponible |
+| **Coût** | Coût mensuel en EUR | Avec tendance mois sur mois |
+
+### Statut des connecteurs
+
+Vue d'ensemble visuelle des 4 canaux de déploiement (Widget, Telegram, WhatsApp, Slack) avec statut actif/inactif. Cliquez sur un connecteur pour accéder à sa page de configuration.
+
+### Conversations récentes
+
+Un tableau compact affichant toutes les conversations récentes avec colonnes :
+
+| Colonne | Description |
+|---------|-------------|
+| **Statut** | Point vert (résolu) ou orange (en cours) |
+| **Conversation** | Premier message utilisateur (tronqué) |
+| **Source** | Badge du canal (Playground, Widget, Slack, Telegram, WhatsApp, Webhook, MCP) |
+| **Messages** | Nombre de messages |
+| **Tools** | Nombre d'appels d'outils |
+| **Tokens** | Total de tokens utilisés (formaté en 12.3k) |
+| **Coût** | Coût de la session en EUR |
+| **Date** | Horodatage relatif |
+
+Cliquez sur une ligne pour voir la chronologie complète de la session.
+
+### Panneaux additionnels
+
+- **Formulaire d'édition** : Pour les agents basés sur des templates, re-répondez aux questions d'onboarding pour mettre à jour le comportement sans modifier le prompt système directement
+- **Panneau mémoire** : Voir, ajouter et supprimer des mémoires d'agent (voir section Mémoire d'agent)
+- **Connecteurs de services** : Connecter/déconnecter Google et Microsoft OAuth pour les outils email et calendrier
+- **AutoFix 1-clic** : Lancez AutoFix directement — il crée automatiquement une suite de notation si aucune n'existe, l'exécute, analyse les échecs et corrige le prompt système
+
+### Mode expert
+
+Cliquez **Mode expert** dans l'en-tête pour basculer vers la page de détail complète avec tous les paramètres techniques.
+
+---
+
+## Templates métier et onboarding
+
+### Onboarding zéro-code
+
+Les nouveaux utilisateurs sont guidés par un assistant d'onboarding :
+
+1. **Choisir un chemin** : Sélectionnez un template métier ou décrivez un agent personnalisé
+2. **Chemin template** : Répondez à 3-5 questions spécifiques à votre secteur → l'agent est créé instantanément avec compétences, outils et notation pré-configurés
+3. **Chemin personnalisé** : Décrivez votre agent en langage naturel → le Wizard IA génère une spécification complète (sortie JSON structurée) → vérifiez et sauvegardez
+
+Après la création, vous êtes redirigé vers le **Tableau de bord opérateur** pour la configuration immédiate.
+
+### Templates disponibles
+
+9 templates spécifiques par secteur avec prompts système, outils, suites de notation et questionnaires d'onboarding :
+
+| Template | Secteur | Fonctionnalités clés |
+|----------|---------|---------------------|
+| **Assistant BTP** | Construction | Génération de devis, planification de chantier, réglementation |
+| **Agent Comptable** | Comptabilité | Traitement de factures, rappels d'échéances fiscales, suivi clients |
+| **Agent Immobilier** | Immobilier | Matching de biens, planification de visites, génération de documents |
+| **Assistant Restaurant** | Restauration | Gestion de menu, réservations, commandes fournisseurs |
+| **Agent E-commerce** | E-commerce | Catalogue produits, suivi de commandes, support client |
+| **Assistant RH** | Ressources humaines | Tri de candidats, checklists d'onboarding, FAQ politique interne |
+| **Agent Salon de beauté** | Beauté et bien-être | Prise de RDV, recommandations produits, fidélisation |
+| **Coach Fitness** | Fitness | Génération de programmes, conseils nutrition, suivi de progression |
+| **Assistant Juridique** | Juridique | Recherche de jurisprudence, rédaction de documents, gestion d'échéances |
+
+### Édition aller-retour des templates
+
+Les templates supportent l'édition complète aller-retour :
+1. Déployez un template → \`templateId\` et \`templateVariables\` (vos réponses) sont sauvegardés sur l'agent
+2. Ouvrez le tableau de bord opérateur → le **Formulaire d'édition** affiche vos réponses originales
+3. Modifiez une réponse → le prompt système est automatiquement régénéré via \`hydratePrompt()\`
+
+---
+
+## Conformité EU AI Act
+
+Kopern inclut des outils intégrés pour vous aider à respecter les exigences du Règlement européen sur l'IA (applicable août 2026).
+
+### Rapport de conformité
+
+Générez un rapport automatisé pour n'importe quel agent :
+
+1. Allez sur la page de détail de votre agent
+2. Ouvrez l'onglet **Conformité**
+3. Cliquez **Générer le rapport** — Kopern analyse la configuration de votre agent
+
+Le rapport couvre 4 articles :
+
+| Article | Sujet | Ce que Kopern vérifie |
+|---------|-------|-----------------------|
+| **Art. 6** | Classification des risques | Domaine de l'agent, outils et services connectés |
+| **Art. 12** | Journalisation et audit | Suivi des sessions, journalisation des événements, suivi des coûts, snapshots de versions |
+| **Art. 14** | Contrôle humain | Politique d'approbation des outils, purpose gate, contrôle des actions destructives |
+| **Art. 52** | Transparence | Identification comme IA, divulgation du branding, notification utilisateur |
+
+Chaque section inclut un score de conformité et des recommandations concrètes.
+
+### Approbation des outils (Art. 14)
+
+Configurez le contrôle humain pour l'exécution des outils :
+
+| Politique | Comportement |
+|-----------|-------------|
+| \`auto\` | Tous les outils s'exécutent automatiquement |
+| \`confirm_destructive\` | Les outils destructifs nécessitent l'approbation |
+| \`confirm_all\` | Tous les appels d'outils nécessitent l'approbation |
+
+En mode interactif (Playground, Widget), un dialogue d'approbation apparaît. En mode headless (Telegram, WhatsApp, Slack, Webhook, MCP), les outils destructifs sont auto-refusés avec une explication.
+
+---
+
 ## Sessions et observabilité
 
 ### Consulter les sessions
@@ -2132,4 +2409,16 @@ Les sessions sont conservées indéfiniment dans votre compte. Vous pouvez les c
 
 **Puis-je utiliser Ollama avec des modèles locaux ?**
 Oui. Sélectionnez **Ollama** comme fournisseur et spécifiez le nom du modèle local que vous avez installé. L'utilisation de modèles Ollama est gratuite (aucun coût de tokens).
+
+**Y a-t-il une limite de longueur de conversation ?**
+Non. Quand les conversations deviennent très longues, la **Compaction de contexte** de Kopern résume automatiquement les anciens messages pour rester dans la fenêtre de contexte du modèle. Les 4 derniers tours sont toujours préservés intacts.
+
+**Mon agent peut-il retenir des informations entre les conversations ?**
+Oui. Activez l'outil builtin **Memory** et votre agent peut stocker et rappeler des faits entre les sessions. Les 20 mémoires les plus récentes sont automatiquement injectées dans le prompt système. Voir la section Mémoire d'agent pour les détails.
+
+**Mon agent peut-il envoyer des emails ou gérer mon calendrier ?**
+Oui. Connectez votre compte Google ou Microsoft via OAuth dans le tableau de bord opérateur, puis activez les outils builtin \`service_email\` et/ou \`service_calendar\`. Votre agent peut lire les emails, envoyer des messages, lister les événements, vérifier les disponibilités et créer/modifier/annuler des événements. Les opérations d'écriture nécessitent l'approbation quand la politique est \`confirm_destructive\`.
+
+**Qu'est-ce que le tableau de bord opérateur ?**
+Une interface de gestion simplifiée pour les utilisateurs non-techniques. Il affiche des cartes KPI (messages, taux de résolution, coût), le statut des connecteurs, un tableau de conversations et AutoFix 1-clic. Il inclut aussi le panneau mémoire et la gestion des connecteurs de services. Accédez-y via le bouton « Tableau de bord » sur la carte de l'agent.
 `;

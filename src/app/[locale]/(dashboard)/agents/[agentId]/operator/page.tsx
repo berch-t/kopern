@@ -34,9 +34,6 @@ import {
   ArrowRight,
   Loader2,
   Settings2,
-  Send,
-  Phone,
-  MessageCircle,
   Globe,
   Plug,
 } from "lucide-react";
@@ -106,10 +103,10 @@ export default function OperatorPage({
   const t = useDictionary();
 
   const connectors = [
-    { key: "widget", href: `/agents/${agentId}/connectors/widget`, icon: Globe, label: "Widget", active: widgetConfig?.enabled, color: "text-blue-500", bg: "bg-blue-500/10" },
-    { key: "telegram", href: `/agents/${agentId}/connectors/telegram`, icon: Send, label: "Telegram", active: telegramConn?.enabled, color: "text-sky-500", bg: "bg-sky-500/10" },
-    { key: "whatsapp", href: `/agents/${agentId}/connectors/whatsapp`, icon: Phone, label: "WhatsApp", active: whatsappConn?.enabled, color: "text-green-500", bg: "bg-green-500/10" },
-    { key: "slack", href: `/agents/${agentId}/connectors/slack`, icon: MessageCircle, label: "Slack", active: slackConn?.enabled, color: "text-purple-500", bg: "bg-purple-500/10" },
+    { key: "widget", href: `/agents/${agentId}/connectors/widget`, label: "Widget", active: widgetConfig?.enabled, bg: "bg-blue-500/10", svg: <Globe className="h-7 w-7 text-blue-500" /> },
+    { key: "telegram", href: `/agents/${agentId}/connectors/telegram`, label: "Telegram", active: telegramConn?.enabled, bg: "bg-[#26A5E4]/10", svg: <svg className="h-7 w-7" viewBox="0 0 240 240" fill="#26A5E4"><path d="M66.964 134.874s-32.08-10.062-51.344-16.002c-17.542-6.693-1.57-14.028 6.015-17.59 7.585-3.563 155.993-61.986 155.993-61.986s17.16-6.96 12.04 9.472c-1.78 6.96-16.174 62.58-30.5 115.988 0 0-2.72 11.2-24.942 1.138 0 0-39.2-26.4-47.174-32.38-3.585-2.96-8.4-9.472 1.78-17.59 0 0 40.22-37.422 52.262-49.142 4.535-5.325-1.78-8.4-7.59-3.52-16.174 12.8-43.538 30.398-53.59 36.94-10.05 6.54-20.32 3.96-20.32 3.96l-33.63-10.288z"/></svg> },
+    { key: "whatsapp", href: `/agents/${agentId}/connectors/whatsapp`, label: "WhatsApp", active: whatsappConn?.enabled, bg: "bg-[#25D366]/10", svg: <svg className="h-7 w-7" viewBox="0 0 24 24" fill="#25D366"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.27.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.23-8.24 8.23-1.48 0-2.93-.39-4.19-1.15l-.3-.17-3.12.82.83-3.04-.2-.31a8.188 8.188 0 0 1-1.26-4.38c.01-4.54 3.7-8.24 8.25-8.25M8.53 7.33c-.16 0-.43.06-.66.31-.22.25-.87.86-.87 2.07 0 1.22.89 2.39 1 2.56.14.17 1.76 2.67 4.25 3.73.59.27 1.05.42 1.41.53.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.07-.1-.23-.16-.48-.27-.25-.14-1.47-.74-1.69-.82-.23-.08-.37-.12-.56.12-.16.25-.64.81-.78.97-.15.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.12-.24-.01-.39.11-.5.11-.11.25-.29.37-.43.13-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.11-.56-1.35-.77-1.84-.2-.48-.4-.42-.56-.43-.14 0-.3-.01-.47-.01"/></svg> },
+    { key: "slack", href: `/agents/${agentId}/connectors/slack`, label: "Slack", active: slackConn?.enabled, bg: "bg-[#4A154B]/10", svg: <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none"><path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z" fill="#E01E5A"/><path d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z" fill="#36C5F0"/><path d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zm-1.27 0a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.163 0a2.528 2.528 0 0 1 2.523 2.522v6.312z" fill="#2EB67D"/><path d="M15.163 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.163 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zm0-1.27a2.527 2.527 0 0 1-2.52-2.523 2.527 2.527 0 0 1 2.52-2.52h6.315A2.528 2.528 0 0 1 24 15.163a2.528 2.528 0 0 1-2.522 2.523h-6.315z" fill="#ECB22E"/></svg> },
   ];
   const hasAnyConnector = connectors.some((c) => c.active);
 
@@ -158,59 +155,6 @@ export default function OperatorPage({
           </div>
         </div>
       </SlideUp>
-
-      {/* Connector Status */}
-      <FadeIn>
-        <Card className={!hasAnyConnector ? "border-amber-500/50 bg-amber-500/5" : undefined}>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Plug className={`h-4 w-4 ${hasAnyConnector ? "text-muted-foreground" : "text-amber-500"}`} />
-                <h3 className="font-semibold text-sm">
-                  {hasAnyConnector ? t.operator.connectors.title : t.operator.connectors.notConnected}
-                </h3>
-              </div>
-              <LocalizedLink href={`/agents/${agentId}/connectors`}>
-                <Button variant="outline" size="sm">
-                  {t.operator.connectors.configure}
-                </Button>
-              </LocalizedLink>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {connectors.map((c) => (
-                <LocalizedLink key={c.key} href={c.href}>
-                  <div className={`flex items-center gap-2 rounded-lg border p-3 transition-colors hover:bg-muted/50 ${c.active ? "border-green-500/30 bg-green-500/5" : ""}`}>
-                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${c.bg}`}>
-                      <c.icon className={`h-4 w-4 ${c.color}`} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium">{c.label}</p>
-                      <p className={`text-[10px] ${c.active ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}>
-                        {c.active ? t.operator.connectors.active : t.operator.connectors.inactive}
-                      </p>
-                    </div>
-                  </div>
-                </LocalizedLink>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </FadeIn>
-
-      {/* Edit Form (template-based agents only) */}
-      {agent && <OperatorEditForm agentId={agentId} agent={agent} />}
-
-      {/* Agent Memory */}
-      {agent && <MemoryPanel agentId={agentId} memoryConfig={agent.memoryConfig} builtinTools={agent.builtinTools} />}
-
-      {/* Service Connectors (Email/Calendar) */}
-      {agent && (
-        <ServiceConnectorPanel
-          agentId={agentId}
-          hasEmailTool={agent.builtinTools?.includes("service_email") ?? false}
-          hasCalendarTool={agent.builtinTools?.includes("service_calendar") ?? false}
-        />
-      )}
 
       {/* KPI Cards */}
       {loading ? (
@@ -275,6 +219,59 @@ export default function OperatorPage({
         </FadeIn>
       )}
 
+      {/* Connector Status */}
+      <FadeIn>
+        <Card className={!hasAnyConnector ? "border-amber-500/50 bg-amber-500/5" : undefined}>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Plug className={`h-4 w-4 ${hasAnyConnector ? "text-muted-foreground" : "text-amber-500"}`} />
+                <h3 className="font-semibold text-sm">
+                  {hasAnyConnector ? t.operator.connectors.title : t.operator.connectors.notConnected}
+                </h3>
+              </div>
+              <LocalizedLink href={`/agents/${agentId}/connectors`}>
+                <Button variant="outline" size="sm">
+                  {t.operator.connectors.configure}
+                </Button>
+              </LocalizedLink>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {connectors.map((c) => (
+                <LocalizedLink key={c.key} href={c.href}>
+                  <div className={`flex items-center gap-2 rounded-lg border p-3 transition-colors hover:bg-muted/50 ${c.active ? "border-green-500/30 bg-green-500/5" : ""}`}>
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center">
+                      {c.svg}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium">{c.label}</p>
+                      <p className={`text-[10px] ${c.active ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}>
+                        {c.active ? t.operator.connectors.active : t.operator.connectors.inactive}
+                      </p>
+                    </div>
+                  </div>
+                </LocalizedLink>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </FadeIn>
+
+      {/* Edit Form (template-based agents only) */}
+      {agent && <OperatorEditForm agentId={agentId} agent={agent} />}
+
+      {/* Agent Memory */}
+      {agent && <MemoryPanel agentId={agentId} memoryConfig={agent.memoryConfig} builtinTools={agent.builtinTools} />}
+
+      {/* Service Connectors (Email/Calendar) */}
+      {agent && (
+        <ServiceConnectorPanel
+          agentId={agentId}
+          hasEmailTool={agent.builtinTools?.includes("service_email") ?? false}
+          hasCalendarTool={agent.builtinTools?.includes("service_calendar") ?? false}
+        />
+      )}
+
       {/* Recent Conversations */}
       <SlideUp delay={0.2}>
         <div className="space-y-4">
@@ -297,44 +294,72 @@ export default function OperatorPage({
               </CardContent>
             </Card>
           ) : (
-            <StaggerChildren>
-              <div className="space-y-2">
-                {conversations.map((conv) => (
-                  <motion.div key={conv.id} variants={staggerItem}>
-                    <LocalizedLink href={`/agents/${agentId}/sessions/${conv.id}`}>
-                      <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-                        <CardContent className="py-3 px-4">
-                          <div className="flex items-center gap-3">
+            <Card>
+              <CardContent className="p-0 overflow-x-auto">
+                {/* Table header */}
+                <div className="grid grid-cols-[auto_1fr_72px_64px_56px_72px_64px_80px] items-center gap-x-3 px-4 py-2 border-b text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                  <span className="w-2" />
+                  <span>Conversation</span>
+                  <span className="text-right">Source</span>
+                  <span className="text-right">Msgs</span>
+                  <span className="text-right">Tools</span>
+                  <span className="text-right">Tokens</span>
+                  <span className="text-right">Cost</span>
+                  <span className="text-right">Date</span>
+                </div>
+                <StaggerChildren>
+                  <div className="divide-y">
+                    {conversations.map((conv) => (
+                      <motion.div key={conv.id} variants={staggerItem}>
+                        <LocalizedLink href={`/agents/${agentId}/sessions/${conv.id}`}>
+                          <div className="grid grid-cols-[auto_1fr_72px_64px_56px_72px_64px_80px] items-center gap-x-3 px-4 py-2 hover:bg-muted/50 transition-colors cursor-pointer">
                             {/* Resolved indicator */}
                             <div className={`h-2 w-2 shrink-0 rounded-full ${conv.resolved ? "bg-emerald-500" : "bg-amber-500"}`} />
 
                             {/* Message */}
-                            <p className="text-sm truncate flex-1 min-w-0">
+                            <p className="text-sm truncate min-w-0">
                               {conv.firstMessage}
                             </p>
 
-                            {/* Meta */}
-                            <div className="flex items-center gap-2 shrink-0">
-                              {conv.source && conv.source !== "playground" && (
-                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${SOURCE_COLORS[conv.source] ?? "bg-gray-500/10 text-gray-500"}`}>
-                                  {SOURCE_LABELS[conv.source] ?? conv.source}
-                                </span>
-                              )}
-                              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                {conv.messageCount} msg
-                              </span>
-                              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                {formatRelativeDate(conv.startedAt)}
+                            {/* Source */}
+                            <div className="text-right">
+                              <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${SOURCE_COLORS[conv.source] ?? "bg-gray-500/10 text-gray-500"}`}>
+                                {SOURCE_LABELS[conv.source] ?? conv.source ?? "—"}
                               </span>
                             </div>
+
+                            {/* Messages count */}
+                            <span className="text-xs text-muted-foreground text-right tabular-nums">
+                              {conv.messageCount}
+                            </span>
+
+                            {/* Tool calls */}
+                            <span className="text-xs text-muted-foreground text-right tabular-nums">
+                              {conv.toolCallCount || "—"}
+                            </span>
+
+                            {/* Tokens */}
+                            <span className="text-xs text-muted-foreground text-right tabular-nums">
+                              {conv.totalTokens > 0 ? conv.totalTokens >= 1000 ? `${(conv.totalTokens / 1000).toFixed(1)}k` : conv.totalTokens : "—"}
+                            </span>
+
+                            {/* Cost */}
+                            <span className="text-xs text-muted-foreground text-right tabular-nums">
+                              {conv.costEUR > 0 ? `${conv.costEUR.toFixed(3)}€` : "—"}
+                            </span>
+
+                            {/* Date */}
+                            <span className="text-xs text-muted-foreground text-right whitespace-nowrap">
+                              {formatRelativeDate(conv.startedAt)}
+                            </span>
                           </div>
-                        </CardContent>
-                      </Card>
-                    </LocalizedLink>
-                  </motion.div>
-                ))}
-              </div>
-            </StaggerChildren>
+                        </LocalizedLink>
+                      </motion.div>
+                    ))}
+                  </div>
+                </StaggerChildren>
+              </CardContent>
+            </Card>
           )}
         </div>
       </SlideUp>

@@ -8,16 +8,21 @@ Kopern is a full-stack **AI Agent Builder, Orchestrator & Grader**. Build custom
 Key capabilities at a glance:
 
 - **Build** agents for any domain (DevOps, Legal, Support, Sales, Finance, HR, and more)
-- **AI Wizard** — describe what you want in plain text and Kopern generates a complete agent specification automatically
+- **AI Wizard** — describe what you want in plain text and Kopern generates a complete agent specification automatically (structured JSON output)
+- **Zero-Code Onboarding** — choose from 9 vertical business templates (BTP, Accounting, Real Estate, Restaurant, E-commerce, HR, Beauty, Fitness, Legal) or describe your agent in natural language
 - **Equip** agents with modular skills (XML-injected instructions) and custom tools (sandboxed JavaScript)
 - **Connect** your GitHub repositories so agents can read, search, and write to your codebase
+- **Agent Memory** — persistent key-value memory across conversations with LRU eviction, auto-injected in system prompt
+- **Context Compaction** — automatic summarization of old messages when the context window fills up, transparent to all routes
+- **Service Connectors** — connect Gmail, Outlook, Google Calendar, and Microsoft Calendar as agent tools via OAuth
 - **Grade** agents with 6 criterion types — output matching, schema validation, tool usage, safety checks, custom scripts, and LLM judges
-- **Optimize** with a 6-mode Optimization Lab — AutoTune, AutoFix, Stress Lab, Tournament, Distillation, Evolution
+- **Optimize** with a 6-mode Optimization Lab — AutoTune, AutoFix (1-click from Operator Dashboard), Stress Lab, Tournament, Distillation, Evolution
 - **Orchestrate** multiple agents as teams (parallel, sequential, conditional), pipelines (multi-step chains), or via sub-agent delegation
 - **Deploy everywhere** — MCP protocol (Claude Code, Cursor), embeddable chat widget, webhooks (n8n, Zapier, Make), Slack bot, Telegram bot, WhatsApp
+- **Operator Dashboard** — simplified view for non-technical users with KPI cards, connector status, 1-click AutoFix, memory panel, and conversation table
 - **Automate workflows** — inbound/outbound webhooks with anti-loop protection for seamless integration with external automation platforms
 - **Track** billing, sessions, conversation timelines, tool calls, and costs in real time with Stripe usage-based meters
-- **Secure by design** — sandboxed execution, HMAC webhook signatures, hashed API keys, plan enforcement on all routes
+- **Secure by design** — sandboxed execution, HMAC webhook signatures, hashed API keys, plan enforcement, EU AI Act compliance tools
 
 ### Create Your First Agent
 
@@ -59,7 +64,7 @@ The wizard typically generates a production-ready agent in under 30 seconds.
 
 ### Start from a Template
 
-Kopern includes 15+ pre-built agent templates covering common use cases.
+Kopern includes 25+ pre-built agent templates covering common use cases.
 
 1. Go to the **Examples** page (accessible from the sidebar)
 2. Browse templates organized by domain -- each template shows a preview of the agent's capabilities
@@ -416,6 +421,55 @@ When handling data-related questions, always apply these rules:
 - **Reuse across agents** -- skills can be copied between agents. Create a library of standard skills (tone, format, safety) and apply them to new agents.
 - **Order matters** -- skills listed first have slightly more influence. Put the most important skills at the top.
 - **Keep skills under 1000 words** -- very long skills dilute the system prompt and increase token costs.
+
+---
+
+## Web Fetch (Built-in Tool)
+
+The \`web_fetch\` built-in tool gives your agent **real internet access**. It fetches any URL server-side and returns extracted text content — web pages, JSON APIs, XML feeds, robots.txt, sitemaps, and more.
+
+### Enabling Web Fetch
+
+1. Open your agent's detail page
+2. Go to the **Tools** section
+3. Enable the **Web Fetch** built-in tool
+4. Save — your agent can now call \`web_fetch(url)\`
+
+### What It Can Do
+
+| Use Case | Example |
+|----------|---------|
+| **Scrape a web page** | \`web_fetch({ url: "https://example.com" })\` → returns extracted text |
+| **Call a REST API** | \`web_fetch({ url: "https://api.example.com/data", headers: { "Authorization": "Bearer ..." } })\` |
+| **Check robots.txt** | \`web_fetch({ url: "https://example.com/robots.txt" })\` |
+| **Read an RSS feed** | \`web_fetch({ url: "https://blog.example.com/feed.xml", extract_text: false })\` |
+| **POST to an API** | \`web_fetch({ url: "...", method: "POST", body: "{ \\"key\\": \\"value\\" }", headers: { "Content-Type": "application/json" } })\` |
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| \`url\` | string | required | URL to fetch (must start with http:// or https://) |
+| \`method\` | string | "GET" | HTTP method (GET, POST, PUT, DELETE) |
+| \`headers\` | object | {} | Custom HTTP headers |
+| \`body\` | string | — | Request body (for POST/PUT) |
+| \`extract_text\` | boolean | true | Extract readable text from HTML (set false for raw response) |
+| \`max_length\` | number | 50000 | Maximum response length in characters |
+
+### How It Works
+
+Unlike custom tools which run in a sandboxed VM with no network access, \`web_fetch\` runs **server-side** in the Kopern API route (Node.js on Vercel). This gives it full HTTP access while remaining secure:
+
+- **30-second timeout** per request
+- **Anti-loop protection** — cannot fetch Kopern's own domains
+- **HTML extraction** — automatically strips scripts, styles, and tags, extracts title + meta description
+- **User-Agent**: \`Kopern-Agent/1.0\`
+
+### Important Limitations
+
+- **No JavaScript rendering** — \`web_fetch\` fetches raw HTML. Sites that require JavaScript (Reddit, YouTube, LinkedIn) will return minimal content. For these, use a dedicated API instead.
+- **No file downloads** — binary files (images, PDFs) are not supported. Only text-based content is returned.
+- **Rate limiting** — excessive fetching may trigger rate limits on target servers. Be respectful.
 
 ---
 
@@ -2083,6 +2137,229 @@ Find them in **Examples** → **Powered by data.gouv.fr MCP** section.
 
 ---
 
+## Agent Memory
+
+Agents can remember facts across conversations using persistent key-value memory. This allows your agent to build up context about users, preferences, and ongoing tasks over time.
+
+### Enabling Memory
+
+1. Open your agent's detail page
+2. Go to the **Tools** section
+3. Enable the **Memory** builtin tool in the tool selector
+4. Save — the agent now has access to 4 memory tools
+
+### Memory Tools
+
+| Tool | Description |
+|------|-------------|
+| \`remember\` | Store a key-value pair (e.g., \`remember("client_name", "M. Dupont")\`) |
+| \`recall\` | Search memories by keyword with relevance scoring and temporal decay |
+| \`forget\` | Delete a specific memory by key |
+| \`search_sessions\` | Search past conversation sessions by keyword |
+
+### How It Works
+
+- **Persistent storage**: Memories are stored in Firestore at \`users/{userId}/agents/{agentId}/memory/{key}\`
+- **Auto-injection**: The top 20 most recently accessed memories are automatically injected into the system prompt as \`<agent-memory>\` XML tags — the agent always has critical context without needing to call \`recall()\`
+- **LRU eviction**: When the memory limit is reached (default 100, max 500), the least recently accessed memory is automatically deleted
+- **Relevance scoring**: \`recall()\` uses keyword matching with temporal decay (\`score *= Math.exp(-ageInDays / 30)\`) — recent memories rank higher
+- **Access tracking**: Each recall updates \`lastAccessedAt\` and \`accessCount\` to improve LRU decisions
+
+### Memory in the Operator Dashboard
+
+The **Memory Panel** in the Operator Dashboard displays all stored memories with:
+- Key-value pairs with category badges (Fact, Preference, Context, Custom)
+- Usage indicator (e.g., "12/100 memories")
+- Add/delete buttons for manual memory management
+
+### Context Compaction
+
+When conversations get very long, Kopern automatically compacts older messages to stay within the model's context window:
+
+1. **Detection**: Before each agent iteration, the system estimates total token count
+2. **Threshold**: If tokens exceed the configured threshold (default 80,000), compaction triggers
+3. **Summarization**: Older messages are sent to a fast model (Haiku/Flash) with a summarization prompt
+4. **Preservation**: The 4 most recent conversation turns are kept intact
+5. **Replacement**: Old messages are replaced with a compact \`[Context from earlier in conversation]\` summary
+
+Compaction is transparent to all routes — chat, widget, webhook, connectors, and MCP all benefit automatically.
+
+---
+
+## Service Connectors (Email & Calendar)
+
+Give your agents the ability to read and send emails, manage calendar events, and check availability — all through secure OAuth connections.
+
+### Supported Providers
+
+| Provider | Email | Calendar |
+|----------|-------|----------|
+| **Google** (Gmail + Google Calendar) | Yes | Yes |
+| **Microsoft** (Outlook + Microsoft Calendar) | Yes | Yes |
+
+### Setup
+
+1. Open the **Operator Dashboard** for your agent
+2. In the **Service Connectors** section, click **Connect** next to Google or Microsoft
+3. Complete the OAuth flow — Kopern requests only the necessary scopes
+4. Enable the \`service_email\` and/or \`service_calendar\` builtin tools in your agent's tool settings
+5. Save — the agent can now use email and calendar tools
+
+### Email Tools
+
+| Tool | Description | Destructive |
+|------|-------------|-------------|
+| \`read_emails\` | List recent emails (subject, sender, date, snippet) | No |
+| \`send_email\` | Send a new email to specified recipients | Yes |
+| \`reply_email\` | Reply to an existing email thread | Yes |
+
+### Calendar Tools
+
+| Tool | Description | Destructive |
+|------|-------------|-------------|
+| \`list_events\` | List upcoming calendar events | No |
+| \`check_availability\` | Check free/busy status for a time range | No |
+| \`create_event\` | Create a new calendar event | Yes |
+| \`update_event\` | Modify an existing event (time, title, attendees) | Yes |
+| \`cancel_event\` | Cancel/delete a calendar event | Yes |
+
+### Security & Limits
+
+- **OAuth tokens** are encrypted with AES-256-GCM before storage (using the \`ENCRYPTION_KEY\` env var)
+- **Auto-refresh**: Expired tokens are automatically refreshed using the stored refresh token
+- **Daily limits**: 20 email sends and 10 calendar event creations per day per provider (reset at midnight UTC)
+- **Tool approval**: All destructive tools (\`send_email\`, \`reply_email\`, \`create_event\`, \`update_event\`, \`cancel_event\`) require user approval when the agent's tool approval policy is set to \`confirm_destructive\`
+- **GDPR cleanup**: Disconnecting a provider deletes all stored tokens and resets daily counters
+
+---
+
+## Operator Dashboard
+
+The Operator Dashboard is a simplified management interface designed for non-technical users who need to monitor and configure their agents without touching technical settings.
+
+### Access
+
+Navigate to any agent and click **Tableau de bord** (Dashboard) on the agent card, or access it directly at \`/agents/{agentId}/operator\`.
+
+### KPI Cards
+
+Four real-time metrics displayed at the top:
+
+| Card | Metric | Details |
+|------|--------|---------|
+| **Messages** | Total messages this month | With month-over-month trend percentage |
+| **Resolution Rate** | Percentage of conversations completed without errors | Based on session end state |
+| **Satisfaction** | Average user satisfaction | Coming soon |
+| **Cost** | Monthly cost in EUR | With month-over-month trend |
+
+### Connector Status
+
+Visual overview of all 4 deployment channels (Widget, Telegram, WhatsApp, Slack) with active/inactive status. Click any connector to access its configuration page.
+
+### Recent Conversations
+
+A compact data table showing all recent conversations with columns:
+
+| Column | Description |
+|--------|-------------|
+| **Status** | Green dot (resolved) or orange dot (in progress) |
+| **Conversation** | First user message (truncated) |
+| **Source** | Channel badge (Playground, Widget, Slack, Telegram, WhatsApp, Webhook, MCP) |
+| **Messages** | Message count |
+| **Tools** | Number of tool calls |
+| **Tokens** | Total tokens used (formatted as 12.3k) |
+| **Cost** | Session cost in EUR |
+| **Date** | Relative timestamp |
+
+Click any row to view the full session timeline.
+
+### Additional Panels
+
+- **Edit Form**: For template-based agents, re-answer onboarding questions to update the agent's behavior without editing the system prompt directly
+- **Memory Panel**: View, add, and delete agent memories (see Agent Memory section)
+- **Service Connectors**: Connect/disconnect Google and Microsoft OAuth for email and calendar tools
+- **1-Click AutoFix**: Run AutoFix directly from the dashboard — it automatically creates a grading suite if none exists, runs it, analyzes failures, and patches the system prompt
+
+### Expert Mode
+
+Click **Mode expert** in the header to switch to the full agent detail page with all technical settings (system prompt, skills, tools, extensions, grading, optimization lab, etc.).
+
+---
+
+## Vertical Templates & Onboarding
+
+### Zero-Code Onboarding
+
+New users are guided through a streamlined onboarding wizard:
+
+1. **Choose a path**: Select from a vertical business template or describe a custom agent
+2. **Template path**: Answer 3-5 onboarding questions specific to your industry → agent is created instantly with pre-configured skills, tools, and grading
+3. **Custom path**: Describe your agent in natural language → the AI Wizard generates a complete specification (structured JSON output) → review and save
+
+After creation, you are redirected to the **Operator Dashboard** for immediate configuration.
+
+### Business Templates
+
+9 industry-specific templates with pre-built system prompts, tools, grading suites, and onboarding questionnaires:
+
+| Template | Industry | Key Features |
+|----------|----------|-------------|
+| **BTP Assistant** | Construction | Quote generation, site planning, regulation lookup |
+| **Accounting Agent** | Accounting | Invoice processing, tax deadline reminders, client follow-up |
+| **Real Estate Agent** | Real Estate | Property matching, visit scheduling, document generation |
+| **Restaurant Assistant** | Food & Beverage | Menu management, reservation handling, supplier orders |
+| **E-commerce Agent** | E-commerce | Product catalog, order tracking, customer support |
+| **HR Assistant** | Human Resources | Candidate screening, onboarding checklists, policy Q&A |
+| **Beauty Salon Agent** | Beauty & Wellness | Appointment booking, product recommendations, loyalty tracking |
+| **Fitness Coach** | Fitness | Program generation, nutrition advice, progress tracking |
+| **Legal Assistant** | Legal | Case research, document drafting, deadline management |
+
+### Template Round-Trip
+
+Templates support full round-trip editing:
+1. Deploy a template → \`templateId\` and \`templateVariables\` (your answers) are saved on the agent
+2. Open the Operator Dashboard → the **Edit Form** shows your original answers
+3. Modify any answer → the system prompt is automatically re-hydrated via \`hydratePrompt()\`
+
+---
+
+## EU AI Act Compliance
+
+Kopern includes built-in tools to help you meet the European AI Act requirements (effective August 2026).
+
+### Compliance Report
+
+Generate an automated compliance report for any agent:
+
+1. Go to your agent's detail page
+2. Open the **Compliance** tab
+3. Click **Generate Report** — Kopern analyzes your agent's configuration
+
+The report covers 4 articles:
+
+| Article | Topic | What Kopern Checks |
+|---------|-------|--------------------|
+| **Art. 6** | Risk Classification | Agent domain, tools, and connected services to determine risk level |
+| **Art. 12** | Logging & Audit | Session tracking, event logging, cost tracking, version snapshots |
+| **Art. 14** | Human Oversight | Tool approval policy, purpose gate, destructive action controls |
+| **Art. 52** | Transparency | System identification as AI, branding disclosure, user notification |
+
+Each section includes a compliance score and actionable recommendations.
+
+### Tool Approval (Art. 14)
+
+Configure human oversight for tool execution:
+
+| Policy | Behavior |
+|--------|----------|
+| \`auto\` | All tools execute automatically (no approval needed) |
+| \`confirm_destructive\` | Destructive tools require user approval before execution |
+| \`confirm_all\` | All tool calls require approval |
+
+In interactive modes (Playground, Widget), an approval dialog appears. In headless modes (Telegram, WhatsApp, Slack, Webhook, MCP), destructive tools are auto-denied with an explanation.
+
+---
+
 ## Sessions & Observability
 
 ### Viewing Sessions
@@ -2456,7 +2733,16 @@ You can duplicate grading suites within an agent. To copy a full agent, use the 
 The wizard is an AI agent itself. You describe what you want in plain English, and it generates a complete agent specification: name, description, domain, system prompt, skills, tools, and grading cases. The generation streams in real time via SSE. You can review and customize everything before saving.
 
 **What is the maximum conversation length?**
-There is no hard limit on conversation length, but very long conversations consume more tokens (and cost more). The agent's context window depends on the model: Claude Sonnet supports ~200K tokens, GPT-4o supports ~128K tokens, Gemini 2.5 Pro supports ~1M tokens.
+There is no hard limit on conversation length. When conversations get very long, Kopern's **Context Compaction** automatically summarizes older messages to stay within the model's context window. The 4 most recent turns are always preserved intact.
+
+**Can my agent remember things between conversations?**
+Yes. Enable the **Memory** builtin tool and your agent can store and recall facts across sessions. The top 20 memories are auto-injected into the system prompt, so the agent always has critical context. See the Agent Memory section for details.
+
+**Can my agent send emails or manage my calendar?**
+Yes. Connect your Google or Microsoft account via OAuth in the Operator Dashboard, then enable the \`service_email\` and/or \`service_calendar\` builtin tools. Your agent can read emails, send messages, list events, check availability, and create/update/cancel calendar events. All write operations require user approval when the tool approval policy is set to \`confirm_destructive\`.
+
+**What is the Operator Dashboard?**
+A simplified management interface for non-technical users. It shows KPI cards (messages, resolution rate, cost), connector status, a conversation table, and 1-click AutoFix. It also includes the Memory Panel and Service Connector management. Access it via the "Tableau de bord" button on any agent card.
 
 **Can multiple agents share the same tools?**
 Tools are defined per-agent. To reuse tools across agents, you can copy the tool configuration manually or use agent templates from the Examples gallery.

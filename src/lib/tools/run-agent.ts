@@ -17,6 +17,7 @@ import { getDatagouvTools, executeDatagouvTool, isDatagouvTool } from "@/lib/too
 import { getPisteTools, executePisteTool, isPisteTool } from "@/lib/tools/piste-tools";
 import { getMemoryTools, executeMemoryTool, isMemoryTool, injectMemoryContext } from "@/lib/tools/memory-tools";
 import { getEmailTools, getCalendarTools, executeServiceTool, isServiceTool } from "@/lib/tools/service-tools";
+import { WEB_FETCH_TOOLS, executeWebFetchTool, isWebFetchTool } from "@/lib/tools/web-fetch-tool";
 import { runExtensions } from "@/lib/extensions/extension-runner";
 import { fireOutboundWebhooks } from "@/lib/connectors/webhook";
 import type { ExtensionEventType } from "@/lib/firebase/firestore";
@@ -58,6 +59,9 @@ export interface AgentRunCallbacks {
   onToolStart?: (toolCall: { name: string; args: Record<string, unknown> }) => void;
   onToolEnd?: (result: { name: string; result: string; isError: boolean }) => void;
   onApprovalRequest?: (request: ApprovalRequest) => Promise<ApprovalDecision>;
+  /** Conversational approval for headless connectors (Telegram, WhatsApp, Slack).
+   *  When set, destructive tools trigger a message to the user instead of auto-deny. */
+  onConversationalApproval?: (request: ApprovalRequest) => Promise<ApprovalDecision>;
   onDone: (metrics: AgentRunMetrics) => void;
   onError: (error: Error) => void;
 }
@@ -145,6 +149,7 @@ export async function runAgentWithTools(
   const hasMemory = agentBuiltinTools.includes("memory");
   const hasServiceEmail = agentBuiltinTools.includes("service_email");
   const hasServiceCalendar = agentBuiltinTools.includes("service_calendar");
+  const hasWebFetch = agentBuiltinTools.includes("web_fetch");
 
   // GitHub tools (with write access if agent has github_write builtin)
   if (connectedRepos.length > 0) {
@@ -179,6 +184,11 @@ export async function runAgentWithTools(
   // Service connector tools — calendar (Google/Outlook)
   if (hasServiceCalendar) {
     tools.push(...getCalendarTools());
+  }
+
+  // Web fetch tool (server-side HTTP fetch)
+  if (hasWebFetch) {
+    tools.push(...WEB_FETCH_TOOLS);
   }
 
   // Slack tools (loaded when agent has a Slack connection with valid bot token)
@@ -239,8 +249,20 @@ export async function runAgentWithTools(
   let iteration = 0;
   let totalToolCalls = 0;
 
-  // Inject current date + agent memory into system prompt + read compaction config
-  let effectiveSystemPrompt = config.systemPrompt + `\n\nCurrent date and time: ${new Date().toISOString()}`;
+  // Inject current date (Europe/Paris, with day name and ISO week info) + tool usage reminder
+  const now = new Date();
+  const parisFmt = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Paris", weekday: "long", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+  const parts = Object.fromEntries(parisFmt.formatToParts(now).map(p => [p.type, p.value]));
+  const parisDate = `${parts.year}-${parts.month}-${parts.day}`;
+  const dateStr = `${parts.weekday}, ${parisDate} ${parts.hour}:${parts.minute} (Europe/Paris)`;
+  // Compute Monday of current week (ISO: Monday=1)
+  const parisNow = new Date(`${parisDate}T${parts.hour}:${parts.minute}:00+02:00`);
+  const dow = parisNow.getDay(); // 0=Sun
+  const mondayOffset = dow === 0 ? -6 : 1 - dow;
+  const monday = new Date(parisNow); monday.setDate(parisNow.getDate() + mondayOffset);
+  const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+  const weekStr = `Current week: Monday ${monday.toISOString().slice(0, 10)} to Sunday ${sunday.toISOString().slice(0, 10)}.`;
+  let effectiveSystemPrompt = config.systemPrompt + `\n\nCurrent date and time: ${dateStr}.\n${weekStr}\nIMPORTANT: When the user asks you to perform an action (send email, create/update/cancel event, remember something, etc.), you MUST call the appropriate tool. Never pretend you performed an action without actually calling the tool.`;
   let compactionThreshold = 0;
   if (hasMemory && config.userId && config.agentId) {
     try {
@@ -339,9 +361,27 @@ export async function runAgentWithTools(
                         callbacks.onToolEnd?.({ name: tc.name, result: "Tool execution denied by operator.", isError: true });
                         continue;
                       }
+                    } else if (callbacks.onConversationalApproval) {
+                      // Conversational approval (Telegram, WhatsApp, Slack)
+                      // Send approval message to user and wait for response
+                      const decision = await callbacks.onConversationalApproval({
+                        toolCallId: tc.id,
+                        toolName: tc.name,
+                        args: tc.input,
+                        isDestructive,
+                      });
+                      if (decision === "denied") {
+                        toolResults.push({
+                          type: "tool_result",
+                          tool_use_id: tc.id,
+                          content: "Tool execution denied by user.",
+                          is_error: true,
+                        });
+                        callbacks.onToolEnd?.({ name: tc.name, result: "Tool execution denied by user.", isError: true });
+                        continue;
+                      }
                     } else {
-                      // Headless context (Telegram, WhatsApp, Slack, Webhook, MCP, etc.)
-                      // No interactive approval possible — auto-deny with explanation
+                      // Headless context with no approval support (Webhook, MCP, etc.)
                       const denyMsg = `Tool "${tc.name}" requires approval but this channel does not support interactive approval. Use the Kopern Playground to execute this action, or set the agent's Tool Approval Policy to "Automatic".`;
                       toolResults.push({
                         type: "tool_result",
@@ -364,7 +404,9 @@ export async function runAgentWithTools(
                           ? await executeDatagouvTool(tc.name, tc.input)
                           : isPisteTool(tc.name)
                             ? await executePisteTool(tc.name, tc.input)
-                            : await executeTool(tc, toolCtx);
+                            : isWebFetchTool(tc.name)
+                              ? await executeWebFetchTool(tc.name, tc.input)
+                              : await executeTool(tc, toolCtx);
                   // Count tool result tokens as additional input
                   inputTokens += estimateTokens(result.result);
                   callbacks.onToolEnd?.({
