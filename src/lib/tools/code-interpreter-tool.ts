@@ -59,6 +59,66 @@ export function isCodeInterpreterTool(name: string): boolean {
 const CODE_INTERPRETER_URL = process.env.CODE_INTERPRETER_URL;
 const CODE_INTERPRETER_SECRET = process.env.CODE_INTERPRETER_SECRET;
 
+// ---------------------------------------------------------------------------
+// GCP IAM authentication (for Cloud Run with --no-allow-unauthenticated)
+// Uses GOOGLE_SERVICE_ACCOUNT_KEY env var (JSON key content)
+// ---------------------------------------------------------------------------
+
+let cachedIdToken: { token: string; expiresAt: number } | null = null;
+
+async function getGcpIdToken(targetAudience: string): Promise<string | null> {
+  const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+  if (!keyJson) return null;
+
+  // Return cached token if still valid (with 60s buffer)
+  if (cachedIdToken && cachedIdToken.expiresAt > Date.now() + 60_000) {
+    return cachedIdToken.token;
+  }
+
+  try {
+    const key = JSON.parse(keyJson);
+    const now = Math.floor(Date.now() / 1000);
+
+    // Build JWT header + payload
+    const header = { alg: "RS256", typ: "JWT", kid: key.private_key_id };
+    const payload = {
+      iss: key.client_email,
+      sub: key.client_email,
+      aud: "https://oauth2.googleapis.com/token",
+      iat: now,
+      exp: now + 3600,
+      target_audience: targetAudience,
+    };
+
+    // Sign JWT with the service account private key
+    const crypto = await import("crypto");
+    const headerB64 = Buffer.from(JSON.stringify(header)).toString("base64url");
+    const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
+    const signInput = `${headerB64}.${payloadB64}`;
+    const sign = crypto.createSign("RSA-SHA256");
+    sign.update(signInput);
+    const signature = sign.sign(key.private_key, "base64url");
+    const jwt = `${signInput}.${signature}`;
+
+    // Exchange JWT for ID token
+    const res = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    const idToken = data.id_token;
+
+    // Cache the token (1 hour validity)
+    cachedIdToken = { token: idToken, expiresAt: Date.now() + 3500_000 };
+    return idToken;
+  } catch {
+    return null;
+  }
+}
+
 export async function executeCodeInterpreterTool(
   name: string,
   args: Record<string, unknown>,
@@ -99,12 +159,20 @@ export async function executeCodeInterpreterTool(
     // Server-side timeout: timeout + 10s buffer for network overhead
     const fetchTimeout = setTimeout(() => controller.abort(), (timeout + 10) * 1000);
 
+    // Authenticate: GCP IAM token (for Cloud Run) + app-level Bearer secret
+    const idToken = await getGcpIdToken(CODE_INTERPRETER_URL);
+    const authHeader = idToken
+      ? `Bearer ${idToken}` // GCP IAM ID token (passes Cloud Run auth)
+      : CODE_INTERPRETER_SECRET
+        ? `Bearer ${CODE_INTERPRETER_SECRET}` // Fallback: app-level secret (for local/public endpoints)
+        : undefined;
+
     const res = await fetch(`${CODE_INTERPRETER_URL}/execute`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(CODE_INTERPRETER_SECRET
-          ? { Authorization: `Bearer ${CODE_INTERPRETER_SECRET}` }
+        ...(authHeader
+          ? { Authorization: authHeader, "X-App-Secret": CODE_INTERPRETER_SECRET ?? "" }
           : {}),
       },
       body: JSON.stringify({

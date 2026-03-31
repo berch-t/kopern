@@ -56,12 +56,20 @@ app.add_middleware(
 
 
 async def verify_auth(request: Request) -> None:
-    """Verify Bearer token. In production, replace with GCP IAM token verification."""
+    """Verify app-level secret via Bearer token OR X-App-Secret header.
+    When Cloud Run handles IAM auth, the Bearer token is a GCP ID token,
+    so the app secret is passed via X-App-Secret instead."""
     if not CODE_INTERPRETER_SECRET:
         return  # No secret = dev mode (accept all)
+    # Check X-App-Secret header first (used when GCP IAM handles Bearer)
+    app_secret = request.headers.get("X-App-Secret", "")
+    if app_secret == CODE_INTERPRETER_SECRET:
+        return
+    # Fallback: check Bearer token (used in local/dev mode)
     auth = request.headers.get("Authorization", "")
-    if auth != f"Bearer {CODE_INTERPRETER_SECRET}":
-        raise HTTPException(status_code=401, detail="Unauthorized")
+    if auth == f"Bearer {CODE_INTERPRETER_SECRET}":
+        return
+    raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 # ---------------------------------------------------------------------------
