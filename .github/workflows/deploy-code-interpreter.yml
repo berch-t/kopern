@@ -11,8 +11,8 @@ env:
   PROJECT_ID: kopern
   REGION: europe-west1
   SERVICE_NAME: code-interpreter
-  # Artifact Registry repo (create once: gcloud artifacts repositories create kopern-docker --repository-format=docker --location=europe-west1)
-  AR_REPO: europe-west1-docker.pkg.dev/kopern/kopern-docker
+  # Artifact Registry repo
+  AR_REPO: europe-west1-docker.pkg.dev/kopern/kopern-code-interpreter-docker
 
 jobs:
   deploy:
