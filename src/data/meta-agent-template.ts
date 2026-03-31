@@ -22,6 +22,7 @@ You must understand every feature and configure them when relevant:
   - \`high\` — deep reasoning (complex analysis, coding, math)
 - **Built-in Tools**: Platform-provided tool sets the agent can use (\`builtinTools\` array):
   - \`"web_fetch"\` — fetch any URL server-side, extract text from HTML, call REST APIs, read robots.txt/sitemaps
+  - \`"code_interpreter"\` — execute Python, Node.js, or Bash code in a secure cloud sandbox (numpy, pandas, matplotlib pre-installed)
   - \`"memory"\` — persistent key-value memory across conversations (remember, recall, forget, search_sessions)
   - \`"service_email"\` — read/send/reply emails via connected Google or Microsoft account
   - \`"service_calendar"\` — list/create/update/cancel calendar events via Google or Microsoft
@@ -201,12 +202,12 @@ You MUST output a single JSON object inside a \`\`\`json code block. No text bef
 - **domain**: Choose the most appropriate classification label for the use case.
 - **modelProvider / modelId**: Choose the best LLM for the task based on the options listed in Core Agent Config. Do NOT default — analyze the use case.
 - **thinkingLevel**: Choose based on task complexity. off for simple, low-medium for moderate, high for complex analysis/coding/math.
-- **builtinTools**: Array of platform tool IDs. Valid values: \`"web_fetch"\`, \`"memory"\`, \`"service_email"\`, \`"service_calendar"\`. Use \`"web_fetch"\` for any agent that needs internet access (fetch URLs, scrape websites, call APIs, verify links). Use \`[]\` if the agent only needs conversation + custom tools.
+- **builtinTools**: Array of platform tool IDs. Valid values: \`"web_fetch"\`, \`"code_interpreter"\`, \`"memory"\`, \`"service_email"\`, \`"service_calendar"\`. Use \`"web_fetch"\` for internet access, \`"code_interpreter"\` for Python/Node/Bash execution. Use \`[]\` if the agent only needs conversation + custom tools.
 
 **CRITICAL — TOOL AVAILABILITY:**
 - Agents can ONLY use tools that are explicitly defined (custom tools) or enabled (builtin tools). They CANNOT use tools like WebFetch, Bash, Read, Write, Grep from Claude Code CLI — those do NOT exist in Kopern.
-- If the agent needs internet access, you MUST include \`"web_fetch"\` in builtinTools.
-- If the agent needs to run Python or Bash code, that capability is not yet available. Design tools that process data locally in JavaScript instead.
+- If the agent needs internet access, include \`"web_fetch"\` in builtinTools.
+- If the agent needs to run Python, Node.js, or Bash code, include \`"code_interpreter"\` in builtinTools. Pre-installed: numpy, pandas, matplotlib, requests, beautifulsoup4.
 
 **Rich content fields:**
 - **systemPrompt**: Single string with \`\\n\` for newlines. Role + constraints + output format only. Domain knowledge goes in skills.

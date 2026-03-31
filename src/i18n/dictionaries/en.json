@@ -242,7 +242,8 @@
         "memory": "Remember facts across conversations, recall context, and search past sessions",
         "service_email": "Read, send, and reply to emails via connected Google or Microsoft account",
         "service_calendar": "List events, check availability, create/update/cancel calendar events",
-        "web_fetch": "Fetch any URL and extract text content — web pages, APIs, RSS feeds, robots.txt, sitemaps"
+        "web_fetch": "Fetch any URL and extract text content — web pages, APIs, RSS feeds, robots.txt, sitemaps",
+        "code_interpreter": "Execute Python, Node.js, or Bash code in a secure cloud sandbox — data analysis, charts, scraping"
       },
       "save": "Save Agent",
       "create": "Create Agent",

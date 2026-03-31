@@ -242,7 +242,8 @@
         "memory": "Retenir des faits entre les conversations, rappeler le contexte et rechercher dans les sessions passées",
         "service_email": "Lire, envoyer et répondre aux emails via un compte Google ou Microsoft connecté",
         "service_calendar": "Consulter les événements, vérifier les disponibilités, créer/modifier/annuler des rendez-vous",
-        "web_fetch": "Récupérer n'importe quelle URL et extraire le contenu texte — pages web, APIs, flux RSS, robots.txt, sitemaps"
+        "web_fetch": "Récupérer n'importe quelle URL et extraire le contenu texte — pages web, APIs, flux RSS, robots.txt, sitemaps",
+        "code_interpreter": "Exécuter du code Python, Node.js ou Bash dans un sandbox cloud sécurisé — analyse de données, graphiques, scraping"
       },
       "save": "Enregistrer l'Agent",
       "create": "Créer l'Agent",

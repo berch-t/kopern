@@ -461,6 +461,44 @@ Contrairement aux outils personnalisés qui tournent dans un sandbox VM sans acc
 
 ---
 
+## Code Interpreter (Outil intégré)
+
+L'outil intégré \`code_interpreter\` permet à votre agent d'**exécuter du vrai code** dans un sandbox cloud sécurisé. Il supporte Python, Node.js et Bash avec des packages courants pré-installés.
+
+### Activer Code Interpreter
+
+1. Ouvrez la page de détail de votre agent
+2. Allez dans la section **Tools**
+3. Activez l'outil intégré **Code Interpreter**
+4. Sauvegardez — votre agent peut maintenant appeler \`code_interpreter(language, code)\`
+
+### Langages supportés
+
+| Langage | Packages pré-installés | Cas d'usage |
+|---------|----------------------|-------------|
+| **Python** | numpy, pandas, scipy, matplotlib, seaborn, pillow, requests, beautifulsoup4, httpx | Analyse de données, graphiques, scraping, calculs, ML |
+| **Node.js** | fs, path, http, https, crypto (built-in) | Intégrations API, traitement JSON, opérations async |
+| **Bash** | curl, wget, jq, git, grep, sed, awk | Commandes système, traitement de texte, manipulation de fichiers |
+
+### Paramètres
+
+| Paramètre | Type | Défaut | Description |
+|-----------|------|--------|-------------|
+| \`language\` | string | requis | \`python\`, \`nodejs\` ou \`bash\` |
+| \`code\` | string | requis | Code à exécuter (max 100KB) |
+| \`timeout\` | number | 60 | Timeout en secondes (max 300) |
+
+### Sécurité
+
+- Le code tourne dans un **container Docker isolé** sur Google Cloud Run
+- Chaque exécution a son propre répertoire temporaire, nettoyé après
+- Le code tourne comme **utilisateur non-root** (\`executor\`)
+- **Pas d'accès aux secrets Kopern** — le sandbox n'a aucun credential Firestore/Stripe/API
+- **Timeout forcé** — processus tué après le délai spécifié
+- **Auto-scale à zéro** — aucun coût quand aucun agent n'exécute du code
+
+---
+
 ## Outils personnalisés
 
 ### Fonctionnement de l'appel d'outil

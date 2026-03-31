@@ -18,6 +18,7 @@ import { getPisteTools, executePisteTool, isPisteTool } from "@/lib/tools/piste-
 import { getMemoryTools, executeMemoryTool, isMemoryTool, injectMemoryContext } from "@/lib/tools/memory-tools";
 import { getEmailTools, getCalendarTools, executeServiceTool, isServiceTool } from "@/lib/tools/service-tools";
 import { WEB_FETCH_TOOLS, executeWebFetchTool, isWebFetchTool } from "@/lib/tools/web-fetch-tool";
+import { CODE_INTERPRETER_TOOLS, executeCodeInterpreterTool, isCodeInterpreterTool } from "@/lib/tools/code-interpreter-tool";
 import { runExtensions } from "@/lib/extensions/extension-runner";
 import { fireOutboundWebhooks } from "@/lib/connectors/webhook";
 import type { ExtensionEventType } from "@/lib/firebase/firestore";
@@ -150,6 +151,7 @@ export async function runAgentWithTools(
   const hasServiceEmail = agentBuiltinTools.includes("service_email");
   const hasServiceCalendar = agentBuiltinTools.includes("service_calendar");
   const hasWebFetch = agentBuiltinTools.includes("web_fetch");
+  const hasCodeInterpreter = agentBuiltinTools.includes("code_interpreter");
 
   // GitHub tools (with write access if agent has github_write builtin)
   if (connectedRepos.length > 0) {
@@ -189,6 +191,11 @@ export async function runAgentWithTools(
   // Web fetch tool (server-side HTTP fetch)
   if (hasWebFetch) {
     tools.push(...WEB_FETCH_TOOLS);
+  }
+
+  // Code interpreter (Cloud Run Docker sandbox)
+  if (hasCodeInterpreter) {
+    tools.push(...CODE_INTERPRETER_TOOLS);
   }
 
   // Slack tools (loaded when agent has a Slack connection with valid bot token)
@@ -406,7 +413,9 @@ export async function runAgentWithTools(
                             ? await executePisteTool(tc.name, tc.input)
                             : isWebFetchTool(tc.name)
                               ? await executeWebFetchTool(tc.name, tc.input)
-                              : await executeTool(tc, toolCtx);
+                              : isCodeInterpreterTool(tc.name)
+                                ? await executeCodeInterpreterTool(tc.name, tc.input)
+                                : await executeTool(tc, toolCtx);
                   // Count tool result tokens as additional input
                   inputTokens += estimateTokens(result.result);
                   callbacks.onToolEnd?.({

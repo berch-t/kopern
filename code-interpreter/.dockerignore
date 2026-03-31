@@ -1,0 +1,29 @@
+# Ignore the entire Next.js app (Vercel handles that)
+../src/
+../node_modules/
+../.next/
+../public/
+../package*.json
+../tsconfig*.json
+../next.config.*
+../tailwind.config.*
+../postcss.config.*
+../biome.json
+../.env*
+../firestore.rules
+../vercel.json
+
+# Standard Docker ignores
+.git
+.gitignore
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+*.egg-info
+dist/
+build/
+.venv/
+venv/
+README.md
+LICENSE

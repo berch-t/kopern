@@ -473,6 +473,70 @@ Unlike custom tools which run in a sandboxed VM with no network access, \`web_fe
 
 ---
 
+## Code Interpreter (Built-in Tool)
+
+The \`code_interpreter\` built-in tool lets your agent **execute real code** in a secure cloud sandbox. It supports Python, Node.js, and Bash with common packages pre-installed.
+
+### Enabling Code Interpreter
+
+1. Open your agent's detail page
+2. Go to the **Tools** section
+3. Enable the **Code Interpreter** built-in tool
+4. Save — your agent can now call \`code_interpreter(language, code)\`
+
+### Supported Languages
+
+| Language | Pre-installed Packages | Use Cases |
+|----------|----------------------|-----------|
+| **Python** | numpy, pandas, scipy, matplotlib, seaborn, pillow, requests, beautifulsoup4, httpx | Data analysis, charts, web scraping, calculations, ML |
+| **Node.js** | Built-in fs, path, http, https, crypto | API integrations, JSON processing, async operations |
+| **Bash** | curl, wget, jq, git, grep, sed, awk | System commands, text processing, file manipulation |
+
+### Examples
+
+**Python — Data Analysis:**
+\`\`\`
+code_interpreter({
+  language: "python",
+  code: "import pandas as pd\\ndata = [10, 20, 30, 40, 50]\\ndf = pd.DataFrame({'values': data})\\nprint(df.describe())"
+})
+\`\`\`
+
+**Python — Generate Chart:**
+\`\`\`
+code_interpreter({
+  language: "python",
+  code: "import matplotlib.pyplot as plt\\nimport os\\nx = range(10)\\ny = [i**2 for i in x]\\nplt.plot(x, y)\\nplt.savefig(os.path.join(os.environ['OUTPUT_DIR'], 'chart.png'))"
+})
+\`\`\`
+
+**Bash — Fetch and process:**
+\`\`\`
+code_interpreter({
+  language: "bash",
+  code: "curl -s https://api.github.com/repos/anthropics/claude-code | jq '{name, stars: .stargazers_count, language}'"
+})
+\`\`\`
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| \`language\` | string | required | \`python\`, \`nodejs\`, or \`bash\` |
+| \`code\` | string | required | Code to execute (max 100KB) |
+| \`timeout\` | number | 60 | Timeout in seconds (max 300) |
+
+### Security
+
+- Code runs in an **isolated Docker container** on Google Cloud Run
+- Each execution gets its own temporary directory, cleaned up after
+- Code runs as a **non-root user** (\`executor\`)
+- **No access to Kopern secrets** — the sandbox has no Firestore/Stripe/API credentials
+- **Timeout enforcement** — processes killed after the specified timeout
+- **Auto-scale to zero** — no cost when no agents are executing code
+
+---
+
 ## Custom Tools
 
 ### How Tool Calling Works
