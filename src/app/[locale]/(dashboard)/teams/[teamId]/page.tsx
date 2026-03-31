@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useMemo, lazy, Suspense } from "react";
+import { use, useState, useMemo, useEffect, lazy, Suspense } from "react";
 import { useDictionary } from "@/providers/LocaleProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { useDocument, useCollection } from "@/hooks/useFirestore";
@@ -22,6 +22,7 @@ import { TeamMemberList } from "@/components/teams/TeamMemberList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -50,6 +51,8 @@ import { RoutineEditor } from "@/components/teams/RoutineEditor";
 import { OrgChart } from "@/components/teams/OrgChart";
 import { GoalTree } from "@/components/teams/GoalTree";
 import { logTeamActivity } from "@/actions/team-activity";
+import { createTeamRun, completeTeamRun, listTeamRuns } from "@/actions/team-runs";
+import type { TeamRunDoc, TeamRunMemberResult } from "@/lib/firebase/firestore";
 
 const FlowEditor = lazy(() => import("@/components/teams/FlowEditor"));
 
@@ -87,6 +90,23 @@ export default function TeamDetailPage({
   const [results, setResults] = useState<
     { agentId: string; status: "pending" | "running" | "completed" | "failed"; output: string }[]
   >([]);
+  const [pastRuns, setPastRuns] = useState<(TeamRunDoc & { id: string })[]>([]);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+
+  // Load past runs on mount
+  useEffect(() => {
+    if (!user) return;
+    listTeamRuns(user.uid, teamId).then(setPastRuns).catch(() => {});
+  }, [user, teamId]);
+
+  // Sync edit fields when team loads
+  useEffect(() => {
+    if (team) {
+      setEditName(team.name);
+      setEditDescription(team.description);
+    }
+  }, [team]);
 
   // Build agent name map for flow serialization
   const agentNames = useMemo(() => {
@@ -129,8 +149,13 @@ export default function TeamDetailPage({
     if (!user) return;
     setSavingFlow(true);
     try {
+      // Strip runtime status from nodes before persisting
+      const cleanNodes = nodes.map(({ id, type, position, data }) => ({
+        id, type, position,
+        data: { ...data, status: undefined },
+      })) as FlowNode[];
       await updateAgentTeam(user.uid, teamId, {
-        flowNodes: nodes,
+        flowNodes: cleanNodes,
         flowEdges: edges,
       });
       logTeamActivity(user.uid, teamId, "flow_updated", {
@@ -163,6 +188,15 @@ export default function TeamDetailPage({
       agentCount: team.agents.length,
       mode: team.executionMode,
     }).catch(() => {});
+
+    // Create persistent run record
+    let runId = "";
+    try {
+      runId = await createTeamRun(user.uid, teamId, {
+        prompt: prompt.trim(),
+        executionMode: team.executionMode,
+      });
+    } catch { /* continue without persistence */ }
 
     try {
       const teamPayload = {
@@ -266,9 +300,51 @@ export default function TeamDetailPage({
           }
         }
       }
+      // Persist completed run
+      if (runId && user) {
+        const finalResults: TeamRunMemberResult[] = [];
+        // Read current results from state via a ref-safe approach
+        setResults((prev) => {
+          for (const r of prev) {
+            finalResults.push({
+              agentId: r.agentId,
+              agentName: getAgentName(r.agentId),
+              role: team.agents.find((m) => m.agentId === r.agentId)?.role ?? "",
+              status: r.status === "completed" ? "completed" : "failed",
+              output: r.output,
+              inputTokens: 0,
+              outputTokens: 0,
+              toolCallCount: 0,
+              durationMs: 0,
+            });
+          }
+          return prev;
+        });
+        completeTeamRun(user.uid, teamId, runId, {
+          status: "completed",
+          results: finalResults,
+          totalCost: 0,
+          totalTokensIn: 0,
+          totalTokensOut: 0,
+        }).catch(() => {});
+        logTeamActivity(user.uid, teamId, "execution_completed", {
+          message: `${finalResults.filter((r) => r.status === "completed").length}/${finalResults.length} agents completed`,
+        }).catch(() => {});
+        // Refresh past runs
+        listTeamRuns(user.uid, teamId).then(setPastRuns).catch(() => {});
+      }
     } catch (err) {
       console.error("Team execution error:", err);
       if (user) {
+        if (runId) {
+          completeTeamRun(user.uid, teamId, runId, {
+            status: "failed",
+            results: [],
+            totalCost: 0,
+            totalTokensIn: 0,
+            totalTokensOut: 0,
+          }).catch(() => {});
+        }
         logTeamActivity(user.uid, teamId, "execution_failed", {
           message: String(err),
         }).catch(() => {});
@@ -285,17 +361,34 @@ export default function TeamDetailPage({
       <SlideUp>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">{team.name}</h1>
-            <div className="mt-1 flex items-center gap-2">
-              <Badge variant="secondary" className={colorClass}>
-                {team.executionMode}
-              </Badge>
-              <span className="text-sm text-muted-foreground">
-                {team.agents.length} agent{team.agents.length !== 1 ? "s" : ""}
-              </span>
-            </div>
-            {team.description && (
-              <p className="mt-2 text-sm text-muted-foreground">{team.description}</p>
+            {editing ? (
+              <div className="space-y-2">
+                <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="text-2xl font-bold h-auto py-1" />
+                <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="Description..." className="text-sm" />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={async () => {
+                    if (!user) return;
+                    await updateAgentTeam(user.uid, teamId, { name: editName.trim(), description: editDescription.trim() });
+                    setEditing(false);
+                  }}>Save</Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setEditName(team.name); setEditDescription(team.description); }}>Cancel</Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <h1 className="text-3xl font-bold">{team.name}</h1>
+                <div className="mt-1 flex items-center gap-2">
+                  <Badge variant="secondary" className={colorClass}>
+                    {team.executionMode}
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">
+                    {team.agents.length} agent{team.agents.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
+                {team.description && (
+                  <p className="mt-2 text-sm text-muted-foreground">{team.description}</p>
+                )}
+              </>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -491,6 +584,76 @@ export default function TeamDetailPage({
           </Card>
         </FadeIn>
       )}
+      {/* Past Runs History */}
+      {pastRuns.length > 0 && (
+        <FadeIn delay={0.3}>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Execution History</CardTitle>
+                <div className="flex gap-1.5">
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                    const data = pastRuns.map((r) => ({
+                      id: r.id, prompt: r.prompt, status: r.status, mode: r.executionMode,
+                      agents: r.results?.length ?? 0, startedAt: r.startedAt?.toDate?.()?.toISOString() ?? "",
+                    }));
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a"); a.href = url;
+                    a.download = `team-runs-${teamId}-${new Date().toISOString().slice(0, 10)}.json`;
+                    a.click(); URL.revokeObjectURL(url);
+                  }}>
+                    <Download className="h-3.5 w-3.5" /> JSON
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0 overflow-x-auto">
+              <div className="grid grid-cols-[auto_1fr_72px_48px_72px_100px] items-center gap-x-3 px-4 py-2 border-b text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                <span className="w-2" />
+                <span>Prompt</span>
+                <span className="text-right">Status</span>
+                <span className="text-right">Agents</span>
+                <span className="text-right">Mode</span>
+                <span className="text-right">Date</span>
+              </div>
+              <div className="divide-y">
+                {pastRuns.map((run) => {
+                  const isExpanded = results.length > 0 && false; // TODO: expand on click
+                  return (
+                    <div key={run.id} className="grid grid-cols-[auto_1fr_72px_48px_72px_100px] items-center gap-x-3 px-4 py-2 hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => {
+                        // Load this run's results into the results panel
+                        if (run.results?.length) {
+                          setResults(run.results.map((r) => ({
+                            agentId: r.agentId,
+                            status: r.status === "completed" ? "completed" as const : "failed" as const,
+                            output: r.output,
+                          })));
+                        }
+                      }}
+                    >
+                      <div className={`h-2 w-2 shrink-0 rounded-full ${run.status === "completed" ? "bg-emerald-500" : run.status === "failed" ? "bg-red-500" : "bg-blue-500 animate-pulse"}`} />
+                      <p className="text-sm truncate min-w-0">{run.prompt}</p>
+                      <div className="text-right">
+                        <Badge variant={run.status === "completed" ? "secondary" : "destructive"} className="text-[10px] px-1.5 py-0">
+                          {run.status}
+                        </Badge>
+                      </div>
+                      <span className="text-xs text-muted-foreground text-right tabular-nums">{run.results?.length ?? 0}</span>
+                      <span className="text-xs text-muted-foreground text-right">{run.executionMode}</span>
+                      <span className="text-xs text-muted-foreground text-right whitespace-nowrap">
+                        {run.startedAt?.toDate?.()?.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) ?? "—"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </FadeIn>
+      )}
+
       {/* Org Chart */}
       {team.agents.some((m) => m.reportsTo) && (
         <OrgChart members={team.agents} agents={agents} />

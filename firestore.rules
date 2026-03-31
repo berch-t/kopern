@@ -119,6 +119,11 @@ service cloud.firestore {
       match /agentTeams/{teamId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
 
+        // Team Runs (execution history)
+        match /runs/{runId} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+
         // Team Activity Log
         match /activity/{activityId} {
           allow read: if request.auth != null && request.auth.uid == userId;

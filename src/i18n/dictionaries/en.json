@@ -460,7 +460,12 @@
     "goals": {
       "title": "Goals",
       "noGoals": "No goals defined",
-      "noGoalsDesc": "Create goals to track your team objectives."
+      "noGoalsDesc": "Create goals to track your team objectives.",
+      "newGoal": "New Goal",
+      "titleLabel": "Title",
+      "descLabel": "Description",
+      "create": "Create Goal",
+      "created": "Goal created"
     },
     "activity": {
       "title": "Activity",

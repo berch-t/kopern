@@ -460,7 +460,12 @@
     "goals": {
       "title": "Objectifs",
       "noGoals": "Aucun objectif défini",
-      "noGoalsDesc": "Créez des objectifs pour suivre les résultats de votre équipe."
+      "noGoalsDesc": "Créez des objectifs pour suivre les résultats de votre équipe.",
+      "newGoal": "Nouvel objectif",
+      "titleLabel": "Titre",
+      "descLabel": "Description",
+      "create": "Créer l'objectif",
+      "created": "Objectif créé"
     },
     "activity": {
       "title": "Activité",

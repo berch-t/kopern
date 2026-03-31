@@ -2,12 +2,23 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { listTeamGoals } from "@/actions/goals";
+import { useDictionary } from "@/providers/LocaleProvider";
+import { listTeamGoals, createGoal } from "@/actions/goals";
 import type { GoalDoc, GoalStatus } from "@/lib/firebase/firestore";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { FadeIn } from "@/components/motion/FadeIn";
-import { Target, ChevronRight, ChevronDown, Loader2 } from "lucide-react";
+import { Target, ChevronRight, ChevronDown, Loader2, Plus } from "lucide-react";
+import { toast } from "sonner";
 
 const STATUS_CONFIG: Record<GoalStatus, { color: string; label: string }> = {
   not_started: { color: "bg-gray-500/15 text-gray-700 dark:text-gray-400", label: "Not started" },
@@ -63,8 +74,26 @@ function GoalNode({ goal, children, depth }: { goal: GoalDoc & { id: string }; c
 
 export function GoalTree({ teamId }: GoalTreeProps) {
   const { user } = useAuth();
+  const t = useDictionary();
   const [goals, setGoals] = useState<(GoalDoc & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function handleCreate() {
+    if (!user || !newTitle.trim()) return;
+    setSaving(true);
+    try {
+      await createGoal(user.uid, { title: newTitle.trim(), description: newDesc.trim(), teamId });
+      const updated = await listTeamGoals(user.uid, teamId);
+      setGoals(updated);
+      setNewTitle(""); setNewDesc(""); setDialogOpen(false);
+      toast.success(t.teams?.goals?.created ?? "Goal created");
+    } catch { toast.error("Error"); }
+    finally { setSaving(false); }
+  }
 
   useEffect(() => {
     if (!user) return;
@@ -89,14 +118,34 @@ export function GoalTree({ teamId }: GoalTreeProps) {
     }
   }
 
+  const goalDialog = (
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm"><Plus className="h-3.5 w-3.5 mr-1" />{t.teams?.goals?.newGoal ?? "New Goal"}</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>{t.teams?.goals?.newGoal ?? "New Goal"}</DialogTitle></DialogHeader>
+        <div className="space-y-3 pt-2">
+          <div className="space-y-1.5"><Label>{t.teams?.goals?.titleLabel ?? "Title"}</Label><Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Q2 Revenue Target..." /></div>
+          <div className="space-y-1.5"><Label>{t.teams?.goals?.descLabel ?? "Description"}</Label><Input value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="Achieve 10K MRR by end of Q2..." /></div>
+          <Button onClick={handleCreate} disabled={saving || !newTitle.trim()} className="w-full">
+            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+            {t.teams?.goals?.create ?? "Create Goal"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (goals.length === 0) {
     return (
       <FadeIn>
         <Card className="border-dashed">
           <CardContent className="py-8 text-center text-muted-foreground">
             <Target className="h-8 w-8 mx-auto mb-3 opacity-40" />
-            <p className="text-sm">No goals defined</p>
-            <p className="text-xs mt-1">Create goals to track your team objectives.</p>
+            <p className="text-sm">{t.teams?.goals?.noGoals ?? "No goals defined"}</p>
+            <p className="text-xs mt-1">{t.teams?.goals?.noGoalsDesc ?? "Create goals to track your team objectives."}</p>
+            <div className="mt-4">{goalDialog}</div>
           </CardContent>
         </Card>
       </FadeIn>
@@ -107,6 +156,13 @@ export function GoalTree({ teamId }: GoalTreeProps) {
     <FadeIn>
       <Card>
         <CardContent className="pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-muted-foreground" />
+              <span className="text-base font-semibold">{t.teams?.goals?.title ?? "Goals"}</span>
+            </div>
+            {goalDialog}
+          </div>
           {rootGoals.map((goal) => (
             <GoalNode
               key={goal.id}

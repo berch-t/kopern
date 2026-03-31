@@ -341,6 +341,33 @@ export interface TeamActivityDoc {
   timestamp: Timestamp;
 }
 
+// --- Team Runs ---
+
+export interface TeamRunMemberResult {
+  agentId: string;
+  agentName: string;
+  role: string;
+  status: "completed" | "failed";
+  output: string;
+  inputTokens: number;
+  outputTokens: number;
+  toolCallCount: number;
+  durationMs: number;
+}
+
+export interface TeamRunDoc {
+  prompt: string;
+  executionMode: "parallel" | "sequential" | "conditional";
+  status: "running" | "completed" | "failed";
+  results: TeamRunMemberResult[];
+  totalCost: number;
+  totalTokensIn: number;
+  totalTokensOut: number;
+  startedAt: Timestamp;
+  completedAt?: Timestamp;
+  createdAt: Timestamp;
+}
+
 // --- Team Tasks ---
 
 export type TaskStatus = "backlog" | "ready" | "in_progress" | "review" | "done" | "blocked";
@@ -716,6 +743,14 @@ export function agentTeamDoc(userId: string, teamId: string) {
 
 export function teamActivityCollection(userId: string, teamId: string) {
   return collection(db, "users", userId, "agentTeams", teamId, "activity") as CollectionReference<TeamActivityDoc>;
+}
+
+export function teamRunsCollection(userId: string, teamId: string) {
+  return collection(db, "users", userId, "agentTeams", teamId, "runs") as CollectionReference<TeamRunDoc>;
+}
+
+export function teamRunDoc(userId: string, teamId: string, runId: string) {
+  return doc(db, "users", userId, "agentTeams", teamId, "runs", runId);
 }
 
 export function teamTasksCollection(userId: string, teamId: string) {
