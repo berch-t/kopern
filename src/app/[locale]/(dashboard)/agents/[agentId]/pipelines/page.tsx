@@ -69,7 +69,7 @@ export default function PipelinesPage({
       </SlideUp>
 
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
           {[...Array(2)].map((_, i) => (
             <div
               key={i}
@@ -94,7 +94,7 @@ export default function PipelinesPage({
           </div>
         </SlideUp>
       ) : (
-        <StaggerChildren className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StaggerChildren className="grid gap-3 grid-cols-1 md:grid-cols-2">
           {pipelines.map((pipeline) => (
             <motion.div key={pipeline.id} variants={staggerItem}>
               <LocalizedLink

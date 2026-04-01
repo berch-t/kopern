@@ -107,7 +107,7 @@ export default function SessionDetailPage({
     return (
       <div className="space-y-6">
         <div className="h-10 w-64 animate-pulse rounded-lg bg-muted" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="h-20 animate-pulse rounded-lg border bg-muted" />
           ))}
@@ -209,7 +209,7 @@ export default function SessionDetailPage({
 
       {/* Stat cards */}
       <FadeIn delay={0.1}>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
           {statCards.map((stat) => (
             <Card key={stat.label}>
               <CardContent className="flex items-center gap-4 p-4">

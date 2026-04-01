@@ -101,7 +101,7 @@ export function ToolForm({ agentId, toolId, isNew }: ToolFormProps) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-3 grid-cols-1 md:grid-cols-3">
         <div className="space-y-2">
           <Label>Name</Label>
           <Input

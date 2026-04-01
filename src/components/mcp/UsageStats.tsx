@@ -43,7 +43,7 @@ export function UsageStats({ usage }: UsageStatsProps) {
           Usage — {current.yearMonth}
         </CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-4 sm:grid-cols-3">
+      <CardContent className="grid gap-3 grid-cols-1 md:grid-cols-3">
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground">Requests</p>
           <p className="text-2xl font-bold">{formatNumber(current.requestCount)}</p>

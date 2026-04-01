@@ -145,7 +145,7 @@ function renderConfigFields(
   switch (criterion.type) {
     case "output_match":
       return (
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid gap-2 grid-cols-1 md:grid-cols-3">
           <div>
             <Label className="text-xs">Mode</Label>
             <Select

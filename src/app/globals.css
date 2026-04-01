@@ -275,3 +275,20 @@
   z-index: 1;
   border-radius: 11px;
 }
+
+/* React Flow — reset default styles on custom node types */
+.react-flow__node-agent,
+.react-flow__node-trigger,
+.react-flow__node-condition,
+.react-flow__node-output,
+.react-flow__node-export {
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  width: auto !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  font-size: inherit !important;
+  text-align: inherit !important;
+  color: inherit !important;
+}

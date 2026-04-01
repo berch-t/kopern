@@ -1,6 +1,7 @@
 import type {
   AgentTeamDoc,
   AgentTeamMember,
+  AgentBranding,
   FlowNode,
   FlowEdge,
 } from "@/lib/firebase/firestore";
@@ -15,6 +16,7 @@ const X_GAP = 260;
 export function teamToFlow(
   team: AgentTeamDoc,
   agentNames: Record<string, string>,
+  agentBrandings?: Record<string, AgentBranding | null>,
 ): { nodes: FlowNode[]; edges: FlowEdge[] } {
   // If flow data already exists, return it directly
   if (team.flowNodes?.length) {
@@ -53,6 +55,7 @@ export function teamToFlow(
           role: member.role,
           roleType: member.roleType,
           description: member.description,
+          branding: agentBrandings?.[member.agentId] ?? null,
         },
       });
       edges.push({
@@ -94,6 +97,7 @@ export function teamToFlow(
           role: member.role,
           roleType: member.roleType,
           description: member.description,
+          branding: agentBrandings?.[member.agentId] ?? null,
         },
       });
       edges.push({
@@ -148,6 +152,7 @@ export function teamToFlow(
           role: member.role,
           roleType: member.roleType,
           description: member.description,
+          branding: agentBrandings?.[member.agentId] ?? null,
         },
       });
       edges.push({

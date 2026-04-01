@@ -22,6 +22,8 @@ import { AgentNode } from "./nodes/AgentNode";
 import { ConditionNode } from "./nodes/ConditionNode";
 import { TriggerNode } from "./nodes/TriggerNode";
 import { OutputNode } from "./nodes/OutputNode";
+import { ExportNode } from "./nodes/ExportNode";
+import { NodeEditDialog } from "./NodeEditDialog";
 import type { FlowNode, FlowEdge, AgentDoc } from "@/lib/firebase/firestore";
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +32,7 @@ import {
   GitBranch,
   Play,
   Flag,
+  Download,
   Save,
   Undo2,
   ZoomIn,
@@ -61,6 +64,7 @@ const nodeTypes = {
   condition: ConditionNode,
   trigger: TriggerNode,
   output: OutputNode,
+  export: ExportNode,
 };
 
 // ---------------------------------------------------------------------------
@@ -72,6 +76,7 @@ const PALETTE_ITEMS = [
   { type: "condition" as const, icon: GitBranch, label: "Condition", color: "text-amber-500" },
   { type: "trigger" as const, icon: Play, label: "Trigger", color: "text-emerald-500" },
   { type: "output" as const, icon: Flag, label: "Output", color: "text-foreground/70" },
+  { type: "export" as const, icon: Download, label: "Export", color: "text-rose-500" },
 ];
 
 const DEFAULT_DATA: Record<string, Record<string, unknown>> = {
@@ -79,6 +84,7 @@ const DEFAULT_DATA: Record<string, Record<string, unknown>> = {
   condition: { label: "Condition", condition: "" },
   trigger: { label: "Start", triggerType: "manual" },
   output: { label: "Output", aggregation: "concat" },
+  export: { label: "Export", exportFormat: "json", autoDownload: true },
 };
 
 // ---------------------------------------------------------------------------
@@ -96,14 +102,24 @@ export default function FlowEditor({
 }: FlowEditorProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
-  // Inject runtime status into node data
+  // Build branding lookup from agents prop
+  const brandingMap = useMemo(() => {
+    const map: Record<string, unknown> = {};
+    for (const a of agents) map[a.id] = a.branding ?? null;
+    return map;
+  }, [agents]);
+
+  // Inject runtime status + branding into node data
   const enrichedInitial = useMemo(() => {
-    if (!nodeStatus) return initialNodes as Node[];
     return initialNodes.map((n) => ({
       ...n,
-      data: { ...n.data, status: nodeStatus[n.id] ?? "idle" },
+      data: {
+        ...n.data,
+        ...(nodeStatus ? { status: nodeStatus[n.id] ?? "idle" } : {}),
+        ...(n.type === "agent" && n.data.agentId ? { branding: brandingMap[n.data.agentId as string] ?? null } : {}),
+      },
     })) as Node[];
-  }, [initialNodes, nodeStatus]);
+  }, [initialNodes, nodeStatus, brandingMap]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(enrichedInitial);
   const [edges, setEdges, onEdgesChange] = useEdgesState(
@@ -114,18 +130,41 @@ export default function FlowEditor({
     })) as Edge[],
   );
 
-  // Update status when prop changes
+  // Update status + branding when props change
   useMemo(() => {
-    if (!nodeStatus) return;
+    if (!nodeStatus && !brandingMap) return;
     setNodes((nds) =>
       nds.map((n) => ({
         ...n,
-        data: { ...n.data, status: nodeStatus[n.id] ?? "idle" },
+        data: {
+          ...n.data,
+          ...(nodeStatus ? { status: nodeStatus[n.id] ?? "idle" } : {}),
+          ...(n.type === "agent" && n.data.agentId ? { branding: brandingMap[n.data.agentId as string] ?? null } : {}),
+        },
       })),
     );
-  }, [nodeStatus, setNodes]);
+  }, [nodeStatus, brandingMap, setNodes]);
 
   const [isDirty, setIsDirty] = useState(false);
+
+  // Node edit dialog state
+  const [editingNode, setEditingNode] = useState<Node | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  const onNodeDoubleClick = useCallback((_event: React.MouseEvent, node: Node) => {
+    setEditingNode(node);
+    setEditDialogOpen(true);
+  }, []);
+
+  const handleNodeDataSave = useCallback(
+    (nodeId: string, data: Record<string, unknown>) => {
+      setNodes((nds) =>
+        nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n)),
+      );
+      setIsDirty(true);
+    },
+    [setNodes],
+  );
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -203,15 +242,14 @@ export default function FlowEditor({
       position: n.position,
       data: n.data as FlowNode["data"],
     }));
-    const flowEdges: FlowEdge[] = edges.map((e) => ({
-      id: e.id,
-      source: e.source,
-      target: e.target,
-      sourceHandle: e.sourceHandle ?? undefined,
-      targetHandle: e.targetHandle ?? undefined,
-      label: typeof e.label === "string" ? e.label : undefined,
-      animated: e.animated,
-    }));
+    const flowEdges: FlowEdge[] = edges.map((e) => {
+      const edge: FlowEdge = { id: e.id, source: e.source, target: e.target };
+      if (e.sourceHandle) edge.sourceHandle = e.sourceHandle;
+      if (e.targetHandle) edge.targetHandle = e.targetHandle;
+      if (typeof e.label === "string") edge.label = e.label;
+      if (e.animated != null) edge.animated = e.animated;
+      return edge;
+    });
     await onSave(flowNodes, flowEdges);
     setIsDirty(false);
   }, [nodes, edges, onSave]);
@@ -226,6 +264,7 @@ export default function FlowEditor({
         onConnect={onConnect}
         onDragOver={onDragOver}
         onDrop={onDrop}
+        onNodeDoubleClick={onNodeDoubleClick}
         nodeTypes={nodeTypes}
         fitView
         snapToGrid
@@ -287,6 +326,14 @@ export default function FlowEditor({
           </div>
         </Panel>
       </ReactFlow>
+
+      <NodeEditDialog
+        node={editingNode}
+        agents={agents}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSave={handleNodeDataSave}
+      />
     </div>
   );
 }

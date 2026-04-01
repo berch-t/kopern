@@ -367,7 +367,7 @@ export default function OptimizePage({
         <Card>
           <CardContent className="p-4">
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabMode)}>
-              <TabsList className="grid grid-cols-3 lg:grid-cols-6 w-full">
+              <TabsList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 w-full">
                 {(Object.entries(modeDescriptions) as [TabMode, { icon: typeof Zap; color: string }][]).map(
                   ([mode, { icon: Icon, color }]) => (
                     <TabsTrigger key={mode} value={mode} className="gap-1.5 text-xs sm:text-sm">
@@ -381,7 +381,7 @@ export default function OptimizePage({
 
               {/* Configuration section — shared across all tabs */}
               <div className="mt-4 space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
                   <div className="space-y-2">
                     <Label>{tOpt.gradingSuite}</Label>
                     <Select value={selectedSuite} onValueChange={setSelectedSuite}>
@@ -1024,7 +1024,7 @@ function StressLabReportView({
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Stats grid */}
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-3 grid-cols-1 md:grid-cols-3">
             <div className="text-center p-3 rounded-lg bg-muted">
               <p className="text-2xl font-bold">{report.totalCases as number}</p>
               <p className="text-xs text-muted-foreground">{tOpt.totalTests}</p>

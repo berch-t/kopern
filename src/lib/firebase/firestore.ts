@@ -288,13 +288,15 @@ export interface FlowNodeData {
   cronExpression?: string; // for trigger nodes
   triggerType?: "manual" | "cron" | "webhook"; // for trigger nodes
   aggregation?: "concat" | "last" | "best"; // for output nodes
+  exportFormat?: "json" | "csv" | "markdown" | "pdf"; // for export nodes
+  autoDownload?: boolean; // for export nodes
   status?: "idle" | "running" | "completed" | "failed"; // runtime status
   [key: string]: unknown; // allow extra fields for React Flow compat
 }
 
 export interface FlowNode {
   id: string;
-  type: "agent" | "condition" | "trigger" | "output";
+  type: "agent" | "condition" | "trigger" | "output" | "export";
   position: { x: number; y: number };
   data: FlowNodeData;
 }

@@ -96,7 +96,7 @@ export default function McpServersPage({
       </SlideUp>
 
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
           {[...Array(2)].map((_, i) => (
             <div key={i} className="h-32 animate-pulse rounded-lg border bg-muted" />
           ))}
@@ -115,7 +115,7 @@ export default function McpServersPage({
           </div>
         </SlideUp>
       ) : (
-        <StaggerChildren className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StaggerChildren className="grid gap-3 grid-cols-1 md:grid-cols-2">
           {servers.map((server) => (
             <motion.div key={server.id} variants={staggerItem}>
               <McpServerCard server={server} agentId={agentId} />

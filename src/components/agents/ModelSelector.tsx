@@ -33,7 +33,7 @@ export function ModelSelector({
   const supportsThinking = currentModel?.supportsThinking ?? false;
 
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
+    <div className="grid gap-3 grid-cols-1 md:grid-cols-3">
       <div className="space-y-2">
         <Label>Provider</Label>
         <Select value={provider} onValueChange={(v) => {

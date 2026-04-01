@@ -136,7 +136,7 @@ export default function OperatorPage({
   if (!user) return null;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="space-y-8">
       {/* Header */}
       <SlideUp>
         <div className="flex items-center justify-between">
@@ -163,7 +163,7 @@ export default function OperatorPage({
         </div>
       ) : (
         <FadeIn>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
             {/* Messages */}
             <KPICard
               icon={MessageSquare}

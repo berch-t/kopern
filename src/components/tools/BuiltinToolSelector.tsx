@@ -80,7 +80,7 @@ export function BuiltinToolSelector({ selected, onChange }: BuiltinToolSelectorP
   return (
     <div className="space-y-2">
       <Label>Built-in Tools</Label>
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-2 grid-cols-1 md:grid-cols-2">
         {visibleTools.map((tool) => {
           const isSelected = selected.includes(tool.id);
           const isAdminTool = "adminOnly" in tool && tool.adminOnly;

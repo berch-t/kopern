@@ -2,8 +2,9 @@
 
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { Bot, Loader2, CheckCircle2, XCircle } from "lucide-react";
-import type { AgentRole } from "@/lib/firebase/firestore";
+import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+import type { AgentRole, AgentBranding } from "@/lib/firebase/firestore";
+import { AgentAvatar } from "@/components/agents/AgentAvatar";
 
 export interface AgentNodeData {
   label: string;
@@ -12,6 +13,7 @@ export interface AgentNodeData {
   roleType?: AgentRole;
   description?: string;
   status?: "idle" | "running" | "completed" | "failed";
+  branding?: AgentBranding | null;
 }
 
 const ROLE_COLORS: Record<AgentRole, string> = {
@@ -48,14 +50,21 @@ function StatusIcon({ status }: { status?: AgentNodeData["status"] }) {
 function AgentNodeComponent({ data, selected }: NodeProps) {
   const d = data as unknown as AgentNodeData;
   const roleType = d.roleType || "custom";
-  const borderColor = ROLE_COLORS[roleType];
   const badgeColor = ROLE_BADGE[roleType];
+
+  // Use branding color for border if available, otherwise fall back to role color
+  const hasBranding = d.branding?.themeColor;
+  const borderColor = hasBranding ? "" : ROLE_COLORS[roleType];
+  const brandingStyle = hasBranding
+    ? { borderColor: d.branding!.themeColor, backgroundColor: d.branding!.themeColor + "0a" }
+    : undefined;
 
   return (
     <div
       className={`relative rounded-xl border-2 px-4 py-3 shadow-sm transition-all min-w-[180px] max-w-[240px] ${borderColor} ${
         selected ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
       } ${d.status === "running" ? "shadow-md shadow-blue-500/20" : ""}`}
+      style={brandingStyle}
     >
       <Handle
         type="target"
@@ -64,9 +73,7 @@ function AgentNodeComponent({ data, selected }: NodeProps) {
       />
 
       <div className="flex items-start gap-2.5">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-foreground/5 mt-0.5">
-          <Bot className="h-4 w-4 text-foreground/70" />
-        </div>
+        <AgentAvatar branding={d.branding} size="sm" className="mt-0.5" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <span className="text-sm font-semibold truncate">{d.label || "Agent"}</span>

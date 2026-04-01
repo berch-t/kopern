@@ -108,18 +108,24 @@ export default function TeamDetailPage({
     }
   }, [team]);
 
-  // Build agent name map for flow serialization
+  // Build agent name + branding maps for flow serialization
   const agentNames = useMemo(() => {
     const map: Record<string, string> = {};
     for (const a of agents) map[a.id] = a.name;
     return map;
   }, [agents]);
 
+  const agentBrandings = useMemo(() => {
+    const map: Record<string, import("@/lib/firebase/firestore").AgentBranding | null> = {};
+    for (const a of agents) map[a.id] = a.branding ?? null;
+    return map;
+  }, [agents]);
+
   // Generate flow data from team
   const flowData = useMemo(() => {
     if (!team) return { nodes: [], edges: [] };
-    return teamToFlow(team, agentNames);
-  }, [team, agentNames]);
+    return teamToFlow(team, agentNames, agentBrandings);
+  }, [team, agentNames, agentBrandings]);
 
   if (loading) {
     return (
@@ -149,14 +155,15 @@ export default function TeamDetailPage({
     if (!user) return;
     setSavingFlow(true);
     try {
-      // Strip runtime status from nodes before persisting
-      const cleanNodes = nodes.map(({ id, type, position, data }) => ({
-        id, type, position,
-        data: { ...data, status: undefined },
-      })) as FlowNode[];
+      // Strip runtime-only fields and remove all undefined values (Firestore rejects them)
+      const cleanNodes = nodes.map(({ id, type, position, data }) => {
+        const { status, branding, ...rest } = data as Record<string, unknown>;
+        return { id, type, position, data: JSON.parse(JSON.stringify(rest)) } as FlowNode;
+      });
+      const cleanEdges = edges.map((e) => JSON.parse(JSON.stringify(e)) as FlowEdge);
       await updateAgentTeam(user.uid, teamId, {
         flowNodes: cleanNodes,
-        flowEdges: edges,
+        flowEdges: cleanEdges,
       });
       logTeamActivity(user.uid, teamId, "flow_updated", {
         message: `${nodes.length} nodes, ${edges.length} edges`,

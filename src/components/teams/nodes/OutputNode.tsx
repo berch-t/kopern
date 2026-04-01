@@ -47,6 +47,12 @@ function OutputNodeComponent({ data, selected }: NodeProps) {
           )}
         </div>
       </div>
+
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!w-3 !h-3 !bg-muted-foreground/40 !border-2 !border-background"
+      />
     </div>
   );
 }

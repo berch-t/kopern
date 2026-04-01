@@ -126,7 +126,7 @@ export default function ConnectorsPage({
       </SlideUp>
 
       <FadeIn delay={0.1}>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
           <ConnectorCard
             icon={MessageSquare}
             title={t.connectors.widget.title}

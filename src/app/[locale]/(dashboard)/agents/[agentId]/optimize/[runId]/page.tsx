@@ -508,7 +508,7 @@ function StressLabResultView({
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Stats */}
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-3 grid-cols-1 md:grid-cols-3">
             <div className="text-center p-3 rounded-lg bg-muted">
               <p className="text-2xl font-bold">{result.totalCases}</p>
               <p className="text-xs text-muted-foreground">{tOpt.totalTests}</p>
