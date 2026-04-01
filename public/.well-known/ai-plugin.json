@@ -9,9 +9,9 @@
   },
   "api": {
     "type": "openapi",
-    "url": "https://kopern.vercel.app/api/health"
+    "url": "https://kopern.ai/api/health"
   },
-  "logo_url": "https://kopern.vercel.app/logo_small.png",
-  "contact_email": "contact@kopern.vercel.app",
-  "legal_info_url": "https://kopern.vercel.app/en/docs"
+  "logo_url": "https://kopern.ai/logo_small.png",
+  "contact_email": "contact@kopern.ai",
+  "legal_info_url": "https://kopern.ai/en/docs"
 }

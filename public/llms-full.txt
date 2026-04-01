@@ -1,42 +1,105 @@
 # Kopern — AI Agent Builder, Orchestrator & Grader (Full Reference)
 
-> Build, test, deploy, and connect production-grade AI agents with tool calling, deterministic grading, multi-agent teams, MCP endpoints, and external connectors.
+> The open-source platform to build, grade, optimize, and deploy AI agents — no code required. 92 features shipped.
 
 ## Platform Overview
 
-Kopern is a SaaS platform for creating custom AI agents. Unlike simple chatbot builders, Kopern provides:
-1. **Full tool calling** — agents can execute custom JavaScript functions with JSON Schema validation
-2. **Deterministic grading** — automated test suites validate agent behavior before deployment
-3. **Multi-agent orchestration** — teams and pipelines for complex workflows
-4. **External deployment** — embed agents on websites, connect to webhooks, or install as Slack bots
-5. **Self-optimization** — AutoResearch lab with 6 modes for automatic prompt improvement
+Kopern is a SaaS platform for creating production-grade AI agents. Unlike simple chatbot builders, Kopern provides:
+1. **Full tool calling** — agents execute custom JavaScript functions, fetch HTTP, run Python/Node/Bash code
+2. **Deterministic grading** — 6 criterion types validate agent behavior with scheduled monitoring
+3. **Self-optimization** — 6 AutoResearch modes automatically improve prompts
+4. **Visual multi-agent orchestration** — React Flow v12 editor with drag-and-drop nodes
+5. **External deployment** — 5 connectors + MCP protocol for IDE integration
+6. **Service connectors** — agents read/send emails and manage calendars via OAuth
+7. **Agent memory** — persistent cross-session memory with context compaction
+8. **EU AI Act compliance** — automated compliance reports and tool approval
 
 ## Agent Configuration
 
 Each agent has:
-- **System Prompt**: Core behavior instructions
-- **Model**: Choose from 15+ LLMs across 5 providers
+- **System Prompt**: Core behavior instructions (auto-injected with current date/time)
+- **Model**: Choose from 30+ LLMs across 5 providers
 - **Skills**: Markdown templates injected as XML context (reusable knowledge blocks)
 - **Custom Tools**: JSON Schema input + sandboxed JS code — agents call these like functions
-- **Built-in Tools**: `read_file`, `search_files`, `github_write` (auto-enabled when repos connected)
+- **Built-in Tools**: web_fetch, code_interpreter, memory, email, calendar, GitHub, bug management
 - **Extensions**: Lifecycle hooks triggered on 30+ events (tool_call_start, tool_call_end, message_sent, etc.)
 - **Purpose Gate**: A question asked at session start to scope the conversation
 - **TillDone Mode**: Agent keeps working until the task is complete (auto-prompting)
-- **Branding**: Custom avatar, icon, and accent color
+- **Branding**: Custom icons (15 options) and theme/accent colors per agent
 - **Tool Overrides**: Temperature, max tokens, thinking level per agent
+- **Memory Config**: Enable persistent memory, set max entries (LRU eviction), compaction threshold
+- **Tool Approval Policy**: auto / confirm_destructive / confirm_all (EU AI Act Art. 14)
 - **Connected Repos**: GitHub repositories accessible via OAuth
+
+## Templates
+
+### General Templates (28)
+Ready-to-deploy agent configurations for common tasks: PR Review, Contract Analyzer, Customer Support, Lead Qualifier, Content Writer, Data Analyst, and more. Each includes system prompt, tools with real executable code, and grading suite.
+
+### Vertical Business Templates (9)
+Industry-specific templates with onboarding questionnaire:
+- **BTP / Construction**: Quote estimation, appointment scheduling
+- **Accounting**: Expense categorization, VAT checking, anomaly detection
+- **Real Estate**: Price estimation, comparable search, buyer qualification
+- **Restaurant**: Reservation management, menu recommendations
+- **E-commerce**: Order tracking, product suggestions, FAQ
+- **HR / Recruitment**: CV parsing, candidate scoring, interview scheduling
+- **Beauty Salon**: Appointment booking, service recommendations
+- **Fitness**: Program creation, nutrition tracking
+- **Legal**: Contract analysis, risk flagging, clause extraction
 
 ## LLM Providers & Models
 
 | Provider | Models | Tool Calling |
 |----------|--------|-------------|
-| Anthropic | Claude Opus 4.6, Sonnet 4.6, Haiku 4.5 | Native tool_use blocks |
-| OpenAI | GPT-4o, GPT-4o-mini | Function calling |
-| Google | Gemini 2.5 Flash | functionCall |
-| Mistral AI | Mistral Large, Codestral, Nemo | Function calling |
-| Ollama | Any local model | Via OpenAI-compatible API |
+| Anthropic | Claude Opus 4.6, Sonnet 4.6/4.5, Haiku 4.5 | Native tool_use blocks |
+| OpenAI | GPT-5.x (5.4, 5.3, 5.2, 5.1, 5), GPT-4o, GPT-4.1, o3/o4 | Function calling |
+| Google | Gemini 2.5 Pro, 2.5 Flash, 2.0 Flash | functionCall |
+| Mistral AI | Mistral Large 3, Small 4, Medium 3.1, Magistral, Codestral, Devstral | Function calling |
+| Ollama | Any local model (Llama, Mixtral, etc.) | Via OpenAI-compatible API |
 
 All models support streaming via SSE (Server-Sent Events).
+Key rotation failover: up to 5 keys per provider, automatic retry on 429/rate_limit/overloaded.
+
+## Built-in Agent Tools
+
+### web_fetch
+Server-side HTTP fetch in Vercel process. Supports GET/POST/PUT/DELETE with custom headers. HTML-to-text extraction. Anti-loop protection blocks requests to Kopern domains. 30s timeout.
+
+### code_interpreter
+Python, Node.js, and Bash execution via GCP Cloud Run (FastAPI + Docker).
+- Pre-installed: numpy, pandas, matplotlib, requests, beautifulsoup4
+- Auto-scale 0→10 instances, 300s timeout
+- Output files via OUTPUT_DIR environment variable
+
+### Agent Memory (4 tools)
+- `remember(key, value, category)` — Store a fact (upsert, LRU eviction at maxEntries)
+- `recall(query, limit)` — Search memories by keyword with temporal decay scoring
+- `forget(key)` — Delete a memory
+- `search_sessions(query, limit)` — Search across recent conversation sessions
+
+Top 20 memories auto-injected into system prompt via `<agent-memory>` XML block.
+
+### Email Tools (3 tools, via OAuth)
+- `read_emails(query, maxResults)` — Search inbox (Gmail API / Microsoft Graph)
+- `send_email(to, subject, body)` — Send email (destructive, requires approval)
+- `reply_email(messageId, body)` — Reply to email (destructive)
+
+### Calendar Tools (5 tools, via OAuth)
+- `list_events(startDate, endDate)` — List calendar events
+- `check_availability(startDate, endDate)` — Check free/busy slots
+- `create_event(title, start, end, attendees)` — Create event (destructive)
+- `update_event(eventId, changes)` — Update event (destructive)
+- `cancel_event(eventId)` — Cancel event (destructive)
+
+Daily limits: 20 emails/day, 10 events/day per agent. Tokens encrypted AES-256-GCM.
+
+### GitHub Tools
+- `read_file(repo, path)` — Read file from connected repo
+- `search_files(repo, query)` — Search across repo
+- `create_branch(repo, branch)` — Create branch (destructive)
+- `commit_files(repo, branch, files, message)` — Commit changes (destructive)
+- `create_pull_request(repo, title, body, branch)` — Open PR (destructive)
 
 ## Grading System
 
@@ -46,49 +109,67 @@ All models support streaming via SSE (Server-Sent Events).
 3. **tool_usage**: Verify the agent called specific tools with expected parameters
 4. **safety_check**: Ensure agent doesn't produce harmful content
 5. **custom_script**: Run arbitrary JavaScript assertions
-6. **llm_judge**: Use another LLM to evaluate quality
+6. **llm_judge**: Use another LLM to evaluate quality with custom rubric
 
-Grading runs are persisted to Firestore with full results history.
+### Scheduled Grading
+- Vercel Cron with configurable schedule (daily/weekly/custom)
+- Score drop alerts: notify when score decreases by more than X points
+- Threshold alerts: notify when score falls below minimum
+- 3 alert channels: email, Slack webhook, custom webhook
+- Auto-generates improvement notes after each run
 
-## AutoResearch — Optimization Lab
+### AutoResearch — Optimization Lab (6 modes)
 
-| Mode | Purpose |
-|------|---------|
-| AutoTune | Optimize system prompts against grading suites automatically |
-| AutoFix | Diagnose and patch failing test cases |
-| Stress Lab | Adversarial testing with edge-case generation |
-| Tournament | Arena-style prompt variant comparison |
-| Distillation | Transfer prompt effectiveness to cheaper models |
-| Evolution | Genetic algorithm-based prompt evolution |
+| Mode | Purpose | How it works |
+|------|---------|-------------|
+| AutoTune | Optimize prompts | Hill-climbing via LLM-guided mutations against grading suite |
+| AutoFix | Fix failures | Diagnose failed test cases → generate patches → re-evaluate |
+| Stress Lab | Red team | 3 phases: Probe → Exploit → Harden. Categories: injection, jailbreak, hallucination, edge cases |
+| Tournament | Compare configs | Head-to-head model/prompt comparison with ELO-like scoring |
+| Distillation | Reduce cost | Transfer quality from expensive to cheap models |
+| Evolution | Multi-dimensional | Population-based genetic search across prompt x model x config |
 
-## Multi-Agent Orchestration
+AutoFix is self-sufficient: generates its own grading suite if none exists, runs grading, analyzes failures, patches prompt — all in one click.
 
-### Agent Teams
-- **Parallel**: All agents run simultaneously, results aggregated
-- **Sequential**: Agents run one after another, each sees prior context
-- **Conditional**: Input routed to specific agent based on rules
+## Visual Multi-Agent Orchestration
+
+### Flow Editor (React Flow v12)
+- 5 node types: Agent, Condition, Trigger, Output, Export
+- Drag-and-drop from palette to canvas
+- Double-click any node to edit configuration
+- Full agent config editing without leaving the page (nested dialog)
+- Agent branding (icons + colors) visible on nodes
+- Runtime status updates during execution (idle/running/completed/failed)
+- Auto-layout: parallel, sequential, conditional arrangements
+- Export node: JSON, CSV, Markdown, PDF with auto-download option
+
+### Team Features
+- **Kanban Board**: 6-column drag-drop task management
+- **Goal Tree**: Collapsible goal hierarchy with progress bars
+- **Org Chart**: SVG organizational chart with Buchheim-Walker layout
+- **Routine Scheduler**: CRON-based recurring team tasks
+- **Activity Timeline**: 8-action audit trail
+- **Budget Enforcer**: Team spend tracking and limits
+- **delegate_task tool**: Coordinator agents delegate to specialists
 
 ### Pipelines
 - Sequential chains where step N's output becomes step N+1's input
 - Input/output mapping between steps
 - Each step can use different tools and models
 
-### Sub-Agent Delegation
-- Agents can delegate subtasks to other agents in your workspace
-
 ## External Connectors
 
 ### Embeddable Chat Widget
 ```html
-<script src="https://kopern.vercel.app/api/widget/script" data-key="kpn_xxx"></script>
+<script src="https://kopern.ai/api/widget/script" data-key="kpn_xxx"></script>
 ```
 - Shadow DOM for CSS isolation
 - SSE streaming responses
-- Markdown rendering (headers, code, lists, links)
+- Markdown rendering (headers, code blocks, lists, links, tables)
 - Mobile-responsive (full-screen < 640px)
 - "Powered by Kopern" badge (removable on Pro+)
 - CORS whitelist per widget
-- Custom welcome message and position (bottom-right/left)
+- Custom welcome message, position, branding
 
 ### Webhooks
 **Inbound**: External services send JSON to your agent
@@ -103,109 +184,220 @@ Content-Type: application/json
 **Outbound**: Agent fires webhooks on events
 - Events: `message_sent`, `tool_call_completed`, `session_ended`, `error`
 - HMAC-SHA256 signing via `X-Webhook-Signature` header
-- Compatible with n8n, Zapier, Make
+- Compatible with n8n, Zapier, Make (step-by-step integration guides included)
 
 **Anti-loop protection**: Inbound webhooks never trigger outbound webhooks.
 
 ### Slack Bot
 - OAuth install flow via dashboard
 - Responds to @mentions and DMs
-- Thread support (maintains conversation in threads)
-- Reaction checkmark on processed messages
-- Events API (serverless-compatible)
+- Thread support (maintains conversation context)
+- Conversational tool approval (agent asks permission before destructive actions)
+- Events API (serverless-compatible, uses `after()` from next/server)
 
-## MCP Protocol (Model Context Protocol)
+### Telegram Bot
+- Bot API via webhook
+- Setup: enter bot token in dashboard → automatic webhook registration
+- Markdown → HTML conversion for rich formatting (tables, code, bold, links)
+- Conversational tool approval
+- Async processing via `after()`
 
-Any Kopern agent can be used as an MCP server:
+### WhatsApp
+- Meta Cloud API (Business)
+- Phone number + access token setup in dashboard
+- Webhook verification (hub.verify)
+- Conversational tool approval
 
+### MCP Protocol (Model Context Protocol)
+Any Kopern agent works as an MCP server:
 ```json
 {
   "mcpServers": {
     "my-agent": {
       "type": "http",
-      "url": "https://kopern.vercel.app/api/mcp/server",
+      "url": "https://kopern.ai/api/mcp/server",
       "headers": { "Authorization": "Bearer kpn_..." }
     }
   }
 }
 ```
+- Streamable HTTP transport (MCP spec 2024-11-05)
+- Compatible with Claude Code, Cursor, Windsurf, and any MCP client
+- Tools:
+  - `kopern_chat` — Send a message to an agent and get a response (with tool calling)
+  - `kopern_agent_info` — Get agent metadata (name, model, config)
+  - `kopern_list_templates` — Browse all 37 ready-to-use templates (28 general + 9 vertical)
+  - `kopern_grade_prompt` — Evaluate a system prompt against test cases with 6 criteria types
+  - `kopern_list_agents` — List all your agents with scores and metadata
+- API key authentication (`kpn_` prefix, SHA-256 hashed, expiry support, rotation)
 
-Available MCP tools:
-- `kopern_chat`: Send a message to the agent and get a response
-- `kopern_agent_info`: Get agent metadata (name, model, tools, skills)
+## Service Connectors (OAuth)
 
-Compatible with Claude Code, Cursor, Windsurf, and any MCP client.
+### Google
+- Gmail: read, send, reply emails
+- Google Calendar: list events, check availability, create/update/cancel
 
-## Bug Tracking System
+### Microsoft
+- Outlook: read, send, reply emails
+- Microsoft Graph Calendar: list events, check availability, create/update/cancel
 
-Built-in bug reporting and autonomous fixing:
-- Site-wide bug report dialog (available on every page)
-- Bug Fixer agent auto-triggered on new reports
-- Admin dashboard with KPI stats, status filters, notes timeline
-- Email notifications for reporters
-- Agent can create GitHub branches and pull requests
+Tokens encrypted with AES-256-GCM. Auto-refresh on expiry. Daily limits enforced.
+GDPR cleanup endpoint for token revocation.
+
+## Operator Dashboard
+
+Simplified view for non-technical users:
+- **KPI Cards**: Messages, resolution rate, satisfaction, cost at a glance
+- **One-click AutoFix**: Improve agent without technical knowledge
+- **Simplified Edit Form**: Re-answer onboarding questions to update behavior
+- **Memory Panel**: View, add, delete agent memories with usage indicator
+- **Connector Status**: See which channels are active
+- **Service Connector Panel**: Connect/disconnect Google and Microsoft OAuth
+- **Expert Mode Toggle**: Switch to full technical view
+
+## Agent Memory & Context Compaction
+
+### Persistent Memory
+- Stored in Firestore: `users/{userId}/agents/{agentId}/memory/{key}`
+- LRU eviction when maxEntries reached (default 100)
+- Keyword search with temporal decay scoring
+- Top 20 memories auto-injected into system prompt
+
+### Context Compaction
+- Detects when messages exceed token threshold
+- Haiku-based summarization of older messages
+- Preserves last 4 conversation turns
+- Transparent to all routes (chat, widget, webhook, connectors, MCP)
+
+## Onboarding
+
+### Template Path (10 seconds)
+1. Choose from 37 templates (gallery with category filters)
+2. Answer 3-5 guided questions (industry-specific)
+3. 1-click deploy → agent ready with grading suite
+
+### Custom Path (60 seconds)
+1. Describe your agent in plain text
+2. AI generates complete agent specification (JSON)
+3. Review and deploy
+
+Both paths redirect to Operator Dashboard after creation.
+
+## Security & Compliance
+
+- **Rate Limiting**: 8 Upstash Redis sliding window limiters (chat, webhook, widget, MCP, GDPR, connector, bug report)
+- **Input Validation**: Zod v4 schemas on all API routes
+- **Tool Approval**: EU AI Act Art. 14 human oversight. Interactive SSE dialog in Playground/Widget, conversational on Telegram/WhatsApp/Slack
+- **Encrypted Tokens**: AES-256-GCM for OAuth tokens
+- **CSP Headers**: Content Security Policy on all routes
+- **MCP Key Security**: SHA-256 hashing, expiry, rotation with audit trail
+- **EU AI Act Compliance**: Automated reports (Art. 6 risk, Art. 12 audit, Art. 14 oversight, Art. 52 transparency)
+- **Sandbox**: Custom tool code runs in Node.js vm module, no network access
 
 ## Billing & Plans
 
-| Feature | Starter (Free) | Pro ($79/mo) | Usage | Enterprise ($499/mo) |
-|---------|----------------|--------------|-------|---------------------|
-| Agents | 3 | 25 | Unlimited | Unlimited |
-| Tokens/month | 100K | 2M | Pay per use | Unlimited |
-| Grading runs | 10/mo | 200/mo | Unlimited | Unlimited |
+| Feature | Starter (Free) | Pro ($79/mo) | Usage (PAYG) | Enterprise ($499/mo) |
+|---------|----------------|--------------|--------------|---------------------|
+| Agents | 2 | 25 | Unlimited | Unlimited |
+| Tokens/month | 10K | 1M | Pay per use | 10M |
+| Grading runs | 5/mo | 100/mo | $0.10/run | Unlimited |
 | Teams | 0 | 5 | Unlimited | Unlimited |
-| Pipelines | 0 | 10 | Unlimited | Unlimited |
-| MCP servers | 1 | 5 | Unlimited | Unlimited |
-| Connectors | 0 | 3 | Unlimited | Unlimited |
-| AutoResearch | No | Yes | Yes | Yes |
+| Connectors | 1 | 3 | Unlimited | Unlimited |
+| MCP endpoints | 1 | 10 | Unlimited | Unlimited |
+| Optimization Lab | No | 6 modes | 6 modes | 6 modes + priority |
+| Models | Sonnet + Haiku | All | All | All |
 
-Usage-based billing via Stripe Billing Meters. Real-time token tracking per agent.
+Usage-based billing via Stripe Billing Meters. 17% platform commission on token costs (covers agentic execution, grading, observability, security, connectors).
 
 ## Technical Architecture
 
 - **Framework**: Next.js 16 (App Router), React 19, TypeScript strict
 - **UI**: shadcn/ui + Radix UI + Tailwind CSS 4 + Framer Motion 12
+- **Visual Editor**: React Flow v12
 - **Database**: Firebase Firestore (real-time subscriptions via onSnapshot)
-- **Auth**: Firebase Auth (Google, GitHub with `repo` scope, Email/Password)
+- **Auth**: Firebase Auth (Google, GitHub, Email/Password)
 - **Payments**: Stripe (subscriptions, usage meters, customer portal, 9 webhook events)
+- **Code Execution**: GCP Cloud Run (Python/Node/Bash sandbox, auto-scale 0→10)
 - **Streaming**: Server-Sent Events for all agent interactions
-- **Sandbox**: Node.js vm module for custom tool execution (5s timeout)
-- **i18n**: Custom system with JSON dictionaries, `[locale]` route segment
+- **Rate Limiting**: Upstash Redis (8 limiters)
+- **Validation**: Zod v4
+- **Encryption**: AES-256-GCM (OAuth tokens)
+- **i18n**: English and French (800+ keys each)
 
-## API Reference
+## Full API Reference
 
 | Method | Endpoint | Auth | Response |
 |--------|----------|------|----------|
 | POST | /api/agents/{id}/chat | Session | SSE stream |
 | POST | /api/agents/{id}/grading/{suiteId}/run | Session | SSE stream |
-| POST | /api/agents/{id}/autoresearch/* | Session | SSE stream |
-| POST | /api/agents/{id}/pipelines/{id}/execute | Session | SSE stream |
+| POST | /api/agents/{id}/autoresearch/autofix | Session | SSE stream |
+| POST | /api/agents/{id}/autoresearch/stress-lab | Session | SSE stream |
+| POST | /api/agents/{id}/autoresearch/tournament | Session | SSE stream |
+| POST | /api/agents/{id}/autoresearch/distillation | Session | SSE stream |
+| POST | /api/agents/{id}/autoresearch/evolution | Session | SSE stream |
+| POST | /api/agents/{id}/autoresearch/{suiteId}/run | Session | SSE stream |
+| POST | /api/agents/{id}/pipelines/{pid}/execute | Session | SSE stream |
 | POST | /api/teams/{id}/execute | Session | SSE stream |
+| POST | /api/agents/{id}/approve | Session | JSON |
 | POST | /api/agents/meta-create | Session | SSE stream |
 | POST | /api/mcp/server | API Key | JSON-RPC |
+| POST | /api/mcp (legacy) | API Key | JSON-RPC |
+| POST/PUT/DELETE | /api/mcp/keys | Session | JSON |
 | POST | /api/widget/chat | API Key | SSE stream |
 | GET | /api/widget/config | API Key | JSON |
+| GET | /api/widget/script | None | JS |
 | POST | /api/webhook/{agentId} | API Key | JSON |
 | POST | /api/slack/events | Slack signature | JSON |
 | GET | /api/slack/install | Session | Redirect |
+| GET | /api/slack/oauth | Query params | Redirect |
+| POST | /api/telegram/webhook | Secret token | JSON |
+| POST | /api/telegram/setup | Session | JSON |
+| GET/POST | /api/whatsapp/webhook | Signature | JSON |
+| POST | /api/whatsapp/setup | Session | JSON |
+| GET | /api/oauth/google | Session | Redirect |
+| GET | /api/oauth/microsoft | Session | Redirect |
+| POST | /api/oauth/disconnect | Session | JSON |
 | POST | /api/stripe/checkout | Session | JSON |
 | POST | /api/stripe/webhook | Stripe signature | JSON |
+| GET | /api/stripe/subscription | Session | JSON |
+| POST | /api/stripe/portal | Session | JSON |
+| GET/POST | /api/github/content | Session | JSON |
+| GET | /api/github/repos | Session | JSON |
+| POST | /api/bug-report | Session/IP | JSON |
+| GET | /api/agents/{id}/compliance-report | Session | JSON |
+| GET | /api/cron/grading | Cron secret | JSON |
+| GET | /api/cron/routines | Cron secret | JSON |
+| GET | /api/health | None | JSON |
 
-## Pages
+## Firestore Schema
 
-| URL | Content | SEO |
-|-----|---------|-----|
-| `/en` | Landing page with inline agent creator | Indexed |
-| `/en/examples` | 15+ agent templates gallery | Indexed |
-| `/en/pricing` | 4 pricing tiers with feature comparison | Indexed |
-| `/en/docs` | Full documentation with search | Indexed |
-| `/fr` | French landing page | Indexed |
-| `/fr/examples` | French examples | Indexed |
-| `/fr/pricing` | French pricing | Indexed |
-| `/fr/docs` | French documentation | Indexed |
-| `/*/dashboard` | User dashboard | Not indexed |
-| `/*/agents/*` | Agent editor | Not indexed |
+```
+users/{userId}
+  /agents/{agentId}
+    /skills, /tools, /extensions, /versions
+    /memory/{key}                    # Agent memory (LRU eviction, keyword search)
+    /gradingSuites/{suiteId}/cases, /runs/{runId}/results
+    /autoresearchRuns/{runId}/iterations
+    /pipelines/{pipelineId}, /sessions/{sessionId}
+    /connectors/widget, /connectors/slackConnection
+    /webhooks/{webhookId}, /webhookLogs/{logId}
+    /mcpServers/{serverId}/usage/{yearMonth}
+  /serviceConnectors/{provider}     # Encrypted OAuth tokens (AES-256-GCM)
+  /agentTeams/{teamId}
+    /activity/{activityId}          # 8-action audit trail
+    /tasks/{taskId}                 # Kanban task board
+    /routines/{routineId}           # CRON scheduled routines
+  /goals/{goalId}
+  /usage/{yearMonth}               # Token + cost tracking with agent breakdown
+  /bugs/{bugId}
+apiKeys/{sha256Hash}                # MCP API keys (O(1) lookup)
+slackTeams/{teamId}                 # Slack workspace index
+telegramBots/{hash}                 # Telegram bot routing
+whatsappPhones/{phoneId}            # WhatsApp phone routing
+```
 
-## Contact
+## Links
 
-Website: https://kopern.vercel.app
-GitHub: https://github.com/berch-t/kopern
+- Website: https://kopern.ai
+- GitHub: https://github.com/berch-t/kopern
+- License: MIT

@@ -1,5 +1,5 @@
 # Kopern — AI Agent Builder
-# https://kopern.vercel.app
+# https://kopern.ai
 
 User-agent: *
 Allow: /
@@ -25,7 +25,7 @@ Allow: /en
 Allow: /fr
 
 # Sitemap
-Sitemap: https://kopern.vercel.app/sitemap.xml
+Sitemap: https://kopern.ai/sitemap.xml
 
 # AI / LLM context files
 # See https://llmstxt.org

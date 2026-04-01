@@ -13,8 +13,8 @@ export async function generateMetadata({
   return {
     title: isEn ? "Agent Templates & Examples" : "Modèles et exemples d'agents IA",
     description: isEn
-      ? "Browse 15+ ready-to-use AI agent templates — code review, data analysis, customer support, content creation, security audit, and more. Clone and customize in minutes."
-      : "Parcourez plus de 15 modèles d'agents IA prêts à l'emploi — revue de code, analyse de données, support client, création de contenu, audit sécurité, et plus.",
+      ? "Browse 37 ready-to-use AI agent templates — code review, data analysis, customer support, content creation, security audit, and more. Clone and customize in minutes."
+      : "Parcourez 37 modèles d'agents IA prêts à l'emploi — revue de code, analyse de données, support client, création de contenu, audit sécurité, et plus.",
     alternates: {
       canonical: `${SITE_URL}/${locale}/examples`,
       languages: { en: `${SITE_URL}/en/examples`, fr: `${SITE_URL}/fr/examples` },
@@ -22,8 +22,8 @@ export async function generateMetadata({
     openGraph: {
       title: isEn ? "AI Agent Templates — Kopern" : "Modèles d'agents IA — Kopern",
       description: isEn
-        ? "15+ production-ready AI agent templates. Clone, customize, and deploy."
-        : "Plus de 15 modèles d'agents IA prêts pour la production.",
+        ? "37 production-ready AI agent templates. Clone, customize, and deploy."
+        : "37 modèles d'agents IA prêts pour la production.",
       url: `${SITE_URL}/${locale}/examples`,
     },
   };

@@ -1,7 +1,7 @@
 # Kopern Security Policy
-# https://kopern.vercel.app
+# https://kopern.ai
 
 Contact: https://github.com/berch-t/kopern/issues
 Preferred-Languages: en, fr
-Canonical: https://kopern.vercel.app/.well-known/security.txt
+Canonical: https://kopern.ai/.well-known/security.txt
 Expires: 2027-03-21T00:00:00.000Z

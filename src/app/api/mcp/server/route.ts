@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
-import { resolveApiKey } from "@/lib/mcp/auth";
+import { resolveApiKey, resolveUserApiKey, type ResolvedKey, type ResolvedUserKey } from "@/lib/mcp/auth";
 import { checkPlanLimits } from "@/lib/stripe/plan-guard";
 import { trackUsage } from "@/lib/mcp/token-counter";
 import { logAppError } from "@/lib/errors/logger";
@@ -10,6 +10,11 @@ import type { LLMMessage } from "@/lib/llm/client";
 import { createSessionServer, updateSessionMetrics, appendSessionEvents, endSessionServer } from "@/lib/billing/track-usage-server";
 import { calculateTokenCost } from "@/lib/billing/pricing";
 import { checkRateLimit, mcpRateLimit } from "@/lib/security/rate-limit";
+import { runGradingSuite } from "@/lib/grading/runner";
+import { createEventCollector } from "@/lib/pi-mono/event-collector";
+import type { CriterionConfig } from "@/lib/firebase/firestore";
+import { useCases } from "@/data/use-cases";
+import { verticalTemplates } from "@/data/vertical-templates";
 
 // ─── MCP Protocol Types ──────────────────────────────────────────────
 
@@ -33,17 +38,27 @@ function jsonErr(id: number | string | null, code: number, message: string, stat
 
 // ─── Auth helper ─────────────────────────────────────────────────────
 
-async function authenticate(request: NextRequest) {
-  // Try Bearer header first
+type AuthResult =
+  | { type: "agent"; key: ResolvedKey }
+  | { type: "user"; key: ResolvedUserKey }
+  | null;
+
+async function authenticate(request: NextRequest): Promise<AuthResult> {
   const authHeader = request.headers.get("Authorization");
-  if (authHeader?.startsWith("Bearer ")) {
-    return resolveApiKey(authHeader.slice(7));
-  }
-  // Fallback: query param ?key=kpn_...
-  const keyParam = new URL(request.url).searchParams.get("key");
-  if (keyParam) {
-    return resolveApiKey(keyParam);
-  }
+  const plainKey = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : new URL(request.url).searchParams.get("key");
+
+  if (!plainKey) return null;
+
+  // Try agent-bound key first (existing behavior)
+  const agentKey = await resolveApiKey(plainKey);
+  if (agentKey) return { type: "agent", key: agentKey };
+
+  // Fallback: try user-level key
+  const userKey = await resolveUserApiKey(plainKey);
+  if (userKey) return { type: "user", key: userKey };
+
   return null;
 }
 
@@ -103,6 +118,128 @@ function buildToolList(agent: Record<string, unknown>) {
     {
       name: "kopern_agent_info",
       description: "Get metadata about this agent (name, description, model, configuration).",
+      inputSchema: {
+        type: "object" as const,
+        properties: {},
+      },
+    },
+    {
+      name: "kopern_list_templates",
+      description: "List all available AI agent templates (28 general + 9 vertical/business). Returns slug, title, domain, tagline for each. No LLM cost.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          category: {
+            type: "string",
+            enum: ["all", "general", "vertical"],
+            description: "Filter templates by category. Default: all",
+          },
+        },
+      },
+    },
+    {
+      name: "kopern_grade_prompt",
+      description: "Grade an AI agent system prompt against test cases. Runs the agent with each test input and evaluates using 6 criteria types (output_match, schema_validation, tool_usage, safety_check, custom_script, llm_judge). Returns a score 0-1 per case and overall. Uses YOUR API keys for LLM calls.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          system_prompt: {
+            type: "string",
+            description: "The system prompt to evaluate",
+          },
+          test_cases: {
+            type: "array",
+            description: "Test cases to run. Each has an input prompt and expected behavior.",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string", description: "Test case name" },
+                input: { type: "string", description: "User message to send to the agent" },
+                expected: { type: "string", description: "Expected behavior description (used for llm_judge evaluation)" },
+              },
+              required: ["name", "input", "expected"],
+            },
+          },
+          provider: {
+            type: "string",
+            enum: ["anthropic", "openai", "google", "mistral"],
+            description: "LLM provider to use. Default: anthropic",
+          },
+          model: {
+            type: "string",
+            description: "Model ID (e.g. claude-sonnet-4-5-20250514, gpt-4o). Default: provider's default model",
+          },
+        },
+        required: ["system_prompt", "test_cases"],
+      },
+    },
+    {
+      name: "kopern_list_agents",
+      description: "List all your Kopern agents (name, description, model, domain, latest grading score). No LLM cost.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {},
+      },
+    },
+  ];
+}
+
+/** Tools available with a user-level key (no agent needed) */
+function buildPlatformToolList() {
+  return [
+    {
+      name: "kopern_list_templates",
+      description: "List all available AI agent templates (28 general + 9 vertical/business). Returns slug, title, domain, tagline for each. No LLM cost.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          category: {
+            type: "string",
+            enum: ["all", "general", "vertical"],
+            description: "Filter templates by category. Default: all",
+          },
+        },
+      },
+    },
+    {
+      name: "kopern_grade_prompt",
+      description: "Grade an AI agent system prompt against test cases. Runs the agent with each test input and evaluates using 6 criteria types (output_match, schema_validation, tool_usage, safety_check, custom_script, llm_judge). Returns a score 0-1 per case and overall. Uses YOUR API keys for LLM calls.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          system_prompt: {
+            type: "string",
+            description: "The system prompt to evaluate",
+          },
+          test_cases: {
+            type: "array",
+            description: "Test cases to run. Each has an input prompt and expected behavior.",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string", description: "Test case name" },
+                input: { type: "string", description: "User message to send to the agent" },
+                expected: { type: "string", description: "Expected behavior description (used for llm_judge evaluation)" },
+              },
+              required: ["name", "input", "expected"],
+            },
+          },
+          provider: {
+            type: "string",
+            enum: ["anthropic", "openai", "google", "mistral"],
+            description: "LLM provider to use. Default: anthropic",
+          },
+          model: {
+            type: "string",
+            description: "Model ID (e.g. claude-sonnet-4-5-20250514, gpt-4o). Default: provider's default model",
+          },
+        },
+        required: ["system_prompt", "test_cases"],
+      },
+    },
+    {
+      name: "kopern_list_agents",
+      description: "List all your Kopern agents (name, description, model, domain, latest grading score). No LLM cost.",
       inputSchema: {
         type: "object" as const,
         properties: {},
@@ -238,20 +375,200 @@ async function executeChat(
   }
 }
 
+// ─── List templates ─────────────────────────────────────────────────
+
+function executeListTemplates(params: Record<string, unknown>) {
+  const category = (params.category as string) || "all";
+
+  const general = useCases.map((t) => ({
+    slug: t.slug,
+    title: t.title,
+    domain: t.domain,
+    tagline: t.tagline,
+    category: "general" as const,
+  }));
+
+  const vertical = verticalTemplates.map((t) => ({
+    slug: t.slug,
+    title: t.title,
+    domain: t.vertical,
+    tagline: t.tagline,
+    category: "vertical" as const,
+  }));
+
+  const templates =
+    category === "general" ? general :
+    category === "vertical" ? vertical :
+    [...general, ...vertical];
+
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({ count: templates.length, templates }, null, 2),
+    }],
+  };
+}
+
+// ─── Grade a prompt ─────────────────────────────────────────────────
+
+const DEFAULT_MODELS: Record<string, string> = {
+  anthropic: "claude-sonnet-4-6",
+  openai: "gpt-4o",
+  google: "gemini-2.5-flash",
+  mistral: "mistral-large-latest",
+};
+
+async function executeGradePrompt(
+  userId: string,
+  agentId: string,
+  params: Record<string, unknown>
+) {
+  const systemPrompt = params.system_prompt as string;
+  const testCases = params.test_cases as { name: string; input: string; expected: string }[];
+  const provider = (params.provider as string) || "anthropic";
+  const model = (params.model as string) || DEFAULT_MODELS[provider] || DEFAULT_MODELS.anthropic;
+
+  if (!systemPrompt) return { isError: true, content: [{ type: "text", text: "system_prompt is required" }] };
+  if (!testCases?.length) return { isError: true, content: [{ type: "text", text: "test_cases must be a non-empty array" }] };
+  if (testCases.length > 20) return { isError: true, content: [{ type: "text", text: "Maximum 20 test cases per run" }] };
+
+  // Resolve user's API keys
+  const apiKeys = await resolveProviderKeys(userId, provider);
+  const apiKey = apiKeys[0];
+  if (!apiKey) {
+    return { isError: true, content: [{ type: "text", text: `No ${provider} API key found in your settings. Add one at kopern.ai → Settings → API Keys.` }] };
+  }
+
+  // Build grading cases with llm_judge criterion (auto-filled from expected behavior)
+  const gradingCases = testCases.map((tc, i) => ({
+    id: `mcp_case_${i}`,
+    name: tc.name,
+    inputPrompt: tc.input,
+    expectedBehavior: tc.expected,
+    orderIndex: i,
+    criteria: [
+      {
+        id: `crit_${i}`,
+        type: "llm_judge" as const,
+        name: "Quality",
+        config: {} as Record<string, unknown>,
+        weight: 1,
+      },
+    ] satisfies CriterionConfig[],
+    createdAt: { toDate: () => new Date(), toMillis: () => Date.now(), toJSON: () => ({ seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }) } as unknown as import("@firebase/firestore").Timestamp,
+  }));
+
+  // Execute each case by running the agent
+  const executeCase = async (inputPrompt: string) => {
+    const collector = createEventCollector();
+    const messages: LLMMessage[] = [{ role: "user" as const, content: inputPrompt }];
+
+    await new Promise<AgentRunMetrics>((resolve, reject) => {
+      runAgentWithTools(
+        {
+          provider,
+          model,
+          systemPrompt,
+          messages,
+          userId,
+          agentId,
+          connectedRepos: [],
+          apiKey,
+          apiKeys: apiKeys.length > 1 ? apiKeys : undefined,
+          skipOutboundWebhooks: true,
+          toolApprovalPolicy: "auto",
+          riskLevel: "minimal",
+        },
+        {
+          onToken: (text) => { collector.addToken(text); },
+          onToolStart: () => {},
+          onToolEnd: (result) => {
+            collector.addToolCall({ name: result.name, args: {}, result: result.result, isError: result.isError });
+          },
+          onDone: (m) => { collector.finalize(); resolve(m); },
+          onError: (err) => reject(err),
+        }
+      );
+    });
+
+    return collector;
+  };
+
+  try {
+    const result = await runGradingSuite(gradingCases, executeCase);
+
+    const summary = {
+      overallScore: Math.round(result.score * 100) / 100,
+      passed: result.passedCases,
+      total: result.totalCases,
+      cases: result.results.map((r) => ({
+        name: r.caseName,
+        passed: r.passed,
+        score: Math.round(r.score * 100) / 100,
+        output: r.agentOutput.slice(0, 500),
+        criteria: r.criteriaResults.map((cr) => ({
+          type: cr.criterionType,
+          passed: cr.passed,
+          score: Math.round(cr.score * 100) / 100,
+          message: cr.message,
+        })),
+      })),
+    };
+
+    return {
+      content: [{ type: "text", text: JSON.stringify(summary, null, 2) }],
+    };
+  } catch (err) {
+    return { isError: true, content: [{ type: "text", text: `Grading error: ${(err as Error).message}` }] };
+  }
+}
+
+// ─── List user's agents ─────────────────────────────────────────────
+
+async function executeListAgents(userId: string) {
+  const snap = await adminDb
+    .collection("users")
+    .doc(userId)
+    .collection("agents")
+    .orderBy("updatedAt", "desc")
+    .limit(50)
+    .get();
+
+  const agents = snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      name: data.name,
+      description: data.description || null,
+      domain: data.domain || null,
+      model: { provider: data.modelProvider, id: data.modelId },
+      latestGradingScore: data.latestGradingScore ?? null,
+      version: data.version || 1,
+    };
+  });
+
+  return {
+    content: [{ type: "text", text: JSON.stringify({ count: agents.length, agents }, null, 2) }],
+  };
+}
+
 // ─── POST handler (MCP Streamable HTTP) ──────────────────────────────
 
 export async function POST(request: NextRequest) {
-  // 1. Authenticate
-  const resolved = await authenticate(request);
-  if (!resolved) {
+  // 1. Authenticate (supports both agent-bound and user-level keys)
+  const auth = await authenticate(request);
+  if (!auth) {
     return jsonErr(null, -32000, "Missing or invalid API key", 401);
   }
-  if (!resolved.enabled) {
+  if (!auth.key.enabled) {
     return jsonErr(null, -32000, "API key is disabled", 403);
   }
 
-  // Rate limiting by API key
-  const rl = await checkRateLimit(mcpRateLimit, resolved.agentId);
+  const userId = auth.key.userId;
+  const agentId = auth.type === "agent" ? auth.key.agentId : null;
+
+  // Rate limiting
+  const rl = await checkRateLimit(mcpRateLimit, agentId || userId);
   if (rl) return rl;
 
   // 2. Parse body
@@ -264,7 +581,6 @@ export async function POST(request: NextRequest) {
 
   // Notifications (no id) → acknowledge with 202
   if (body.id === undefined || body.id === null) {
-    // notifications/initialized, etc. — no response needed
     return new NextResponse(null, { status: 202 });
   }
 
@@ -284,6 +600,7 @@ export async function POST(request: NextRequest) {
         serverInfo: {
           name: "kopern",
           version: "1.0.0",
+          description: "Grade AI system prompts against test cases, chat with agents, browse 37 templates, and manage your agent fleet.",
         },
       });
     }
@@ -295,12 +612,13 @@ export async function POST(request: NextRequest) {
 
     // ── List tools ──
     case "tools/list": {
-      const agent = await loadAgent(resolved.userId, resolved.agentId);
-      if (!agent) return jsonErr(body.id, -32000, "Agent not found");
-
-      return jsonOk(body.id, {
-        tools: buildToolList(agent),
-      });
+      // User-level keys get platform tools only; agent keys get all tools
+      if (agentId) {
+        const agent = await loadAgent(userId, agentId);
+        if (!agent) return jsonErr(body.id, -32000, "Agent not found");
+        return jsonOk(body.id, { tools: buildToolList(agent) });
+      }
+      return jsonOk(body.id, { tools: buildPlatformToolList() });
     }
 
     // ── Call a tool ──
@@ -308,29 +626,50 @@ export async function POST(request: NextRequest) {
       const toolName = body.params?.name as string;
       const toolArgs = (body.params?.arguments as Record<string, unknown>) || {};
 
-      // Plan limits
-      const tokenCheck = await checkPlanLimits(resolved.userId, "tokens");
-      if (!tokenCheck.allowed) {
+      // ── Platform tools (work with both key types) ──
+      if (toolName === "kopern_list_templates") {
+        return jsonOk(body.id, executeListTemplates(toolArgs));
+      }
+
+      if (toolName === "kopern_list_agents") {
+        return jsonOk(body.id, await executeListAgents(userId));
+      }
+
+      if (toolName === "kopern_grade_prompt") {
+        const tokenCheck = await checkPlanLimits(userId, "tokens");
+        if (!tokenCheck.allowed) {
+          return jsonOk(body.id, { isError: true, content: [{ type: "text", text: tokenCheck.reason || "Plan limit reached" }] });
+        }
+        const gradeCheck = await checkPlanLimits(userId, "grading");
+        if (!gradeCheck.allowed) {
+          return jsonOk(body.id, { isError: true, content: [{ type: "text", text: gradeCheck.reason || "Grading run limit reached" }] });
+        }
+        // grade_prompt uses a dummy agentId for user-level keys (no agent context needed)
+        const result = await executeGradePrompt(userId, agentId || "__user__", toolArgs);
+        return jsonOk(body.id, result);
+      }
+
+      // ── Agent-bound tools (require agent key) ──
+      if (!agentId) {
         return jsonOk(body.id, {
           isError: true,
-          content: [{ type: "text", text: tokenCheck.reason || "Plan limit reached" }],
+          content: [{ type: "text", text: `"${toolName}" requires an agent-bound API key. Create one at kopern.ai → Agent → MCP/API tab.` }],
         });
       }
 
-      const agent = await loadAgent(resolved.userId, resolved.agentId);
+      const tokenCheck = await checkPlanLimits(userId, "tokens");
+      if (!tokenCheck.allowed) {
+        return jsonOk(body.id, { isError: true, content: [{ type: "text", text: tokenCheck.reason || "Plan limit reached" }] });
+      }
+
+      const agent = await loadAgent(userId, agentId);
       if (!agent) return jsonErr(body.id, -32000, "Agent not found");
 
       switch (toolName) {
         case "kopern_chat": {
-          const skills = await loadSkills(resolved.userId, resolved.agentId);
-          const result = await executeChat(
-            resolved.userId,
-            resolved.agentId,
-            resolved.mcpServerId,
-            agent,
-            skills,
-            toolArgs
-          );
+          const mcpServerId = auth.type === "agent" ? auth.key.mcpServerId : "";
+          const skills = await loadSkills(userId, agentId);
+          const result = await executeChat(userId, agentId, mcpServerId, agent, skills, toolArgs);
           return jsonOk(body.id, result);
         }
 

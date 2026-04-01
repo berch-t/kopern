@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
         }
       } else {
         // Anonymous demo: use env var demo key only
-        const envMap: Record<string, string> = { anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY", google: "GOOGLE_AI_API_KEY" };
+        const envMap: Record<string, string> = { anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY", google: "GOOGLE_AI_API_KEY", mistral: "MISTRAL_API_KEY" };
         const envKey = envMap[resolvedProvider] ? process.env[envMap[resolvedProvider]] : undefined;
         apiKey = envKey && envKey.length >= 8 ? envKey : undefined;
       }

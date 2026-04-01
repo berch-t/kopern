@@ -160,6 +160,7 @@ function normalizeProvider(raw: string): string {
   const lower = raw.toLowerCase();
   if (lower.includes("openai") || lower.includes("gpt")) return "openai";
   if (lower.includes("google") || lower.includes("gemini")) return "google";
+  if (lower.includes("mistral") || lower.includes("codestral") || lower.includes("magistral") || lower.includes("devstral")) return "mistral";
   return "anthropic";
 }
 

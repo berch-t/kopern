@@ -22,6 +22,12 @@ export async function checkPlanLimits(
     return { allowed: true, plan: "enterprise" };
   }
 
+  // Beta testers get pro limits (no admin privileges, no bug tracker, their own API keys)
+  const BETA_UIDS = (process.env.NEXT_PUBLIC_BETA_UID ?? "").split(",").filter(Boolean);
+  if (BETA_UIDS.includes(userId)) {
+    return { allowed: true, plan: "pro" };
+  }
+
   const userSnap = await adminDb.doc(`users/${userId}`).get();
   const userData = userSnap.data();
   const plan: PlanTier = userData?.subscription?.plan || "starter";

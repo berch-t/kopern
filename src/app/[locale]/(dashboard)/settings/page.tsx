@@ -25,7 +25,7 @@ import { providers } from "@/lib/pi-mono/providers";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { toast } from "sonner";
-import { Eye, EyeOff, Github, Check, Shield, Download, Trash2, Plus, X } from "lucide-react";
+import { Eye, EyeOff, Github, Check, Shield, Download, Trash2, Plus, X, Key, Copy, Terminal } from "lucide-react";
 import { useDictionary } from "@/providers/LocaleProvider";
 import { LocalizedLink } from "@/components/LocalizedLink";
 
@@ -111,6 +111,9 @@ export default function SettingsPage() {
       <SlideUp>
         <h1 className="text-3xl font-bold">{t.settings.title}</h1>
       </SlideUp>
+
+      {/* Personal API Key — prominent first card */}
+      <PersonalApiKeyCard />
 
       <Card>
         <CardHeader>
@@ -419,5 +422,177 @@ function GdprSection() {
         </CardContent>
       </Card>
     </FadeIn>
+  );
+}
+
+function PersonalApiKeyCard() {
+  const t = useDictionary();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [newKey, setNewKey] = useState<string | null>(null);
+  const [keyInfo, setKeyInfo] = useState<{ exists: boolean; apiKeyPrefix?: string; apiKeyHash?: string; createdAt?: string; lastUsedAt?: string } | null>(null);
+
+  // Fetch existing key info on mount
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch("/api/mcp/user-key", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) setKeyInfo(await res.json());
+      } catch { /* ignore */ }
+    })();
+  }, [user]);
+
+  async function handleGenerate() {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch("/api/mcp/user-key", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.error || "Failed to generate key");
+        return;
+      }
+      const data = await res.json();
+      setNewKey(data.apiKey);
+      setKeyInfo({ exists: true, apiKeyPrefix: data.apiKeyPrefix, apiKeyHash: data.apiKeyHash });
+      toast.success(t.settings.personalKeyGenerated);
+    } catch {
+      toast.error("Failed to generate key");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!user || !keyInfo?.apiKeyHash) return;
+    setDeleting(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`/api/mcp/user-key?hash=${keyInfo.apiKeyHash}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setKeyInfo({ exists: false });
+        setNewKey(null);
+        setConfirmDelete(false);
+        toast.success(t.settings.personalKeyDeleted);
+      }
+    } catch {
+      toast.error("Failed to delete key");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  function copyKey(text: string) {
+    navigator.clipboard.writeText(text);
+    toast.success(t.settings.personalKeyCopied);
+  }
+
+  const mcpConfig = newKey
+    ? JSON.stringify({
+        mcpServers: {
+          kopern: {
+            type: "http",
+            url: "https://kopern.ai/api/mcp/server",
+            headers: { Authorization: `Bearer ${newKey}` },
+          },
+        },
+      }, null, 2)
+    : null;
+
+  return (
+    <Card className="border-primary/20 bg-primary/[0.02]">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Key className="h-5 w-5 text-primary" />
+          {t.settings.personalKey}
+        </CardTitle>
+        <CardDescription>{t.settings.personalKeyDesc}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {keyInfo?.exists ? (
+          <>
+            {/* Key value + copy */}
+            <div className="flex items-center gap-2">
+              <code className="rounded bg-muted px-3 py-1.5 text-sm font-mono truncate max-w-full">
+                {newKey || `${keyInfo.apiKeyPrefix}${"*".repeat(20)}`}
+              </code>
+              {newKey && (
+                <Button variant="ghost" size="icon" className="shrink-0" onClick={() => copyKey(newKey)}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+
+            {/* Status + delete */}
+            <div className="flex items-center justify-between">
+              <Badge variant="default" className="bg-emerald-600 text-xs">
+                {t.settings.personalKeyActive}
+              </Badge>
+              <div className="flex gap-2">
+                {confirmDelete ? (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
+                      {t.common.cancel}
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      {t.settings.personalKeyDelete}
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setConfirmDelete(true)}>
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    {t.settings.personalKeyDelete}
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {confirmDelete && (
+              <p className="text-xs text-destructive">{t.settings.personalKeyDeleteConfirm}</p>
+            )}
+
+            {/* Show MCP config after generation */}
+            {newKey && (
+              <div className="space-y-2">
+                <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                  {t.settings.personalKeyShowOnce}
+                </p>
+                <div className="relative">
+                  <pre className="rounded-lg bg-muted p-4 text-xs font-mono overflow-x-auto">{mcpConfig}</pre>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2"
+                    onClick={() => copyKey(mcpConfig!)}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          /* No key yet — generate button */
+          <Button onClick={handleGenerate} disabled={loading}>
+            <Terminal className="h-4 w-4 mr-2" />
+            {loading ? t.common.loading : t.settings.personalKeyGenerate}
+          </Button>
+        )}
+      </CardContent>
+    </Card>
   );
 }

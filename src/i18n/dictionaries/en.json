@@ -820,7 +820,17 @@
     "githubLinkFailed": "Failed to link GitHub account",
     "apiKeysDesc": "Your API keys are stored securely. Add multiple keys per provider for automatic failover on rate limits.",
     "failoverKey": "Failover key",
-    "addFailoverKey": "Add failover key"
+    "addFailoverKey": "Add failover key",
+    "personalKey": "Personal API Key",
+    "personalKeyDesc": "Connect Kopern to any MCP client (Claude Code, Cursor, Smithery...) — no agent setup required.",
+    "personalKeyGenerate": "Generate key",
+    "personalKeyDelete": "Delete key",
+    "personalKeyCopied": "Key copied to clipboard",
+    "personalKeyGenerated": "API key generated. Copy it now — it won't be shown again.",
+    "personalKeyDeleted": "Personal API key deleted",
+    "personalKeyDeleteConfirm": "Delete this key? Active MCP connections will stop working.",
+    "personalKeyShowOnce": "Copy this key now — it won't be shown again",
+    "personalKeyActive": "Active"
   },
   "apiKeys": {
     "title": "API Endpoints",

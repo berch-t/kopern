@@ -28,7 +28,7 @@ export async function trackUsageServer(
   if (!userId || !agentId) return;
 
   const yearMonth = getCurrentYearMonth();
-  const cost = calculateTokenCost(provider, inputTokens, outputTokens, modelId);
+  const cost = calculateTokenCost(provider, inputTokens, outputTokens, modelId, userId);
   const ref = adminDb.doc(`users/${userId}/usage/${yearMonth}`);
 
   // First ensure the doc exists with top-level counters

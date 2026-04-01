@@ -24,6 +24,47 @@ export interface ResolvedKey {
   rateLimitPerMinute: number;
 }
 
+/** User-level key: not bound to a specific agent. Used for platform-wide MCP tools (list_templates, grade_prompt, list_agents). */
+export interface ResolvedUserKey {
+  userId: string;
+  enabled: boolean;
+  rateLimitPerMinute: number;
+}
+
+/**
+ * Resolve a user-level API key (not bound to any agent).
+ * Returns null if the key is agent-bound — use resolveApiKey() for those.
+ */
+export async function resolveUserApiKey(plainKey: string): Promise<ResolvedUserKey | null> {
+  if (!plainKey.startsWith(KEY_PREFIX)) return null;
+
+  const hash = hashApiKey(plainKey);
+  const snap = await adminDb.collection("apiKeys").doc(hash).get();
+
+  if (!snap.exists) return null;
+
+  const data = snap.data()!;
+
+  // Only user-level keys (no agentId)
+  if (data.agentId) return null;
+
+  // Check expiration
+  if (data.expiresAt) {
+    const expiresAt = data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
+    if (expiresAt < new Date()) return null;
+  }
+
+  // Update lastUsedAt (fire-and-forget)
+  adminDb.collection("apiKeys").doc(hash).update({ lastUsedAt: FieldValue.serverTimestamp() }).catch(() => {});
+
+  return {
+    userId: data.userId,
+    enabled: data.enabled,
+    rateLimitPerMinute: data.rateLimitPerMinute,
+  };
+}
+
+/** Resolve an agent-bound API key. Returns null for user-level keys. */
 export async function resolveApiKey(plainKey: string): Promise<ResolvedKey | null> {
   if (!plainKey.startsWith(KEY_PREFIX)) return null;
 
@@ -121,4 +162,33 @@ export async function rotateApiKey(oldKeyHash: string): Promise<{ newKey: string
   });
 
   return { newKey, newHash };
+}
+
+/**
+ * Create a user-level API key (not bound to any agent).
+ * Stored in the same apiKeys collection but with agentId: null.
+ */
+export async function createUserApiKeyDoc(
+  plainKey: string,
+  userId: string,
+  rateLimitPerMinute = 30
+) {
+  const hash = hashApiKey(plainKey);
+
+  await adminDb
+    .collection("apiKeys")
+    .doc(hash)
+    .set({
+      userId,
+      agentId: null,
+      mcpServerId: null,
+      type: "user",
+      enabled: true,
+      rateLimitPerMinute,
+      expiresAt: null,
+      lastUsedAt: null,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+  return { hash, prefix: getKeyPrefix(plainKey) };
 }

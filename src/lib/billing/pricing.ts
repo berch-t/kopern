@@ -66,16 +66,23 @@ export const MODEL_PRICING: Record<string, { input: number; output: number; name
   "mistral-nemo-latest":     { input: 0.02, output: 0.04, name: "Mistral Nemo" },
 };
 
+/** Check if a user is a beta tester (no commission, pro limits, no admin privileges) */
+export function isBetaUser(userId: string): boolean {
+  const BETA_UIDS = (process.env.NEXT_PUBLIC_BETA_UID ?? "").split(",").filter(Boolean);
+  return BETA_UIDS.includes(userId);
+}
+
 /** Calculate cost for a given number of tokens, using per-model pricing when available.
- *  Applies the Kopern platform commission (17%) on top of provider costs. */
+ *  Applies the Kopern platform commission (17%) on top of provider costs.
+ *  Beta testers are exempt from commission. */
 export function calculateTokenCost(
   provider: string,
   inputTokens: number,
   outputTokens: number,
-  modelId?: string
+  modelId?: string,
+  userId?: string
 ): number {
-  // Lazy import to avoid circular dependency
-  const COMMISSION = 0.17;
+  const COMMISSION = userId && isBetaUser(userId) ? 0 : 0.17;
 
   // Try per-model pricing first
   const modelPricing = modelId ? MODEL_PRICING[modelId] : undefined;
