@@ -71,10 +71,11 @@ export async function sendTelegramMessage(
   const chunks = splitMessage(text, MAX_MESSAGE_LENGTH);
 
   for (const chunk of chunks) {
+    const htmlText = markdownToTelegramHTML(chunk);
     const payload: Record<string, unknown> = {
       chat_id: chatId,
-      text: markdownToTelegramV2(chunk),
-      parse_mode: "MarkdownV2",
+      text: htmlText,
+      parse_mode: "HTML",
     };
     if (replyToMessageId) {
       payload.reply_parameters = { message_id: replyToMessageId };
@@ -87,10 +88,10 @@ export async function sendTelegramMessage(
     });
 
     if (!res.ok) {
-      // Fallback: send without MarkdownV2 if parsing fails
+      // Fallback: send as plain text (strip all markdown)
       const fallback: Record<string, unknown> = {
         chat_id: chatId,
-        text: chunk,
+        text: stripMarkdown(chunk),
       };
       if (replyToMessageId) {
         fallback.reply_parameters = { message_id: replyToMessageId };
@@ -180,59 +181,116 @@ export async function lookupTelegramBot(
   };
 }
 
-// --- Markdown Conversion ---
+// --- Markdown → Telegram HTML Conversion ---
 
 /**
- * Convert standard Markdown to Telegram MarkdownV2 format.
- * Telegram requires escaping special characters: _ * [ ] ( ) ~ ` > # + - = | { } . !
+ * Convert standard Markdown to Telegram HTML format.
+ * HTML is much more forgiving than MarkdownV2 — no need to escape special chars.
+ * Telegram supports: <b>, <i>, <code>, <pre>, <a>, <s>, <u>, <blockquote>
  */
-function markdownToTelegramV2(text: string): string {
+function markdownToTelegramHTML(text: string): string {
   let result = text;
 
-  // Preserve code blocks
+  // Preserve code blocks — convert to <pre>
   const codeBlocks: string[] = [];
-  result = result.replace(/```([\s\S]*?)```/g, (_, code) => {
-    codeBlocks.push(code);
+  result = result.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+    const escaped = escapeHTML(code.trim());
+    const pre = lang ? `<pre><code class="language-${lang}">${escaped}</code></pre>` : `<pre>${escaped}</pre>`;
+    codeBlocks.push(pre);
     return `__CODEBLOCK_${codeBlocks.length - 1}__`;
   });
 
-  // Preserve inline code
+  // Preserve inline code — convert to <code>
   const inlineCodes: string[] = [];
   result = result.replace(/`([^`]+)`/g, (_, code) => {
-    inlineCodes.push(code);
+    inlineCodes.push(`<code>${escapeHTML(code)}</code>`);
     return `__INLINE_${inlineCodes.length - 1}__`;
   });
 
-  // Escape special chars that aren't part of markdown formatting
-  // Must be done BEFORE converting bold/italic
-  const specialChars = /([[\]()~>#+=|{}.!-])/g;
-  result = result.replace(specialChars, "\\$1");
+  // Tables → readable key-value text (Telegram has no table support)
+  result = result.replace(/^\|(.+)\|\s*\n\|[-| :]+\|\s*\n((?:\|.+\|\s*\n?)*)/gm, (_, header, body) => {
+    const headers = header.split("|").map((h: string) => h.trim()).filter(Boolean);
+    const rows = body.trim().split("\n").filter(Boolean);
+    let out = "";
+    for (const row of rows) {
+      const cells = row.split("|").map((c: string) => c.trim()).filter(Boolean);
+      const parts: string[] = [];
+      for (let i = 0; i < cells.length; i++) {
+        if (headers[i] && cells[i]) {
+          parts.push(`<b>${escapeHTML(headers[i])}</b>: ${escapeHTML(cells[i])}`);
+        } else if (cells[i]) {
+          parts.push(escapeHTML(cells[i]));
+        }
+      }
+      out += parts.join(" | ") + "\n";
+    }
+    return out;
+  });
 
-  // Bold: **text** → *text*
-  result = result.replace(/\\\*\\\*(.+?)\\\*\\\*/g, "*$1*");
+  // Bold: **text** → <b>text</b>
+  result = result.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
 
-  // Italic: single *text* → _text_
-  result = result.replace(/(?<!\\\*)\\\*(?!\\\*)(.+?)(?<!\\\*)\\\*(?!\\\*)/g, "_$1_");
+  // Italic: *text* → <i>text</i> (but not inside <b> tags)
+  result = result.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, "<i>$1</i>");
 
-  // Headers: # Title → *Title* (bold)
-  result = result.replace(/^\\#{1,6}\s+(.+)$/gm, "*$1*");
+  // Strikethrough: ~~text~~ → <s>text</s>
+  result = result.replace(/~~(.+?)~~/g, "<s>$1</s>");
+
+  // Headers: # Title → bold line
+  result = result.replace(/^#{1,6}\s+(.+)$/gm, "\n<b>$1</b>");
+
+  // Links: [text](url) → <a href="url">text</a>
+  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+
+  // Blockquotes: > text → <blockquote>text</blockquote>
+  result = result.replace(/^>\s+(.+)$/gm, "<blockquote>$1</blockquote>");
 
   // Horizontal rules
-  result = result.replace(/^(\\-{3,}|\\_{3,})$/gm, "———");
+  result = result.replace(/^-{3,}$/gm, "———");
+  result = result.replace(/^_{3,}$/gm, "———");
 
-  // Restore inline code with escaping
-  result = result.replace(/__INLINE_(\d+)__/g, (_, i) => {
-    const code = inlineCodes[parseInt(i)];
-    return `\`${code}\``;
-  });
+  // Restore inline code
+  result = result.replace(/__INLINE_(\d+)__/g, (_, i) => inlineCodes[parseInt(i)]);
 
   // Restore code blocks
-  result = result.replace(/__CODEBLOCK_(\d+)__/g, (_, i) => {
-    const code = codeBlocks[parseInt(i)];
-    return `\`\`\`${code}\`\`\``;
-  });
+  result = result.replace(/__CODEBLOCK_(\d+)__/g, (_, i) => codeBlocks[parseInt(i)]);
 
-  return result;
+  // Clean up excessive blank lines
+  result = result.replace(/\n{3,}/g, "\n\n");
+
+  return result.trim();
+}
+
+/** Escape HTML special chars */
+function escapeHTML(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** Strip all markdown formatting for plain text fallback */
+function stripMarkdown(text: string): string {
+  let result = text;
+  // Remove code blocks (keep content)
+  result = result.replace(/```\w*\n?([\s\S]*?)```/g, "$1");
+  // Remove inline code backticks
+  result = result.replace(/`([^`]+)`/g, "$1");
+  // Remove bold/italic
+  result = result.replace(/\*\*(.+?)\*\*/g, "$1");
+  result = result.replace(/\*(.+?)\*/g, "$1");
+  result = result.replace(/~~(.+?)~~/g, "$1");
+  // Remove headers
+  result = result.replace(/^#{1,6}\s+/gm, "");
+  // Remove links (keep text)
+  result = result.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+  // Remove blockquote markers
+  result = result.replace(/^>\s+/gm, "");
+  // Tables: remove pipes, keep content
+  result = result.replace(/^\|[-| :]+\|\s*$/gm, "");
+  result = result.replace(/^\|(.+)\|$/gm, (_, content) =>
+    content.split("|").map((c: string) => c.trim()).filter(Boolean).join(" | ")
+  );
+  // Remove horizontal rules
+  result = result.replace(/^-{3,}$/gm, "———");
+  return result.trim();
 }
 
 // --- Helpers ---
