@@ -960,7 +960,7 @@ async function executeGradePrompt(
         weight: 1,
       },
     ] satisfies CriterionConfig[],
-    createdAt: { toDate: () => new Date(), toMillis: () => Date.now(), toJSON: () => ({ seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }) } as unknown as import("@firebase/firestore").Timestamp,
+    createdAt: { toDate: () => new Date(), toMillis: () => Date.now(), toJSON: () => ({ seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 }) } as unknown as import("firebase/firestore").Timestamp,
   }));
 
   // Execute each case by running the agent

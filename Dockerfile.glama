@@ -1,0 +1,9 @@
+FROM node:18-slim
+
+# Install the MCP bridge package (stdio-to-HTTP, zero deps)
+RUN npm install -g @kopern/mcp-server@2.0.3
+
+# The bridge reads KOPERN_API_KEY from env and forwards JSON-RPC to KOPERN_URL
+ENV KOPERN_URL=https://kopern.ai/api/mcp/server
+
+CMD ["kopern-mcp-server"]
