@@ -177,7 +177,7 @@ export function HowItWorks({ id }: HowItWorksProps) {
 
   return (
     <section id={id} className="py-24">
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-6">
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold sm:text-4xl">
@@ -321,7 +321,7 @@ export function HowItWorks({ id }: HowItWorksProps) {
         </div>
 
         {/* Content area with TOC sidebar */}
-        <div className="flex gap-0 rounded-xl border bg-card/50 overflow-hidden" style={{ height: "80vh" }}>
+        <div className="flex gap-0 rounded-xl border bg-card/50 overflow-hidden" style={{ height: "80vh", minHeight: 400 }}>
           {/* Left sidebar — TOC reads headings from contentRef DOM */}
           <aside className="hidden lg:block w-60 shrink-0 border-r overflow-y-auto p-4">
             <TableOfContents

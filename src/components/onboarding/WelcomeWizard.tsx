@@ -484,7 +484,7 @@ export function WelcomeWizard({ open, onOpenChange }: WelcomeWizardProps) {
       if (!v && abortRef.current) abortRef.current.abort();
       onOpenChange(v);
     }}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden p-0 gap-0 [&>button]:hidden">
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-2xl max-h-[90vh] overflow-hidden p-0 gap-0 [&>button]:hidden">
         <DialogTitle className="sr-only">
           {isFr ? "Assistant de creation" : "Creation wizard"}
         </DialogTitle>

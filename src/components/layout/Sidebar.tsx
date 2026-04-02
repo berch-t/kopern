@@ -71,7 +71,7 @@ export function Sidebar() {
     <motion.aside
       animate={{ width: collapsed ? 64 : 240 }}
       transition={{ duration: 0.2, ease: "easeInOut" }}
-      className="hidden md:flex h-screen flex-col border-r bg-sidebar text-sidebar-foreground"
+      className="hidden md:flex h-dvh flex-col border-r bg-sidebar text-sidebar-foreground"
     >
       <div className="flex h-14 items-center justify-between px-3">
         <AnimatePresence>
@@ -204,7 +204,7 @@ export function MobileSidebar() {
       <Button
         variant="ghost"
         size="icon"
-        className="md:hidden h-9 w-9"
+        className="md:hidden h-11 w-11"
         onClick={() => setOpen(true)}
       >
         <Menu className="h-5 w-5" />
@@ -216,7 +216,7 @@ export function MobileSidebar() {
               <img src="/logo_small.png" alt="Kopern" className="h-6" />
             </SheetTitle>
           </SheetHeader>
-          <nav className="flex-1 space-y-1 px-2 py-4">
+          <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
             {allItems.map((item) => {
               const isActive = pathname.includes(item.href);
               return (
@@ -225,7 +225,7 @@ export function MobileSidebar() {
                   href={item.href}
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2.5 text-[15px] font-medium transition-colors",
+                    "flex items-center gap-3 rounded-md px-3 py-2.5 min-h-[44px] text-[15px] font-medium transition-colors",
                     isActive
                       ? "bg-sidebar-accent text-sidebar-accent-foreground"
                       : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"

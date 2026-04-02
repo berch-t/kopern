@@ -87,17 +87,17 @@ export default function AgentDetailLayout({
     <div className="space-y-3">
       {/* Compact header */}
       {agent && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <LocalizedLink href="/agents" className="text-muted-foreground hover:text-foreground text-sm">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            <LocalizedLink href="/agents" className="text-muted-foreground hover:text-foreground text-sm shrink-0">
               ← {t.agents?.title ?? "Agents"}
             </LocalizedLink>
-            <span className="text-muted-foreground/40">/</span>
-            <h1 className="text-lg font-bold truncate">{agent.name}</h1>
-            <Badge variant="secondary" className="text-[10px]">{agent.domain}</Badge>
-            <span className="text-xs text-muted-foreground">v{agent.version} · {agent.modelId}</span>
+            <span className="text-muted-foreground/40 hidden sm:inline">/</span>
+            <h1 className="text-base sm:text-lg font-bold truncate">{agent.name}</h1>
+            <Badge variant="secondary" className="text-[10px] hidden sm:inline-flex">{agent.domain}</Badge>
+            <span className="text-xs text-muted-foreground hidden md:inline">v{agent.version} · {agent.modelId}</span>
             {agent.latestGradingScore !== null && (
-              <Badge variant="outline" className="text-[10px] tabular-nums">
+              <Badge variant="outline" className="text-[10px] tabular-nums hidden sm:inline-flex">
                 <AnimatedCounter value={agent.latestGradingScore * 100} suffix="%" />
               </Badge>
             )}

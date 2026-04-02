@@ -297,14 +297,14 @@ export default function OperatorPage({
             <Card>
               <CardContent className="p-0 overflow-x-auto">
                 {/* Table header */}
-                <div className="grid grid-cols-[auto_1fr_72px_64px_56px_72px_64px_80px] items-center gap-x-3 px-4 py-2 border-b text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                <div className="grid grid-cols-[auto_1fr_80px] md:grid-cols-[auto_1fr_72px_64px_56px_72px_64px_80px] items-center gap-x-3 px-4 py-2 border-b text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                   <span className="w-2" />
                   <span>Conversation</span>
-                  <span className="text-right">Source</span>
-                  <span className="text-right">Msgs</span>
-                  <span className="text-right">Tools</span>
-                  <span className="text-right">Tokens</span>
-                  <span className="text-right">Cost</span>
+                  <span className="hidden md:block text-right">Source</span>
+                  <span className="hidden md:block text-right">Msgs</span>
+                  <span className="hidden md:block text-right">Tools</span>
+                  <span className="hidden md:block text-right">Tokens</span>
+                  <span className="hidden md:block text-right">Cost</span>
                   <span className="text-right">Date</span>
                 </div>
                 <StaggerChildren>
@@ -312,7 +312,7 @@ export default function OperatorPage({
                     {conversations.map((conv) => (
                       <motion.div key={conv.id} variants={staggerItem}>
                         <LocalizedLink href={`/agents/${agentId}/sessions/${conv.id}`}>
-                          <div className="grid grid-cols-[auto_1fr_72px_64px_56px_72px_64px_80px] items-center gap-x-3 px-4 py-2 hover:bg-muted/50 transition-colors cursor-pointer">
+                          <div className="grid grid-cols-[auto_1fr_80px] md:grid-cols-[auto_1fr_72px_64px_56px_72px_64px_80px] items-center gap-x-3 px-4 py-2 hover:bg-muted/50 transition-colors cursor-pointer">
                             {/* Resolved indicator */}
                             <div className={`h-2 w-2 shrink-0 rounded-full ${conv.resolved ? "bg-emerald-500" : "bg-amber-500"}`} />
 
@@ -322,29 +322,29 @@ export default function OperatorPage({
                             </p>
 
                             {/* Source */}
-                            <div className="text-right">
+                            <div className="hidden md:block text-right">
                               <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${SOURCE_COLORS[conv.source] ?? "bg-gray-500/10 text-gray-500"}`}>
                                 {SOURCE_LABELS[conv.source] ?? conv.source ?? "—"}
                               </span>
                             </div>
 
                             {/* Messages count */}
-                            <span className="text-xs text-muted-foreground text-right tabular-nums">
+                            <span className="hidden md:block text-xs text-muted-foreground text-right tabular-nums">
                               {conv.messageCount}
                             </span>
 
                             {/* Tool calls */}
-                            <span className="text-xs text-muted-foreground text-right tabular-nums">
+                            <span className="hidden md:block text-xs text-muted-foreground text-right tabular-nums">
                               {conv.toolCallCount || "—"}
                             </span>
 
                             {/* Tokens */}
-                            <span className="text-xs text-muted-foreground text-right tabular-nums">
+                            <span className="hidden md:block text-xs text-muted-foreground text-right tabular-nums">
                               {conv.totalTokens > 0 ? conv.totalTokens >= 1000 ? `${(conv.totalTokens / 1000).toFixed(1)}k` : conv.totalTokens : "—"}
                             </span>
 
                             {/* Cost */}
-                            <span className="text-xs text-muted-foreground text-right tabular-nums">
+                            <span className="hidden md:block text-xs text-muted-foreground text-right tabular-nums">
                               {conv.costEUR > 0 ? `${conv.costEUR.toFixed(3)}€` : "—"}
                             </span>
 

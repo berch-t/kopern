@@ -59,10 +59,10 @@ export default function AgentsPage() {
   return (
     <div className="space-y-8">
       <SlideUp>
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">{t.agents.title}</h1>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setWizardOpen(true)}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold">{t.agents.title}</h1>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => setWizardOpen(true)}>
               <Sparkles className="mr-2 h-4 w-4" />
               {isFr ? "Assistant rapide" : "Quick assistant"}
             </Button>
@@ -102,12 +102,12 @@ export default function AgentsPage() {
         <FadeIn>
           <Card>
             <CardContent className="p-0 overflow-x-auto">
-              <div className="grid grid-cols-[1fr_80px_120px_64px_80px_36px] items-center gap-x-3 px-4 py-2 border-b text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+              <div className="grid grid-cols-[1fr_36px] md:grid-cols-[1fr_80px_120px_64px_80px_36px] items-center gap-x-3 px-4 py-2 border-b text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                 <span>Agent</span>
-                <span>Domain</span>
-                <span>Model</span>
-                <span className="text-right">Score</span>
-                <span className="text-right">Version</span>
+                <span className="hidden md:block">Domain</span>
+                <span className="hidden md:block">Model</span>
+                <span className="hidden md:block text-right">Score</span>
+                <span className="hidden md:block text-right">Version</span>
                 <span />
               </div>
               <div className="divide-y">
@@ -116,7 +116,7 @@ export default function AgentsPage() {
                   return (
                     <div
                       key={agent.id}
-                      className="grid grid-cols-[1fr_80px_120px_64px_80px_36px] items-center gap-x-3 px-4 py-2.5 hover:bg-muted/50 transition-colors cursor-pointer"
+                      className="grid grid-cols-[1fr_36px] md:grid-cols-[1fr_80px_120px_64px_80px_36px] items-center gap-x-3 px-4 py-2.5 hover:bg-muted/50 transition-colors cursor-pointer"
                       onClick={() => router.push(`/agents/${agent.id}`)}
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -128,18 +128,18 @@ export default function AgentsPage() {
                           )}
                         </div>
                       </div>
-                      <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${domainColor}`}>
+                      <span className={`hidden md:inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${domainColor}`}>
                         {agent.domain || "—"}
                       </span>
-                      <span className="text-xs text-muted-foreground truncate">
+                      <span className="hidden md:block text-xs text-muted-foreground truncate">
                         {agent.modelId || "—"}
                       </span>
-                      <span className="text-xs text-right tabular-nums">
+                      <span className="hidden md:block text-xs text-right tabular-nums">
                         {agent.latestGradingScore != null
                           ? `${Math.round(agent.latestGradingScore * 100)}%`
                           : "—"}
                       </span>
-                      <span className="text-xs text-muted-foreground text-right">
+                      <span className="hidden md:block text-xs text-muted-foreground text-right">
                         v{agent.version ?? 1}
                       </span>
                       <LocalizedLink href={`/agents/${agent.id}/operator`} onClick={(e) => e.stopPropagation()}>
@@ -172,11 +172,11 @@ export default function AgentsPage() {
             </div>
             <Card>
               <CardContent className="p-0 overflow-x-auto">
-                <div className="grid grid-cols-[1fr_90px_64px_100px] items-center gap-x-3 px-4 py-2 border-b text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                <div className="grid grid-cols-[1fr_90px] sm:grid-cols-[1fr_90px_64px_100px] items-center gap-x-3 px-4 py-2 border-b text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                   <span>Team</span>
                   <span>Mode</span>
-                  <span className="text-right">Agents</span>
-                  <span className="text-right">Description</span>
+                  <span className="hidden sm:block text-right">Agents</span>
+                  <span className="hidden sm:block text-right">Description</span>
                 </div>
                 <div className="divide-y">
                   {teams.map((team) => {
@@ -184,17 +184,17 @@ export default function AgentsPage() {
                     return (
                       <div
                         key={team.id}
-                        className="grid grid-cols-[1fr_90px_64px_100px] items-center gap-x-3 px-4 py-2.5 hover:bg-muted/50 transition-colors cursor-pointer"
+                        className="grid grid-cols-[1fr_90px] sm:grid-cols-[1fr_90px_64px_100px] items-center gap-x-3 px-4 py-2.5 hover:bg-muted/50 transition-colors cursor-pointer"
                         onClick={() => router.push(`/teams/${team.id}`)}
                       >
                         <p className="text-sm font-medium truncate">{team.name}</p>
                         <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${modeColor}`}>
                           {team.executionMode}
                         </span>
-                        <span className="text-xs text-muted-foreground text-right tabular-nums">
+                        <span className="hidden sm:block text-xs text-muted-foreground text-right tabular-nums">
                           {team.agents?.length ?? 0}
                         </span>
-                        <p className="text-[11px] text-muted-foreground truncate text-right">
+                        <p className="hidden sm:block text-[11px] text-muted-foreground truncate text-right">
                           {team.description || "—"}
                         </p>
                       </div>

@@ -41,7 +41,7 @@ export function Header() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               {user.photoURL ? (
-                <button className="h-8 w-8 rounded-full overflow-hidden border hover:ring-2 hover:ring-primary/40 transition-all">
+                <button className="h-9 w-9 rounded-full overflow-hidden border hover:ring-2 hover:ring-primary/40 transition-all">
                   <img
                     src={user.photoURL}
                     alt={user.displayName || "Profile"}

@@ -616,19 +616,19 @@ export default function TeamDetailPage({
               </div>
             </CardHeader>
             <CardContent className="p-0 overflow-x-auto">
-              <div className="grid grid-cols-[auto_1fr_72px_48px_72px_100px] items-center gap-x-3 px-4 py-2 border-b text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+              <div className="grid grid-cols-[auto_1fr_100px] md:grid-cols-[auto_1fr_72px_48px_72px_100px] items-center gap-x-3 px-4 py-2 border-b text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                 <span className="w-2" />
                 <span>Prompt</span>
-                <span className="text-right">Status</span>
-                <span className="text-right">Agents</span>
-                <span className="text-right">Mode</span>
+                <span className="hidden md:block text-right">Status</span>
+                <span className="hidden md:block text-right">Agents</span>
+                <span className="hidden md:block text-right">Mode</span>
                 <span className="text-right">Date</span>
               </div>
               <div className="divide-y">
                 {pastRuns.map((run) => {
                   const isExpanded = results.length > 0 && false; // TODO: expand on click
                   return (
-                    <div key={run.id} className="grid grid-cols-[auto_1fr_72px_48px_72px_100px] items-center gap-x-3 px-4 py-2 hover:bg-muted/50 transition-colors cursor-pointer"
+                    <div key={run.id} className="grid grid-cols-[auto_1fr_100px] md:grid-cols-[auto_1fr_72px_48px_72px_100px] items-center gap-x-3 px-4 py-2 hover:bg-muted/50 transition-colors cursor-pointer"
                       onClick={() => {
                         // Load this run's results into the results panel
                         if (run.results?.length) {
@@ -642,13 +642,13 @@ export default function TeamDetailPage({
                     >
                       <div className={`h-2 w-2 shrink-0 rounded-full ${run.status === "completed" ? "bg-emerald-500" : run.status === "failed" ? "bg-red-500" : "bg-blue-500 animate-pulse"}`} />
                       <p className="text-sm truncate min-w-0">{run.prompt}</p>
-                      <div className="text-right">
+                      <div className="hidden md:block text-right">
                         <Badge variant={run.status === "completed" ? "secondary" : "destructive"} className="text-[10px] px-1.5 py-0">
                           {run.status}
                         </Badge>
                       </div>
-                      <span className="text-xs text-muted-foreground text-right tabular-nums">{run.results?.length ?? 0}</span>
-                      <span className="text-xs text-muted-foreground text-right">{run.executionMode}</span>
+                      <span className="hidden md:block text-xs text-muted-foreground text-right tabular-nums">{run.results?.length ?? 0}</span>
+                      <span className="hidden md:block text-xs text-muted-foreground text-right">{run.executionMode}</span>
                       <span className="text-xs text-muted-foreground text-right whitespace-nowrap">
                         {run.startedAt?.toDate?.()?.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) ?? "—"}
                       </span>

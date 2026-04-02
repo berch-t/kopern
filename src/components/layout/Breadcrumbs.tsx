@@ -112,7 +112,7 @@ export function Breadcrumbs() {
   });
 
   return (
-    <nav className="flex items-center gap-1 px-6 py-2 text-sm text-muted-foreground">
+    <nav className="flex items-center gap-1 px-3 md:px-6 py-2 text-sm text-muted-foreground overflow-x-auto whitespace-nowrap scrollbar-none">
       <Link href={`/${locale}`} className="hover:text-foreground transition-colors">
         {t.breadcrumbs.home}
       </Link>

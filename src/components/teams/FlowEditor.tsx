@@ -255,7 +255,7 @@ export default function FlowEditor({
   }, [nodes, edges, onSave]);
 
   return (
-    <div ref={reactFlowWrapper} className="h-[600px] w-full rounded-xl border bg-background overflow-hidden">
+    <div ref={reactFlowWrapper} className="h-[400px] md:h-[600px] w-full rounded-xl border bg-background overflow-hidden">
       <ReactFlow
         nodes={nodes}
         edges={edges}
