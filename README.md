@@ -15,6 +15,12 @@
 </p>
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/@kopern/mcp-server"><img src="https://img.shields.io/npm/v/@kopern/mcp-server.svg" alt="npm version" /></a>
+  <a href="https://smithery.ai/servers/kopern/mcp-server"><img src="https://smithery.ai/badge/kopern/mcp-server" alt="Smithery" /></a>
+  <a href="https://glama.ai/mcp/servers/berch-t/kopern"><img src="https://glama.ai/mcp/servers/berch-t/kopern/badges/score.svg" alt="Glama" /></a>
+</p>
+
+<p align="center">
   <a href="#features">Features</a> &middot;
   <a href="#quick-start">Quick Start</a> &middot;
   <a href="#why-kopern">Why Kopern</a> &middot;
