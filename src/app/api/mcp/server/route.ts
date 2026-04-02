@@ -1229,9 +1229,108 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // ── Prompts (empty) ──
+    // ── Prompts ──
     case "prompts/list": {
-      return jsonOk(body.id, { prompts: [] });
+      return jsonOk(body.id, {
+        prompts: [
+          {
+            name: "create-agent",
+            description: "Step-by-step guide to create, configure and deploy a new AI agent on Kopern",
+            arguments: [
+              { name: "use_case", description: "What the agent should do (e.g. 'customer support chatbot for a restaurant')", required: true },
+            ],
+          },
+          {
+            name: "grade-and-improve",
+            description: "Create a grading suite, run evaluation, and optimize an existing agent with AutoResearch",
+            arguments: [
+              { name: "agent_id", description: "The agent to evaluate and improve", required: true },
+            ],
+          },
+          {
+            name: "deploy-everywhere",
+            description: "Deploy an agent to all available channels: widget, Slack, Telegram, WhatsApp, webhooks",
+            arguments: [
+              { name: "agent_id", description: "The agent to deploy", required: true },
+            ],
+          },
+        ],
+      });
+    }
+
+    case "prompts/get": {
+      const promptName = body.params?.name as string;
+      const promptArgs = ((body.params as Record<string, unknown>)?.arguments ?? {}) as Record<string, string>;
+
+      if (promptName === "create-agent") {
+        return jsonOk(body.id, {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: `I want to create a new AI agent on Kopern for this use case: "${promptArgs.use_case || "general assistant"}".
+
+Please follow these steps:
+1. First, list available templates with kopern_list_templates to see if one matches
+2. If a template matches, deploy it with kopern_deploy_template
+3. If no template matches, create a custom agent with kopern_create_agent — write a detailed system prompt
+4. Then create a grading suite with kopern_create_grading_suite (3-5 test cases)
+5. Run grading with kopern_run_grading to get a baseline score
+6. If score < 80%, run kopern_run_autoresearch to optimize
+7. Finally, deploy with kopern_connect_widget`,
+              },
+            },
+          ],
+        });
+      }
+
+      if (promptName === "grade-and-improve") {
+        return jsonOk(body.id, {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: `I want to evaluate and improve agent "${promptArgs.agent_id}".
+
+Please follow these steps:
+1. Get the agent details with kopern_get_agent
+2. Create a grading suite with kopern_create_grading_suite (5+ realistic test cases covering edge cases)
+3. Run grading with kopern_run_grading
+4. Review results with kopern_get_grading_results
+5. If score < 90%, run kopern_run_autoresearch to auto-optimize the prompt
+6. Run grading again to confirm improvement`,
+              },
+            },
+          ],
+        });
+      }
+
+      if (promptName === "deploy-everywhere") {
+        return jsonOk(body.id, {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: `I want to deploy agent "${promptArgs.agent_id}" to all channels.
+
+Please help me set up each channel:
+1. kopern_connect_widget — embeddable chat widget for websites
+2. kopern_connect_slack — Slack workspace bot
+3. kopern_connect_telegram — Telegram bot (needs bot token from @BotFather)
+4. kopern_connect_whatsapp — WhatsApp Business (needs Meta phone_number_id + access_token)
+5. kopern_connect_webhook — inbound/outbound webhooks for n8n, Zapier, Make
+
+Ask me which channels I want to enable and what credentials I have ready.`,
+              },
+            },
+          ],
+        });
+      }
+
+      return jsonOk(body.id, { isError: true, messages: [{ role: "user", content: { type: "text", text: `Unknown prompt: ${promptName}` } }] });
     }
 
     // ── Resources (empty) ──

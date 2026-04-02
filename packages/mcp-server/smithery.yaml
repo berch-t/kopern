@@ -1,6 +1,21 @@
 # Smithery configuration for @kopern/mcp-server
 # https://smithery.ai/docs/config
 
+name: "Kopern"
+description: "Full AI agent lifecycle platform — create, grade, optimize, deploy, orchestrate and monitor AI agents. 32 tools covering the complete workflow from prompt to production."
+homepage: "https://kopern.ai"
+icon: "https://kopern.ai/logo_small.png"
+license: "MIT"
+keywords:
+  - ai-agents
+  - agent-builder
+  - grading
+  - optimization
+  - orchestration
+  - multi-agent
+  - deployment
+  - tool-calling
+
 startCommand:
   type: stdio
   configSchema:
@@ -8,7 +23,12 @@ startCommand:
     properties:
       KOPERN_API_KEY:
         type: string
-        description: "Your Kopern API key (kpn_...). Get it at https://kopern.ai → Settings → API Keys."
+        description: "Your Kopern API key (starts with kpn_). Get it free at https://kopern.ai → Settings → Personal API Key."
+        minLength: 10
+      KOPERN_URL:
+        type: string
+        description: "Kopern API endpoint URL. Only change this for self-hosted instances."
+        default: "https://kopern.ai/api/mcp/server"
     required:
       - KOPERN_API_KEY
   commandFunction: |-
@@ -16,6 +36,7 @@ startCommand:
       command: "npx",
       args: ["-y", "@kopern/mcp-server"],
       env: {
-        KOPERN_API_KEY: config.KOPERN_API_KEY
+        KOPERN_API_KEY: config.KOPERN_API_KEY,
+        ...(config.KOPERN_URL ? { KOPERN_URL: config.KOPERN_URL } : {})
       }
     })
