@@ -1,6 +1,7 @@
 # @kopern/mcp-server
 
 [![npm version](https://img.shields.io/npm/v/@kopern/mcp-server.svg)](https://www.npmjs.com/package/@kopern/mcp-server)
+[![smithery badge](https://smithery.ai/badge/kopern/mcp-server)](https://smithery.ai/servers/kopern/mcp-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **32 AI agent tools for Claude Code, Cursor, Windsurf, and any MCP client.**
