@@ -897,6 +897,47 @@
     },
     "integratesWith": "Intégrations native"
   },
+  "mcpSection": {
+    "title": "Construit pour les",
+    "titleAccent": "Développeurs",
+    "subtitle": "32 outils MCP pour créer, tester, noter et déployer des agents IA depuis votre terminal ou IDE. Une commande pour installer. Zéro dépendance.",
+    "install": {
+      "title": "Installation en une ligne",
+      "description": "Ajoutez Kopern à Claude Code, Cursor ou Windsurf en quelques secondes. Zéro dépendance — juste Node.js 18+."
+    },
+    "tools": {
+      "title": "32 Outils",
+      "description": "CRUD d'agents, suites de notation, optimisation AutoTune, équipes multi-agents, pipelines, 7 connecteurs, mémoire, rapports de conformité, et plus."
+    },
+    "protocol": {
+      "title": "Protocole MCP",
+      "description": "Transport Streamable HTTP standard. Compatible avec tout client MCP — pas de vendor lock-in."
+    },
+    "registries": {
+      "title": "Disponible sur",
+      "description": "Publié sur npm, Smithery, Glama, et plus. Installez depuis votre registre préféré."
+    },
+    "cliTitle": "Mode CLI complet",
+    "cliDescription": "Chaque fonctionnalité Kopern est disponible comme outil MCP. Créez des agents, lancez la notation, déployez des templates, connectez des canaux — sans quitter votre éditeur.",
+    "categories": {
+      "agents": "Gestion d'Agents",
+      "agentsCount": "8 outils",
+      "grading": "Notation & Optimisation",
+      "gradingCount": "6 outils",
+      "teams": "Équipes & Pipelines",
+      "teamsCount": "4 outils",
+      "connectors": "Connecteurs",
+      "connectorsCount": "7 outils",
+      "sessions": "Sessions & Mémoire",
+      "sessionsCount": "3 outils",
+      "utilities": "Utilitaires",
+      "utilitiesCount": "4 outils"
+    },
+    "httpTitle": "Ou utilisez Streamable HTTP directement",
+    "npmBadge": "npm",
+    "smitheryBadge": "Smithery",
+    "glamaBadge": "Glama"
+  },
   "bugReport": {
     "button": "Signaler un Bug",
     "title": "Signaler un Bug",

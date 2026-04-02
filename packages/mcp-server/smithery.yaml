@@ -1,0 +1,21 @@
+# Smithery configuration for @kopern/mcp-server
+# https://smithery.ai/docs/config
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      KOPERN_API_KEY:
+        type: string
+        description: "Your Kopern API key (kpn_...). Get it at https://kopern.ai → Settings → API Keys."
+    required:
+      - KOPERN_API_KEY
+  commandFunction: |-
+    (config) => ({
+      command: "npx",
+      args: ["-y", "@kopern/mcp-server"],
+      env: {
+        KOPERN_API_KEY: config.KOPERN_API_KEY
+      }
+    })

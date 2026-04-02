@@ -897,6 +897,47 @@
     },
     "integratesWith": "Integrates natively"
   },
+  "mcpSection": {
+    "title": "Built for",
+    "titleAccent": "Developers",
+    "subtitle": "32 MCP tools to build, test, grade, and deploy AI agents from your terminal or IDE. One command to install. Zero dependencies.",
+    "install": {
+      "title": "One-Line Install",
+      "description": "Add Kopern to Claude Code, Cursor, or Windsurf in seconds. Zero dependencies — just Node.js 18+."
+    },
+    "tools": {
+      "title": "32 Tools",
+      "description": "Agent CRUD, grading suites, AutoTune optimization, multi-agent teams, pipelines, 7 connectors, memory, compliance reports, and more."
+    },
+    "protocol": {
+      "title": "MCP Protocol",
+      "description": "Standard Streamable HTTP transport. Works with any MCP-compatible client — no vendor lock-in."
+    },
+    "registries": {
+      "title": "Available On",
+      "description": "Published on npm, Smithery, Glama, and more. Install from your favorite registry."
+    },
+    "cliTitle": "Full CLI Mode",
+    "cliDescription": "Every Kopern feature is available as an MCP tool. Create agents, run grading, deploy templates, connect channels — all without leaving your editor.",
+    "categories": {
+      "agents": "Agent Management",
+      "agentsCount": "8 tools",
+      "grading": "Grading & Optimization",
+      "gradingCount": "6 tools",
+      "teams": "Teams & Pipelines",
+      "teamsCount": "4 tools",
+      "connectors": "Connectors",
+      "connectorsCount": "7 tools",
+      "sessions": "Sessions & Memory",
+      "sessionsCount": "3 tools",
+      "utilities": "Utilities",
+      "utilitiesCount": "4 tools"
+    },
+    "httpTitle": "Or use Streamable HTTP directly",
+    "npmBadge": "npm",
+    "smitheryBadge": "Smithery",
+    "glamaBadge": "Glama"
+  },
   "bugReport": {
     "button": "Report a Bug",
     "title": "Report a Bug",

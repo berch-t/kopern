@@ -1,0 +1,68 @@
+{
+  "name": "@kopern/mcp-server",
+  "version": "2.0.0",
+  "description": "32 AI agent tools for Claude Code, Cursor, Windsurf, and any MCP client. Build, test, grade, and deploy AI agents from your terminal.",
+  "homepage": "https://kopern.ai",
+  "repository": "https://github.com/berch-t/kopern",
+  "logo": "https://kopern.ai/logo_small.png",
+  "author": "Kopern",
+  "license": "MIT",
+  "transport": [
+    {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@kopern/mcp-server"],
+      "env": {
+        "KOPERN_API_KEY": {
+          "description": "Your Kopern API key (kpn_...)",
+          "required": true
+        }
+      }
+    },
+    {
+      "type": "http",
+      "url": "https://kopern.ai/api/mcp/server",
+      "authentication": {
+        "type": "bearer",
+        "description": "Pass your kpn_ key as Bearer token"
+      }
+    }
+  ],
+  "categories": ["ai", "agents", "grading", "deployment", "orchestration"],
+  "toolCount": 32,
+  "tools": [
+    "kopern_create_agent",
+    "kopern_get_agent",
+    "kopern_update_agent",
+    "kopern_delete_agent",
+    "kopern_list_agents",
+    "kopern_chat",
+    "kopern_agent_info",
+    "kopern_deploy_template",
+    "kopern_list_templates",
+    "kopern_grade_prompt",
+    "kopern_create_grading_suite",
+    "kopern_run_grading",
+    "kopern_run_autoresearch",
+    "kopern_get_grading_results",
+    "kopern_list_grading_runs",
+    "kopern_create_team",
+    "kopern_run_team",
+    "kopern_create_pipeline",
+    "kopern_run_pipeline",
+    "kopern_connect_widget",
+    "kopern_connect_telegram",
+    "kopern_connect_whatsapp",
+    "kopern_connect_slack",
+    "kopern_connect_webhook",
+    "kopern_connect_email",
+    "kopern_connect_calendar",
+    "kopern_list_sessions",
+    "kopern_get_session",
+    "kopern_manage_memory",
+    "kopern_compliance_report",
+    "kopern_get_usage",
+    "kopern_export_agent",
+    "kopern_import_agent"
+  ]
+}

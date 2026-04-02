@@ -37,6 +37,7 @@ import {
   MessageSquare,
   Sparkles,
   Users,
+  Check,
   CheckCircle2,
   Save,
   LogIn,
@@ -57,6 +58,10 @@ import {
   Send,
   Phone,
   Menu,
+  Terminal,
+  Package,
+  Blocks,
+  Copy,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
@@ -71,6 +76,24 @@ class DocsBoundary extends Component<{ children: ReactNode }, { hasError: boolea
   static getDerivedStateFromError() { return { hasError: true }; }
   componentDidCatch(error: Error, info: ErrorInfo) { console.error("HowItWorks error:", error, info); }
   render() { return this.state.hasError ? null : this.props.children; }
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }}
+      className="ml-auto p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+      aria-label="Copy"
+    >
+      {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+    </button>
+  );
 }
 
 const PixelBlast = lazy(() => import("@/components/ui/PixelBlast"));
@@ -1104,6 +1127,167 @@ export default function LandingPage() {
           </motion.div>
         </div>
       </div>
+
+        {/* MCP for Developers */}
+        <div className="pt-10 pb-20 px-4 md:px-6" style={{ background: "var(--landing-section-alt)" }}>
+          <div className="max-w-6xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-center mb-12"
+            >
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                {t.mcpSection.title}{" "}
+                <span className="text-primary">{t.mcpSection.titleAccent}</span>
+              </h2>
+              <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+                {t.mcpSection.subtitle}
+              </p>
+            </motion.div>
+
+            {/* Install snippet */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+              className="mb-12"
+            >
+              <div className="max-w-2xl mx-auto space-y-4">
+                {/* Claude Code one-liner */}
+                <div className="rounded-xl border bg-card overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/50">
+                    <Terminal className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs font-medium text-muted-foreground">Claude Code</span>
+                    <CopyButton text="claude mcp add kopern -- npx -y @kopern/mcp-server" />
+                  </div>
+                  <pre className="p-4 text-sm overflow-x-auto"><code className="text-primary">claude mcp add kopern -- npx -y @kopern/mcp-server</code></pre>
+                </div>
+
+                {/* .mcp.json config */}
+                <div className="rounded-xl border bg-card overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/50">
+                    <Code2 className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs font-medium text-muted-foreground">.mcp.json</span>
+                    <CopyButton text={`{\n  "mcpServers": {\n    "kopern": {\n      "command": "npx",\n      "args": ["-y", "@kopern/mcp-server"],\n      "env": {\n        "KOPERN_API_KEY": "kpn_your_key_here"\n      }\n    }\n  }\n}`} />
+                  </div>
+                  <pre className="p-4 text-sm overflow-x-auto"><code className="text-foreground/80">{`{
+  "mcpServers": {
+    "kopern": {
+      "command": "npx",
+      "args": ["-y", "@kopern/mcp-server"],
+      "env": {
+        "KOPERN_API_KEY": "kpn_your_key_here"
+      }
+    }
+  }
+}`}</code></pre>
+                </div>
+
+                {/* HTTP direct */}
+                <p className="text-center text-xs text-muted-foreground">{t.mcpSection.httpTitle}</p>
+                <div className="rounded-xl border bg-card overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/50">
+                    <Blocks className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs font-medium text-muted-foreground">Streamable HTTP</span>
+                    <CopyButton text={`{\n  "mcpServers": {\n    "kopern": {\n      "type": "http",\n      "url": "https://kopern.ai/api/mcp/server",\n      "headers": { "Authorization": "Bearer kpn_..." }\n    }\n  }\n}`} />
+                  </div>
+                  <pre className="p-4 text-sm overflow-x-auto"><code className="text-foreground/80">{`{
+  "mcpServers": {
+    "kopern": {
+      "type": "http",
+      "url": "https://kopern.ai/api/mcp/server",
+      "headers": { "Authorization": "Bearer kpn_..." }
+    }
+  }
+}`}</code></pre>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* CLI Mode description */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="text-center mb-10"
+            >
+              <h3 className="text-xl font-semibold mb-2">{t.mcpSection.cliTitle}</h3>
+              <p className="text-muted-foreground max-w-xl mx-auto text-sm">{t.mcpSection.cliDescription}</p>
+            </motion.div>
+
+            {/* Tool categories grid */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.25 }}
+              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-12"
+            >
+              {[
+                { name: t.mcpSection.categories.agents, count: t.mcpSection.categories.agentsCount, icon: Bot, color: "text-blue-500" },
+                { name: t.mcpSection.categories.grading, count: t.mcpSection.categories.gradingCount, icon: ClipboardCheck, color: "text-emerald-500" },
+                { name: t.mcpSection.categories.teams, count: t.mcpSection.categories.teamsCount, icon: Users, color: "text-violet-500" },
+                { name: t.mcpSection.categories.connectors, count: t.mcpSection.categories.connectorsCount, icon: Cable, color: "text-amber-500" },
+                { name: t.mcpSection.categories.sessions, count: t.mcpSection.categories.sessionsCount, icon: MessageSquare, color: "text-pink-500" },
+                { name: t.mcpSection.categories.utilities, count: t.mcpSection.categories.utilitiesCount, icon: Shield, color: "text-cyan-500" },
+              ].map((cat) => (
+                <BorderGlow key={cat.name} className="bg-card" glowRadius={28}>
+                  <div className="flex items-center gap-3 p-4">
+                    <cat.icon className={`h-5 w-5 ${cat.color} shrink-0`} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{cat.name}</p>
+                      <p className="text-xs text-muted-foreground">{cat.count}</p>
+                    </div>
+                  </div>
+                </BorderGlow>
+              ))}
+            </motion.div>
+
+            {/* Registry badges */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="flex flex-wrap items-center justify-center gap-3"
+            >
+              <a href="https://www.npmjs.com/package/@kopern/mcp-server" target="_blank" rel="noopener noreferrer">
+                <span className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover:bg-muted/50 transition-colors">
+                  <Package className="h-4 w-4 text-red-500" />
+                  npm
+                </span>
+              </a>
+              <a href="https://smithery.ai/server/@kopern/mcp-server" target="_blank" rel="noopener noreferrer">
+                <span className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover:bg-muted/50 transition-colors">
+                  <Blocks className="h-4 w-4 text-violet-500" />
+                  Smithery
+                </span>
+              </a>
+              <a href="https://glama.ai/mcp/servers/@kopern/mcp-server" target="_blank" rel="noopener noreferrer">
+                <span className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover:bg-muted/50 transition-colors">
+                  <Sparkles className="h-4 w-4 text-amber-500" />
+                  Glama
+                </span>
+              </a>
+              <a href="https://opentools.com/@kopern/mcp-server" target="_blank" rel="noopener noreferrer">
+                <span className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover:bg-muted/50 transition-colors">
+                  <Plug className="h-4 w-4 text-emerald-500" />
+                  Open Tools
+                </span>
+              </a>
+              <a href="https://mcp.tools/@kopern/mcp-server" target="_blank" rel="noopener noreferrer">
+                <span className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover:bg-muted/50 transition-colors">
+                  <Terminal className="h-4 w-4 text-blue-500" />
+                  MCPT
+                </span>
+              </a>
+            </motion.div>
+          </div>
+        </div>
 
         {/* Features */}
         <div style={{ background: "var(--landing-section-alt)" }}>
