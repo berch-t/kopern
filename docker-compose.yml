@@ -1,0 +1,88 @@
+# ─── Kopern Self-Hosted ─────────────────────────────────────────────
+#
+# Deploy Kopern on your own infrastructure.
+#
+# Quick start:
+#   cp .env.example .env.local
+#   # Edit .env.local with your Firebase + LLM keys
+#   docker compose up -d
+#
+# For full local (no cloud):
+#   - Use Firebase Emulator (see firebase-emulator service below)
+#   - Use Ollama for LLM (OLLAMA_BASE_URL=http://ollama:11434)
+#   - No Stripe needed (billing features disabled without keys)
+#
+# ────────────────────────────────────────────────────────────────────
+
+services:
+  # ── Kopern App ──────────────────────────────────────────────────
+  kopern:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY:-}
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-}
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-}
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:-}
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:-}
+        NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID:-}
+        NEXT_PUBLIC_ADMIN_UID: ${NEXT_PUBLIC_ADMIN_UID:-}
+        NEXT_PUBLIC_BETA_UID: ${NEXT_PUBLIC_BETA_UID:-}
+    ports:
+      - "${PORT:-3000}:3000"
+    env_file:
+      - .env.local
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    restart: unless-stopped
+    depends_on:
+      - redis
+
+  # ── Redis (rate limiting) ───────────────────────────────────────
+  # Optional: rate limiting gracefully degrades without Redis.
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  # ── Ollama (local LLM — optional) ──────────────────────────────
+  # Uncomment to run LLMs locally. GPU passthrough requires
+  # nvidia-container-toolkit on the host.
+  #
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   # GPU passthrough (NVIDIA):
+  #   # deploy:
+  #   #   resources:
+  #   #     reservations:
+  #   #       devices:
+  #   #         - driver: nvidia
+  #   #           count: all
+  #   #           capabilities: [gpu]
+  #   restart: unless-stopped
+
+  # ── Firebase Emulator (full local — optional) ──────────────────
+  # Uncomment for development without a cloud Firebase project.
+  # Requires: FIRESTORE_EMULATOR_HOST=firebase-emulator:8080
+  #
+  # firebase-emulator:
+  #   image: andreysenov/firebase-tools
+  #   ports:
+  #     - "4000:4000"   # Emulator UI
+  #     - "8080:8080"   # Firestore
+  #     - "9099:9099"   # Auth
+  #   command: firebase emulators:start --only firestore,auth --project demo-kopern
+  #   restart: unless-stopped
+
+volumes:
+  redis_data:
+  # ollama_data:

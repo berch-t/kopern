@@ -546,100 +546,65 @@ AutoResearch runs consume tokens (often many iterations × full grading suite). 
 
 ---
 
-## MCP Servers (API Deployment)
+## MCP Protocol (Kopern-as-a-Service)
 
-MCP Servers let you **expose your agent as an API endpoint** that any application can call.
+Kopern exposes **32 MCP tools** covering the full agent lifecycle — create, grade, optimize, deploy, orchestrate, and monitor — via the standard MCP Streamable HTTP protocol (spec 2024-11-05). Works with Claude Code, Cursor, Windsurf, or any MCP client.
 
-### Creating a Server
+### Two Key Types
 
-1. Go to your agent's **MCP Servers** tab
-2. Click **New Server** — give it a name and description
-3. Copy the API key (shown only once — save it securely!)
+| Key Type | Scope | Tools |
+|----------|-------|-------|
+| **Agent-bound** | Tied to a specific agent | 32 tools (all platform + kopern_chat + kopern_agent_info) |
+| **User-level (Personal API Key)** | Not tied to any agent | 31 platform tools (no chat) |
 
-### Calling the API
+### Setup
 
-**Endpoint:** \`POST /api/mcp\`
-
-**Authentication:** Include your API key as a Bearer token.
-
-#### Get Agent Info
+Add this to your \`.mcp.json\` (Claude Code, Cursor, etc.):
 
 \`\`\`json
 {
-  "jsonrpc": "2.0",
-  "method": "initialize",
-  "id": 1
+  "mcpServers": {
+    "kopern": {
+      "type": "http",
+      "url": "https://kopern.ai/api/mcp/server",
+      "headers": { "Authorization": "Bearer kpn_your_key" }
+    }
+  }
 }
 \`\`\`
 
-#### Send a Message
+### Available Tools (32)
 
-\`\`\`json
-{
-  "jsonrpc": "2.0",
-  "method": "completion/create",
-  "params": {
-    "message": "Analyze this pull request for security issues",
-    "history": [
-      {"role": "user", "content": "Hello"},
-      {"role": "assistant", "content": "Hi! How can I help?"}
-    ]
-  },
-  "id": 2
-}
-\`\`\`
+| Category | Tools |
+|----------|-------|
+| **Agent CRUD** | kopern_create_agent, kopern_get_agent, kopern_update_agent, kopern_delete_agent, kopern_list_agents |
+| **Templates** | kopern_list_templates, kopern_deploy_template |
+| **Chat** | kopern_chat, kopern_agent_info (agent-bound key only) |
+| **Grading** | kopern_grade_prompt, kopern_create_grading_suite, kopern_run_grading, kopern_get_grading_results, kopern_list_grading_runs |
+| **Optimization** | kopern_run_autoresearch |
+| **Teams & Pipelines** | kopern_create_team, kopern_run_team, kopern_create_pipeline, kopern_run_pipeline |
+| **Connectors** | kopern_connect_widget, kopern_connect_telegram, kopern_connect_whatsapp, kopern_connect_slack, kopern_connect_webhook, kopern_connect_email, kopern_connect_calendar |
+| **Monitoring** | kopern_list_sessions, kopern_get_session, kopern_manage_memory, kopern_compliance_report, kopern_get_usage |
+| **Portability** | kopern_export_agent, kopern_import_agent |
 
-### Code Examples
+### Code Example (cURL)
 
-**cURL:**
 \`\`\`bash
-curl -X POST https://your-domain.com/api/mcp \\
+curl -X POST https://kopern.ai/api/mcp/server \\
   -H "Authorization: Bearer kpn_your_api_key" \\
   -H "Content-Type: application/json" \\
-  -d '{"jsonrpc":"2.0","method":"completion/create","params":{"message":"Hello"},"id":1}'
-\`\`\`
-
-**Node.js:**
-\`\`\`javascript
-const response = await fetch("https://your-domain.com/api/mcp", {
-  method: "POST",
-  headers: {
-    "Authorization": "Bearer kpn_your_api_key",
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    jsonrpc: "2.0",
-    method: "completion/create",
-    params: { message: "Analyze this code..." },
-    id: 1,
-  }),
-});
-const { result } = await response.json();
-console.log(result.content);
-\`\`\`
-
-**Python:**
-\`\`\`python
-import requests
-
-response = requests.post(
-    "https://your-domain.com/api/mcp",
-    headers={"Authorization": "Bearer kpn_your_api_key"},
-    json={"jsonrpc": "2.0", "method": "completion/create",
-          "params": {"message": "Summarize this..."}, "id": 1},
-)
-print(response.json()["result"]["content"])
+  -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"kopern_list_agents","arguments":{}},"id":1}'
 \`\`\`
 
 ### API Key Security
 
 - Keys are prefixed with \`kpn_\` and use 32 random hex bytes
 - Only the SHA-256 hash is stored — the plaintext key is shown once at creation
-- Each server has configurable rate limiting (requests per minute)
+- Key rotation with audit trail, expiry support
 
 ### Usage Tracking
 
-Token usage is tracked per server per month. View usage in the **API Keys** page or in each server's detail page.
+Token usage is tracked per key per month. View usage in the **Settings** page or via the \`kopern_get_usage\` MCP tool.
 
 ---
 

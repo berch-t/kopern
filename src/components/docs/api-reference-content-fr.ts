@@ -585,7 +585,7 @@ L'endpoint implemente le transport HTTP Streamable de MCP. Les requetes et repon
 | Methode | Description |
 |---------|-------------|
 | \`initialize\` | Handshake — retourne la version du protocole et les capacites |
-| \`tools/list\` | Lister les outils disponibles (kopern_chat, kopern_agent_info) |
+| \`tools/list\` | Lister les outils disponibles (32 outils — agent CRUD, grading, optimisation, equipes, connecteurs, monitoring, portabilite) |
 | \`tools/call\` | Executer un outil |
 | \`ping\` | Verification de connexion |
 
@@ -914,6 +914,8 @@ func main() {
 | 2026-03-15 | Ajout du connecteur Slack |
 | 2026-03-12 | Ajout des webhooks entrants/sortants avec HMAC |
 | 2026-03-10 | Ajout du widget embarquable (chat, config, script) |
+| 2026-04-02 | MCP v2.0.0 — 32 outils couvrant le cycle complet agent, cles user-level, self-hosted Docker |
+| 2026-04-01 | MCP v1.1.0 — 19 outils (agent CRUD, grading, equipes, connecteurs) |
 | 2026-03-01 | Ajout du serveur MCP HTTP Streamable |
 | 2026-02-15 | API initiale avec endpoint MCP legacy |
 `;

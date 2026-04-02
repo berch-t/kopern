@@ -546,100 +546,65 @@ Les runs AutoResearch consomment des tokens (souvent plusieurs iterations × sui
 
 ---
 
-## Serveurs MCP (Deploiement API)
+## Protocole MCP (Kopern-as-a-Service)
 
-Les Serveurs MCP vous permettent d'**exposer votre agent comme endpoint API** que toute application peut appeler.
+Kopern expose **32 outils MCP** couvrant le cycle complet des agents — creation, grading, optimisation, deploiement, orchestration et monitoring — via le protocole standard MCP Streamable HTTP (spec 2024-11-05). Compatible Claude Code, Cursor, Windsurf, ou tout client MCP.
 
-### Creer un serveur
+### Deux types de cles
 
-1. Allez dans l'onglet **Serveurs MCP** de votre agent
-2. Cliquez sur **Nouveau Serveur** — donnez un nom et une description
-3. Copiez la cle API (affichee une seule fois — conservez-la en securite !)
+| Type de cle | Portee | Outils |
+|-------------|--------|--------|
+| **Agent-bound** | Lie a un agent specifique | 32 outils (tous les platform + kopern_chat + kopern_agent_info) |
+| **User-level (Cle API personnelle)** | Non lie a un agent | 31 outils platform (sans chat) |
 
-### Appeler l'API
+### Configuration
 
-**Endpoint :** \`POST /api/mcp\`
-
-**Authentification :** Incluez votre cle API comme token Bearer.
-
-#### Obtenir les infos de l'agent
+Ajoutez ceci a votre \`.mcp.json\` (Claude Code, Cursor, etc.) :
 
 \`\`\`json
 {
-  "jsonrpc": "2.0",
-  "method": "initialize",
-  "id": 1
+  "mcpServers": {
+    "kopern": {
+      "type": "http",
+      "url": "https://kopern.ai/api/mcp/server",
+      "headers": { "Authorization": "Bearer kpn_votre_cle" }
+    }
+  }
 }
 \`\`\`
 
-#### Envoyer un message
+### Outils disponibles (32)
 
-\`\`\`json
-{
-  "jsonrpc": "2.0",
-  "method": "completion/create",
-  "params": {
-    "message": "Analysez ce pull request pour les problemes de securite",
-    "history": [
-      {"role": "user", "content": "Bonjour"},
-      {"role": "assistant", "content": "Bonjour ! Comment puis-je vous aider ?"}
-    ]
-  },
-  "id": 2
-}
-\`\`\`
+| Categorie | Outils |
+|-----------|--------|
+| **Agent CRUD** | kopern_create_agent, kopern_get_agent, kopern_update_agent, kopern_delete_agent, kopern_list_agents |
+| **Templates** | kopern_list_templates, kopern_deploy_template |
+| **Chat** | kopern_chat, kopern_agent_info (cle agent-bound uniquement) |
+| **Grading** | kopern_grade_prompt, kopern_create_grading_suite, kopern_run_grading, kopern_get_grading_results, kopern_list_grading_runs |
+| **Optimisation** | kopern_run_autoresearch |
+| **Equipes & Pipelines** | kopern_create_team, kopern_run_team, kopern_create_pipeline, kopern_run_pipeline |
+| **Connecteurs** | kopern_connect_widget, kopern_connect_telegram, kopern_connect_whatsapp, kopern_connect_slack, kopern_connect_webhook, kopern_connect_email, kopern_connect_calendar |
+| **Monitoring** | kopern_list_sessions, kopern_get_session, kopern_manage_memory, kopern_compliance_report, kopern_get_usage |
+| **Portabilite** | kopern_export_agent, kopern_import_agent |
 
-### Exemples de code
+### Exemple (cURL)
 
-**cURL :**
 \`\`\`bash
-curl -X POST https://your-domain.com/api/mcp \\
-  -H "Authorization: Bearer kpn_your_api_key" \\
+curl -X POST https://kopern.ai/api/mcp/server \\
+  -H "Authorization: Bearer kpn_votre_cle" \\
   -H "Content-Type: application/json" \\
-  -d '{"jsonrpc":"2.0","method":"completion/create","params":{"message":"Bonjour"},"id":1}'
-\`\`\`
-
-**Node.js :**
-\`\`\`javascript
-const response = await fetch("https://your-domain.com/api/mcp", {
-  method: "POST",
-  headers: {
-    "Authorization": "Bearer kpn_your_api_key",
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    jsonrpc: "2.0",
-    method: "completion/create",
-    params: { message: "Analysez ce code..." },
-    id: 1,
-  }),
-});
-const { result } = await response.json();
-console.log(result.content);
-\`\`\`
-
-**Python :**
-\`\`\`python
-import requests
-
-response = requests.post(
-    "https://your-domain.com/api/mcp",
-    headers={"Authorization": "Bearer kpn_your_api_key"},
-    json={"jsonrpc": "2.0", "method": "completion/create",
-          "params": {"message": "Resumez ce document..."}, "id": 1},
-)
-print(response.json()["result"]["content"])
+  -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"kopern_list_agents","arguments":{}},"id":1}'
 \`\`\`
 
 ### Securite des cles API
 
 - Les cles sont prefixees par \`kpn_\` et utilisent 32 octets hexadecimaux aleatoires
 - Seul le hash SHA-256 est stocke — la cle en clair est affichee une seule fois
-- Chaque serveur a une limitation de debit configurable (requetes par minute)
+- Rotation de cles avec audit trail, support d'expiration
 
 ### Suivi d'utilisation
 
-L'utilisation de tokens est suivie par serveur et par mois. Consultez-la dans la page **Cles API** ou dans le detail de chaque serveur.
+L'utilisation de tokens est suivie par cle et par mois. Consultez dans la page **Parametres** ou via l'outil MCP \`kopern_get_usage\`.
 
 ---
 

@@ -1,4 +1,4 @@
-// ─── MCP Platform Tools — Vague 1 Execution Functions ──────────────────────
+// ─── MCP Platform Tools — Vague 1 + Vague 2 Execution Functions ────────────
 // All functions use Firebase Admin SDK (server-side only).
 // Called from /api/mcp/server/route.ts
 
@@ -15,6 +15,7 @@ import type { CriterionConfig } from "@/lib/firebase/firestore";
 import type { LLMMessage } from "@/lib/llm/client";
 import { useCases } from "@/data/use-cases";
 import { verticalTemplates } from "@/data/vertical-templates";
+import { generateComplianceReport } from "@/lib/compliance/generate-report";
 
 // ─── Response helpers ───────────────────────────────────────────────
 
@@ -1076,5 +1077,721 @@ export async function executeConnectSlack(
       "3. Authorize the Kopern bot",
       "4. Your agent is now connected to Slack",
     ],
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ─── VAGUE 2 — Ecosystem Tools ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════
+
+// ─── Pipelines ─────────────────────────────────────────────────────
+
+export async function executeCreatePipeline(
+  userId: string,
+  params: Record<string, unknown>
+): Promise<ToolResult> {
+  const agentId = params.agent_id as string;
+  const name = params.name as string;
+  if (!agentId) return err("agent_id is required");
+  if (!name) return err("name is required");
+
+  const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
+  if (!agentSnap.exists) return err(`Agent ${agentId} not found`);
+
+  const steps = params.steps as { agent_id: string; role: string; order?: number; input_mapping?: string; custom_input_template?: string; continue_on_error?: boolean }[];
+  if (!steps?.length) return err("steps is required (array of pipeline steps)");
+
+  // Verify all step agents exist
+  for (const step of steps) {
+    const snap = await adminDb.doc(`users/${userId}/agents/${step.agent_id}`).get();
+    if (!snap.exists) return err(`Step agent ${step.agent_id} not found`);
+  }
+
+  const pipelineSteps = steps.map((s, i) => {
+    const step: Record<string, unknown> = {
+      agentId: s.agent_id,
+      role: s.role || "processor",
+      order: s.order ?? i,
+      inputMapping: (s.input_mapping as "previous_output" | "original_input" | "custom") || "previous_output",
+      continueOnError: s.continue_on_error ?? false,
+    };
+    if (s.custom_input_template) step.customInputTemplate = s.custom_input_template;
+    return step;
+  });
+
+  const ref = await adminDb.collection(`users/${userId}/agents/${agentId}/pipelines`).add({
+    name,
+    description: (params.description as string) || "",
+    steps: pipelineSteps,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  return ok({
+    pipelineId: ref.id,
+    agentId,
+    name,
+    stepsCount: pipelineSteps.length,
+    message: `Pipeline "${name}" created with ${pipelineSteps.length} steps.`,
+  });
+}
+
+export async function executeRunPipeline(
+  userId: string,
+  params: Record<string, unknown>
+): Promise<ToolResult> {
+  const agentId = params.agent_id as string;
+  const pipelineId = params.pipeline_id as string;
+  const prompt = params.prompt as string;
+  if (!agentId) return err("agent_id is required");
+  if (!pipelineId) return err("pipeline_id is required");
+  if (!prompt) return err("prompt is required");
+
+  const pipelineSnap = await adminDb.doc(`users/${userId}/agents/${agentId}/pipelines/${pipelineId}`).get();
+  if (!pipelineSnap.exists) return err(`Pipeline ${pipelineId} not found`);
+
+  const pipeline = pipelineSnap.data()!;
+  const steps = (pipeline.steps as { agentId: string; role: string; order: number; inputMapping: string; customInputTemplate?: string; continueOnError: boolean }[])
+    .sort((a, b) => a.order - b.order);
+
+  if (!steps.length) return err("Pipeline has no steps");
+
+  const results: { stepIndex: number; agentId: string; role: string; output: string; tokens: { input: number; output: number } }[] = [];
+  let previousOutput = "";
+
+  for (const [i, step] of steps.entries()) {
+    // Determine input
+    let stepInput: string;
+    if (step.inputMapping === "original_input") {
+      stepInput = prompt;
+    } else if (step.inputMapping === "custom" && step.customInputTemplate) {
+      stepInput = step.customInputTemplate
+        .replace("{{original_input}}", prompt)
+        .replace("{{previous_output}}", previousOutput);
+    } else {
+      stepInput = i === 0 ? prompt : `Previous step output:\n\n${previousOutput}\n\nOriginal request: ${prompt}`;
+    }
+
+    // Load step agent
+    const stepAgentSnap = await adminDb.doc(`users/${userId}/agents/${step.agentId}`).get();
+    if (!stepAgentSnap.exists) {
+      if (step.continueOnError) { results.push({ stepIndex: i, agentId: step.agentId, role: step.role, output: `[Error: Agent ${step.agentId} not found]`, tokens: { input: 0, output: 0 } }); continue; }
+      return err(`Step agent ${step.agentId} not found`);
+    }
+    const stepAgent = stepAgentSnap.data()!;
+
+    // Load skills
+    let systemPrompt = (stepAgent.systemPrompt as string) || "";
+    const skillsSnap = await adminDb.collection(`users/${userId}/agents/${step.agentId}/skills`).get();
+    if (!skillsSnap.empty) {
+      const xml = skillsSnap.docs.map(d => `<skill name="${d.data().name}">\n${d.data().content}\n</skill>`).join("\n\n");
+      systemPrompt += `\n\n<skills>\n${xml}\n</skills>`;
+    }
+
+    const apiKeys = await resolveProviderKeys(userId, stepAgent.modelProvider as string);
+    let output = "";
+
+    try {
+      const metrics = await new Promise<AgentRunMetrics>((resolve, reject) => {
+        runAgentWithTools(
+          {
+            provider: stepAgent.modelProvider as string,
+            model: stepAgent.modelId as string,
+            systemPrompt,
+            messages: [{ role: "user" as const, content: stepInput }],
+            userId,
+            agentId: step.agentId,
+            connectedRepos: [],
+            apiKey: apiKeys[0],
+            apiKeys: apiKeys.length > 1 ? apiKeys : undefined,
+            skipOutboundWebhooks: true,
+            toolApprovalPolicy: "auto",
+            riskLevel: "minimal",
+          },
+          {
+            onToken: (text) => { output += text; },
+            onToolStart: () => {},
+            onToolEnd: () => {},
+            onDone: (m) => resolve(m),
+            onError: (e) => reject(e),
+          }
+        );
+      });
+
+      results.push({ stepIndex: i, agentId: step.agentId, role: step.role, output, tokens: { input: metrics.inputTokens, output: metrics.outputTokens } });
+      previousOutput = output;
+    } catch (e) {
+      if (step.continueOnError) {
+        results.push({ stepIndex: i, agentId: step.agentId, role: step.role, output: `[Error: ${(e as Error).message}]`, tokens: { input: 0, output: 0 } });
+      } else {
+        return err(`Pipeline step ${i} failed: ${(e as Error).message}`);
+      }
+    }
+  }
+
+  const totalTokens = results.reduce((acc, r) => ({ input: acc.input + r.tokens.input, output: acc.output + r.tokens.output }), { input: 0, output: 0 });
+
+  return ok({
+    pipelineId,
+    pipelineName: pipeline.name,
+    stepsExecuted: results.length,
+    results: results.map(r => ({ ...r, output: r.output.slice(0, 3000) })),
+    totalTokens,
+    finalOutput: results[results.length - 1]?.output || "",
+  });
+}
+
+// ─── Sessions ──────────────────────────────────────────────────────
+
+export async function executeListSessions(
+  userId: string,
+  params: Record<string, unknown>
+): Promise<ToolResult> {
+  const agentId = params.agent_id as string;
+  if (!agentId) return err("agent_id is required");
+
+  const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
+  if (!agentSnap.exists) return err(`Agent ${agentId} not found`);
+
+  const limit = Math.min((params.limit as number) || 20, 50);
+
+  const snap = await adminDb
+    .collection(`users/${userId}/agents/${agentId}/sessions`)
+    .orderBy("startedAt", "desc")
+    .limit(limit)
+    .get();
+
+  const sessions = snap.docs.map(d => {
+    const data = d.data();
+    return {
+      id: d.id,
+      purpose: data.purpose || null,
+      source: data.source || "unknown",
+      startedAt: data.startedAt?.toDate?.()?.toISOString?.() || null,
+      endedAt: data.endedAt?.toDate?.()?.toISOString?.() || null,
+      totalTokensIn: data.totalTokensIn || 0,
+      totalTokensOut: data.totalTokensOut || 0,
+      totalCost: data.totalCost || 0,
+      toolCallCount: data.toolCallCount || 0,
+      messageCount: data.messageCount || 0,
+      modelUsed: data.modelUsed || null,
+    };
+  });
+
+  return ok({ count: sessions.length, agentId, sessions });
+}
+
+export async function executeGetSession(
+  userId: string,
+  params: Record<string, unknown>
+): Promise<ToolResult> {
+  const agentId = params.agent_id as string;
+  const sessionId = params.session_id as string;
+  if (!agentId) return err("agent_id is required");
+  if (!sessionId) return err("session_id is required");
+
+  const snap = await adminDb.doc(`users/${userId}/agents/${agentId}/sessions/${sessionId}`).get();
+  if (!snap.exists) return err(`Session ${sessionId} not found`);
+
+  const data = snap.data()!;
+  const events = (data.events || []).map((e: Record<string, unknown>) => ({
+    type: e.type,
+    timestamp: (e.timestamp as { toDate?: () => Date })?.toDate?.()?.toISOString?.() || null,
+    data: e.data,
+  }));
+
+  return ok({
+    id: sessionId,
+    agentId,
+    purpose: data.purpose || null,
+    source: data.source || "unknown",
+    startedAt: data.startedAt?.toDate?.()?.toISOString?.() || null,
+    endedAt: data.endedAt?.toDate?.()?.toISOString?.() || null,
+    totalTokensIn: data.totalTokensIn || 0,
+    totalTokensOut: data.totalTokensOut || 0,
+    totalCost: data.totalCost || 0,
+    toolCallCount: data.toolCallCount || 0,
+    messageCount: data.messageCount || 0,
+    modelUsed: data.modelUsed || null,
+    providerUsed: data.providerUsed || null,
+    events: events.slice(0, 100), // Cap at 100 events to avoid huge payloads
+  });
+}
+
+// ─── Memory ────────────────────────────────────────────────────────
+
+export async function executeManageMemory(
+  userId: string,
+  params: Record<string, unknown>
+): Promise<ToolResult> {
+  const agentId = params.agent_id as string;
+  const action = params.action as string;
+  if (!agentId) return err("agent_id is required");
+  if (!action) return err("action is required: remember, recall, forget, list");
+
+  const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
+  if (!agentSnap.exists) return err(`Agent ${agentId} not found`);
+
+  const memoryCol = `users/${userId}/agents/${agentId}/memory`;
+
+  switch (action) {
+    case "remember": {
+      const key = params.key as string;
+      const value = params.value as string;
+      const category = (params.category as string) || "custom";
+      if (!key) return err("key is required for remember");
+      if (!value) return err("value is required for remember");
+
+      const docId = key.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 128);
+      await adminDb.doc(`${memoryCol}/${docId}`).set({
+        key,
+        value,
+        category,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+        lastAccessedAt: FieldValue.serverTimestamp(),
+        accessCount: 1,
+      }, { merge: false });
+
+      return ok({ action: "remember", key, message: `Memory "${key}" saved.` });
+    }
+
+    case "recall": {
+      const query = params.query as string;
+      if (!query) return err("query is required for recall");
+
+      const snap = await adminDb.collection(memoryCol).get();
+      const keywords = query.toLowerCase().split(/\s+/);
+      const scored = snap.docs
+        .map(d => {
+          const data = d.data();
+          const text = `${data.key} ${data.value}`.toLowerCase();
+          const score = keywords.reduce((acc, kw) => acc + (text.includes(kw) ? 1 : 0), 0);
+          return { id: d.id, key: data.key, value: data.value, category: data.category, score };
+        })
+        .filter(m => m.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 10);
+
+      return ok({ action: "recall", query, count: scored.length, memories: scored });
+    }
+
+    case "forget": {
+      const key = params.key as string;
+      if (!key) return err("key is required for forget");
+
+      const docId = key.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 128);
+      const snap = await adminDb.doc(`${memoryCol}/${docId}`).get();
+      if (!snap.exists) return err(`Memory "${key}" not found`);
+
+      await adminDb.doc(`${memoryCol}/${docId}`).delete();
+      return ok({ action: "forget", key, message: `Memory "${key}" deleted.` });
+    }
+
+    case "list": {
+      const snap = await adminDb.collection(memoryCol)
+        .orderBy("lastAccessedAt", "desc")
+        .limit(50)
+        .get();
+
+      const memories = snap.docs.map(d => {
+        const data = d.data();
+        return { key: data.key, value: data.value, category: data.category || "custom", accessCount: data.accessCount || 0 };
+      });
+
+      return ok({ action: "list", count: memories.length, memories });
+    }
+
+    default:
+      return err(`Unknown action "${action}". Must be one of: remember, recall, forget, list`);
+  }
+}
+
+// ─── Compliance Report ─────────────────────────────────────────────
+
+export async function executeComplianceReport(
+  userId: string,
+  params: Record<string, unknown>
+): Promise<ToolResult> {
+  const agentId = params.agent_id as string;
+  if (!agentId) return err("agent_id is required");
+
+  const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
+  if (!agentSnap.exists) return err(`Agent ${agentId} not found`);
+
+  try {
+    const report = await generateComplianceReport(userId, agentId);
+    return ok(report);
+  } catch (e) {
+    return err(`Compliance report error: ${(e as Error).message}`);
+  }
+}
+
+// ─── Grading Results ───────────────────────────────────────────────
+
+export async function executeGetGradingResults(
+  userId: string,
+  params: Record<string, unknown>
+): Promise<ToolResult> {
+  const agentId = params.agent_id as string;
+  const suiteId = params.suite_id as string;
+  const runId = params.run_id as string;
+  if (!agentId) return err("agent_id is required");
+  if (!suiteId) return err("suite_id is required");
+  if (!runId) return err("run_id is required");
+
+  const runSnap = await adminDb.doc(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs/${runId}`).get();
+  if (!runSnap.exists) return err(`Grading run ${runId} not found`);
+
+  const runData = runSnap.data()!;
+
+  // Load detailed results
+  const resultsSnap = await adminDb
+    .collection(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs/${runId}/results`)
+    .get();
+
+  const results = resultsSnap.docs.map(d => {
+    const data = d.data();
+    return {
+      caseId: data.caseId,
+      caseName: data.caseName || data.caseId,
+      passed: data.passed,
+      score: Math.round((data.score || 0) * 100) / 100,
+      agentOutput: (data.agentOutput || "").slice(0, 500),
+      toolCalls: (data.toolCalls || []).length,
+      durationMs: data.durationMs || 0,
+      criteriaResults: (data.criteriaResults || []).map((cr: Record<string, unknown>) => ({
+        type: cr.criterionType,
+        passed: cr.passed,
+        score: Math.round((cr.score as number || 0) * 100) / 100,
+        message: cr.message,
+      })),
+    };
+  });
+
+  return ok({
+    runId,
+    suiteId,
+    agentId,
+    status: runData.status,
+    score: runData.score != null ? Math.round(runData.score * 100) / 100 : null,
+    totalCases: runData.totalCases,
+    passedCases: runData.passedCases,
+    agentVersion: runData.agentVersion,
+    completedAt: runData.completedAt?.toDate?.()?.toISOString?.() || null,
+    improvementSummary: runData.improvementSummary || null,
+    improvementNotes: runData.improvementNotes || [],
+    results,
+  });
+}
+
+export async function executeListGradingRuns(
+  userId: string,
+  params: Record<string, unknown>
+): Promise<ToolResult> {
+  const agentId = params.agent_id as string;
+  const suiteId = params.suite_id as string;
+  if (!agentId) return err("agent_id is required");
+  if (!suiteId) return err("suite_id is required");
+
+  const snap = await adminDb
+    .collection(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs`)
+    .orderBy("createdAt", "desc")
+    .limit(20)
+    .get();
+
+  const runs = snap.docs.map(d => {
+    const data = d.data();
+    return {
+      id: d.id,
+      status: data.status,
+      score: data.score != null ? Math.round(data.score * 100) / 100 : null,
+      totalCases: data.totalCases,
+      passedCases: data.passedCases,
+      agentVersion: data.agentVersion,
+      completedAt: data.completedAt?.toDate?.()?.toISOString?.() || null,
+      createdAt: data.createdAt?.toDate?.()?.toISOString?.() || null,
+    };
+  });
+
+  return ok({ agentId, suiteId, count: runs.length, runs });
+}
+
+// ─── Service Connectors (Email/Calendar) ───────────────────────────
+
+export async function executeConnectEmail(
+  userId: string,
+  params: Record<string, unknown>
+): Promise<ToolResult> {
+  const agentId = params.agent_id as string;
+  const provider = params.provider as string;
+  if (!agentId) return err("agent_id is required");
+  if (!provider || !["google", "microsoft"].includes(provider)) return err("provider must be 'google' or 'microsoft'");
+
+  const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
+  if (!agentSnap.exists) return err(`Agent ${agentId} not found`);
+
+  // Service connectors require OAuth flow in the browser
+  const oauthUrl = provider === "google"
+    ? `https://kopern.ai/api/oauth/google?userId=${userId}&agentId=${agentId}&scope=email`
+    : `https://kopern.ai/api/oauth/microsoft?userId=${userId}&agentId=${agentId}&scope=email`;
+
+  // Enable the builtin tool
+  const currentBuiltins = (agentSnap.data()!.builtinTools as string[]) || [];
+  if (!currentBuiltins.includes("service_email")) {
+    await adminDb.doc(`users/${userId}/agents/${agentId}`).update({
+      builtinTools: [...currentBuiltins, "service_email"],
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  }
+
+  return ok({
+    agentId,
+    provider,
+    oauthUrl,
+    builtinEnabled: "service_email",
+    message: `Open the OAuth URL in your browser to connect ${provider === "google" ? "Gmail" : "Outlook"}. The "service_email" builtin tool has been enabled on the agent.`,
+    tools: ["read_emails", "send_email", "reply_email"],
+  });
+}
+
+export async function executeConnectCalendar(
+  userId: string,
+  params: Record<string, unknown>
+): Promise<ToolResult> {
+  const agentId = params.agent_id as string;
+  const provider = params.provider as string;
+  if (!agentId) return err("agent_id is required");
+  if (!provider || !["google", "microsoft"].includes(provider)) return err("provider must be 'google' or 'microsoft'");
+
+  const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
+  if (!agentSnap.exists) return err(`Agent ${agentId} not found`);
+
+  const oauthUrl = provider === "google"
+    ? `https://kopern.ai/api/oauth/google?userId=${userId}&agentId=${agentId}&scope=calendar`
+    : `https://kopern.ai/api/oauth/microsoft?userId=${userId}&agentId=${agentId}&scope=calendar`;
+
+  const currentBuiltins = (agentSnap.data()!.builtinTools as string[]) || [];
+  if (!currentBuiltins.includes("service_calendar")) {
+    await adminDb.doc(`users/${userId}/agents/${agentId}`).update({
+      builtinTools: [...currentBuiltins, "service_calendar"],
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  }
+
+  return ok({
+    agentId,
+    provider,
+    oauthUrl,
+    builtinEnabled: "service_calendar",
+    message: `Open the OAuth URL in your browser to connect ${provider === "google" ? "Google Calendar" : "Microsoft Calendar"}. The "service_calendar" builtin tool has been enabled on the agent.`,
+    tools: ["list_events", "check_availability", "create_event", "update_event", "cancel_event"],
+  });
+}
+
+// ─── Usage ─────────────────────────────────────────────────────────
+
+export async function executeGetUsage(
+  userId: string,
+  params: Record<string, unknown>
+): Promise<ToolResult> {
+  const yearMonth = (params.year_month as string) || new Date().toISOString().slice(0, 7);
+  const includeHistory = params.include_history === true;
+
+  if (includeHistory) {
+    const snap = await adminDb.collection(`users/${userId}/usage`)
+      .orderBy("__name__", "desc")
+      .limit(6)
+      .get();
+
+    const history = snap.docs.map(d => {
+      const data = d.data();
+      return {
+        yearMonth: d.id,
+        inputTokens: data.inputTokens || 0,
+        outputTokens: data.outputTokens || 0,
+        totalCost: Math.round((data.totalCost || 0) * 1000) / 1000,
+        requestCount: data.requestCount || 0,
+        gradingRuns: data.gradingRuns || 0,
+        agentBreakdown: data.agentBreakdown || {},
+      };
+    });
+
+    return ok({ userId, months: history.length, history });
+  }
+
+  const snap = await adminDb.doc(`users/${userId}/usage/${yearMonth}`).get();
+  if (!snap.exists) return ok({ userId, yearMonth, inputTokens: 0, outputTokens: 0, totalCost: 0, requestCount: 0, message: "No usage recorded for this period." });
+
+  const data = snap.data()!;
+  return ok({
+    userId,
+    yearMonth,
+    inputTokens: data.inputTokens || 0,
+    outputTokens: data.outputTokens || 0,
+    totalCost: Math.round((data.totalCost || 0) * 1000) / 1000,
+    requestCount: data.requestCount || 0,
+    gradingRuns: data.gradingRuns || 0,
+    agentBreakdown: data.agentBreakdown || {},
+  });
+}
+
+// ─── Export / Import Agent ─────────────────────────────────────────
+
+export async function executeExportAgent(
+  userId: string,
+  params: Record<string, unknown>
+): Promise<ToolResult> {
+  const agentId = params.agent_id as string;
+  if (!agentId) return err("agent_id is required");
+
+  const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
+  if (!agentSnap.exists) return err(`Agent ${agentId} not found`);
+
+  const agentData = agentSnap.data()!;
+
+  // Load subcollections in parallel
+  const [skillsSnap, toolsSnap, extensionsSnap, suitesSnap] = await Promise.all([
+    adminDb.collection(`users/${userId}/agents/${agentId}/skills`).get(),
+    adminDb.collection(`users/${userId}/agents/${agentId}/tools`).get(),
+    adminDb.collection(`users/${userId}/agents/${agentId}/extensions`).get(),
+    adminDb.collection(`users/${userId}/agents/${agentId}/gradingSuites`).get(),
+  ]);
+
+  const skills = skillsSnap.docs.map(d => ({ name: d.data().name, description: d.data().description, content: d.data().content }));
+  const tools = toolsSnap.docs.map(d => ({ name: d.data().name, label: d.data().label, description: d.data().description, parametersSchema: d.data().parametersSchema, executeCode: d.data().executeCode }));
+  const extensions = extensionsSnap.docs.map(d => ({ name: d.data().name, description: d.data().description, code: d.data().code, events: d.data().events, blocking: d.data().blocking, enabled: d.data().enabled }));
+
+  // Load grading suites with cases
+  const gradingSuites = [];
+  for (const suiteDoc of suitesSnap.docs) {
+    const casesSnap = await suiteDoc.ref.collection("cases").orderBy("orderIndex").get();
+    gradingSuites.push({
+      name: suiteDoc.data().name,
+      description: suiteDoc.data().description,
+      cases: casesSnap.docs.map(c => ({
+        name: c.data().name,
+        inputPrompt: c.data().inputPrompt,
+        expectedBehavior: c.data().expectedBehavior,
+        orderIndex: c.data().orderIndex,
+        criteria: c.data().criteria || [],
+      })),
+    });
+  }
+
+  const exportData = {
+    _kopernExport: true,
+    _version: 1,
+    _exportedAt: new Date().toISOString(),
+    agent: {
+      name: agentData.name,
+      description: agentData.description,
+      domain: agentData.domain,
+      systemPrompt: agentData.systemPrompt,
+      modelProvider: agentData.modelProvider,
+      modelId: agentData.modelId,
+      thinkingLevel: agentData.thinkingLevel || "off",
+      builtinTools: agentData.builtinTools || [],
+      toolApprovalPolicy: agentData.toolApprovalPolicy || "auto",
+      riskLevel: agentData.riskLevel || "minimal",
+      memoryConfig: agentData.memoryConfig || null,
+      templateId: agentData.templateId || null,
+      templateVariables: agentData.templateVariables || null,
+    },
+    skills,
+    tools,
+    extensions,
+    gradingSuites,
+  };
+
+  return ok(exportData);
+}
+
+export async function executeImportAgent(
+  userId: string,
+  params: Record<string, unknown>
+): Promise<ToolResult> {
+  const data = params.data as Record<string, unknown>;
+  if (!data) return err("data is required (the exported JSON object)");
+  if (!data._kopernExport) return err("Invalid export format. Must be a Kopern agent export.");
+
+  const agent = data.agent as Record<string, unknown>;
+  if (!agent?.name || !agent?.systemPrompt) return err("Export data missing agent name or systemPrompt");
+
+  // Create agent
+  const ref = await adminDb.collection(`users/${userId}/agents`).add({
+    name: `${agent.name} (imported)`,
+    description: agent.description || "",
+    domain: agent.domain || "other",
+    systemPrompt: agent.systemPrompt,
+    modelProvider: agent.modelProvider || "anthropic",
+    modelId: agent.modelId || "claude-sonnet-4-6",
+    thinkingLevel: agent.thinkingLevel || "off",
+    builtinTools: agent.builtinTools || [],
+    connectedRepos: [],
+    version: 1,
+    isPublished: false,
+    latestGradingScore: null,
+    purposeGate: null,
+    tillDone: null,
+    branding: null,
+    toolOverrides: [],
+    toolApprovalPolicy: agent.toolApprovalPolicy || "auto",
+    riskLevel: agent.riskLevel || "minimal",
+    memoryConfig: agent.memoryConfig || null,
+    templateId: agent.templateId || null,
+    templateVariables: agent.templateVariables || null,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+  const agentId = ref.id;
+
+  const batch = adminDb.batch();
+  let skillCount = 0, toolCount = 0, extCount = 0, suiteCount = 0, caseCount = 0;
+
+  // Skills
+  const skills = (data.skills as { name: string; description: string; content: string }[]) || [];
+  for (const s of skills) {
+    const sRef = adminDb.collection(`users/${userId}/agents/${agentId}/skills`).doc();
+    batch.set(sRef, { name: s.name, description: s.description || s.name, content: s.content, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    skillCount++;
+  }
+
+  // Tools
+  const tools = (data.tools as { name: string; label: string; description: string; parametersSchema: unknown; executeCode: string }[]) || [];
+  for (const t of tools) {
+    const tRef = adminDb.collection(`users/${userId}/agents/${agentId}/tools`).doc();
+    batch.set(tRef, { name: t.name, label: t.label || t.name, description: t.description, parametersSchema: t.parametersSchema, executeCode: t.executeCode, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    toolCount++;
+  }
+
+  // Extensions
+  const extensions = (data.extensions as { name: string; description: string; code: string; events: string[]; blocking: boolean; enabled: boolean }[]) || [];
+  for (const e of extensions) {
+    const eRef = adminDb.collection(`users/${userId}/agents/${agentId}/extensions`).doc();
+    batch.set(eRef, { name: e.name, description: e.description, code: e.code, events: e.events || [], blocking: e.blocking ?? false, enabled: e.enabled ?? true, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    extCount++;
+  }
+
+  // Grading suites
+  const gradingSuites = (data.gradingSuites as { name: string; description: string; cases: { name: string; inputPrompt: string; expectedBehavior: string; orderIndex: number; criteria: unknown[] }[] }[]) || [];
+  for (const suite of gradingSuites) {
+    const suiteRef = adminDb.collection(`users/${userId}/agents/${agentId}/gradingSuites`).doc();
+    batch.set(suiteRef, { name: suite.name, description: suite.description || "", createdAt: FieldValue.serverTimestamp() });
+    suiteCount++;
+    for (const c of suite.cases || []) {
+      const cRef = suiteRef.collection("cases").doc();
+      batch.set(cRef, { name: c.name, inputPrompt: c.inputPrompt, expectedBehavior: c.expectedBehavior, orderIndex: c.orderIndex, criteria: c.criteria || [], createdAt: FieldValue.serverTimestamp() });
+      caseCount++;
+    }
+  }
+
+  await batch.commit();
+
+  return ok({
+    agentId,
+    name: `${agent.name} (imported)`,
+    imported: { skills: skillCount, tools: toolCount, extensions: extCount, gradingSuites: suiteCount, gradingCases: caseCount },
+    message: `Agent "${agent.name}" imported successfully with ${skillCount} skills, ${toolCount} tools, ${extCount} extensions, ${suiteCount} grading suites (${caseCount} cases).`,
   });
 }

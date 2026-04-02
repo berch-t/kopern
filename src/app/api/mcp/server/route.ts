@@ -31,6 +31,20 @@ import {
   executeConnectTelegram,
   executeConnectWhatsApp,
   executeConnectSlack,
+  // Vague 2
+  executeCreatePipeline,
+  executeRunPipeline,
+  executeListSessions,
+  executeGetSession,
+  executeManageMemory,
+  executeComplianceReport,
+  executeGetGradingResults,
+  executeListGradingRuns,
+  executeConnectEmail,
+  executeConnectCalendar,
+  executeGetUsage,
+  executeExportAgent,
+  executeImportAgent,
 } from "@/lib/mcp/platform-tools";
 
 // ─── MCP Protocol Types ──────────────────────────────────────────────
@@ -431,11 +445,190 @@ const TOOL_DEFS = {
       required: ["agent_id"],
     },
   },
+
+  // ── Vague 2 — Ecosystem Tools ──────────────────────────────────
+  kopern_create_pipeline: {
+    name: "kopern_create_pipeline",
+    description: "Create a multi-step pipeline on an agent. Steps chain agents sequentially with configurable input mapping.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        agent_id: { type: "string", description: "The parent agent ID" },
+        name: { type: "string", description: "Pipeline name" },
+        description: { type: "string", description: "Pipeline description" },
+        steps: {
+          type: "array",
+          description: "Pipeline steps",
+          items: {
+            type: "object",
+            properties: {
+              agent_id: { type: "string", description: "Agent ID for this step" },
+              role: { type: "string", description: "Step role (e.g. processor, reviewer)" },
+              order: { type: "number", description: "Execution order" },
+              input_mapping: { type: "string", enum: ["previous_output", "original_input", "custom"], description: "Input source. Default: previous_output" },
+              custom_input_template: { type: "string", description: "Template with {{original_input}} and {{previous_output}} placeholders" },
+              continue_on_error: { type: "boolean", description: "Continue pipeline if this step fails. Default: false" },
+            },
+            required: ["agent_id"],
+          },
+        },
+      },
+      required: ["agent_id", "name", "steps"],
+    },
+  },
+  kopern_run_pipeline: {
+    name: "kopern_run_pipeline",
+    description: "Execute a pipeline on a prompt. Steps run sequentially, each feeding its output to the next. Uses YOUR API keys.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        agent_id: { type: "string", description: "The parent agent ID" },
+        pipeline_id: { type: "string", description: "The pipeline ID" },
+        prompt: { type: "string", description: "The input prompt" },
+      },
+      required: ["agent_id", "pipeline_id", "prompt"],
+    },
+  },
+  kopern_list_sessions: {
+    name: "kopern_list_sessions",
+    description: "List conversation sessions for an agent. Shows purpose, source, token usage, cost, timestamps. No LLM cost.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        agent_id: { type: "string", description: "The agent ID" },
+        limit: { type: "number", description: "Max sessions to return (1-50). Default: 20" },
+      },
+      required: ["agent_id"],
+    },
+  },
+  kopern_get_session: {
+    name: "kopern_get_session",
+    description: "Get full details of a session including message events, tool calls, and metrics. No LLM cost.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        agent_id: { type: "string", description: "The agent ID" },
+        session_id: { type: "string", description: "The session ID" },
+      },
+      required: ["agent_id", "session_id"],
+    },
+  },
+  kopern_manage_memory: {
+    name: "kopern_manage_memory",
+    description: "Manage an agent's persistent memory. Actions: remember (save key-value), recall (search by query), forget (delete by key), list (all memories). No LLM cost.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        agent_id: { type: "string", description: "The agent ID" },
+        action: { type: "string", enum: ["remember", "recall", "forget", "list"], description: "Memory action" },
+        key: { type: "string", description: "Memory key (for remember/forget)" },
+        value: { type: "string", description: "Memory value (for remember)" },
+        category: { type: "string", enum: ["fact", "preference", "context", "custom"], description: "Memory category (for remember). Default: custom" },
+        query: { type: "string", description: "Search query (for recall)" },
+      },
+      required: ["agent_id", "action"],
+    },
+  },
+  kopern_compliance_report: {
+    name: "kopern_compliance_report",
+    description: "Generate an EU AI Act compliance report for an agent. Checks Art. 6 (risk), Art. 12 (audit trail), Art. 14 (human oversight), Art. 52 (transparency). No LLM cost.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        agent_id: { type: "string", description: "The agent ID" },
+      },
+      required: ["agent_id"],
+    },
+  },
+  kopern_get_grading_results: {
+    name: "kopern_get_grading_results",
+    description: "Get detailed results of a grading run: per-case scores, agent outputs, criteria evaluations, improvement notes. No LLM cost.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        agent_id: { type: "string", description: "The agent ID" },
+        suite_id: { type: "string", description: "The grading suite ID" },
+        run_id: { type: "string", description: "The grading run ID" },
+      },
+      required: ["agent_id", "suite_id", "run_id"],
+    },
+  },
+  kopern_list_grading_runs: {
+    name: "kopern_list_grading_runs",
+    description: "List grading runs for a suite. Shows score history, pass rates, and versions over time. No LLM cost.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        agent_id: { type: "string", description: "The agent ID" },
+        suite_id: { type: "string", description: "The grading suite ID" },
+      },
+      required: ["agent_id", "suite_id"],
+    },
+  },
+  kopern_connect_email: {
+    name: "kopern_connect_email",
+    description: "Connect an agent to Gmail or Outlook for email tools (read_emails, send_email, reply_email). Requires OAuth in browser. Enables the service_email builtin tool.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        agent_id: { type: "string", description: "The agent ID" },
+        provider: { type: "string", enum: ["google", "microsoft"], description: "Email provider" },
+      },
+      required: ["agent_id", "provider"],
+    },
+  },
+  kopern_connect_calendar: {
+    name: "kopern_connect_calendar",
+    description: "Connect an agent to Google Calendar or Microsoft Calendar for scheduling tools (list_events, create_event, etc.). Requires OAuth in browser. Enables the service_calendar builtin tool.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        agent_id: { type: "string", description: "The agent ID" },
+        provider: { type: "string", enum: ["google", "microsoft"], description: "Calendar provider" },
+      },
+      required: ["agent_id", "provider"],
+    },
+  },
+  kopern_get_usage: {
+    name: "kopern_get_usage",
+    description: "Get token usage and cost metrics. Shows input/output tokens, cost, grading runs, and per-agent breakdown. No LLM cost.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        year_month: { type: "string", description: "Period in YYYY-MM format. Default: current month" },
+        include_history: { type: "boolean", description: "Include last 6 months history. Default: false" },
+      },
+    },
+  },
+  kopern_export_agent: {
+    name: "kopern_export_agent",
+    description: "Export an agent as a portable JSON object (agent config, skills, tools, extensions, grading suites with cases). Use kopern_import_agent to re-import. No LLM cost.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        agent_id: { type: "string", description: "The agent ID to export" },
+      },
+      required: ["agent_id"],
+    },
+  },
+  kopern_import_agent: {
+    name: "kopern_import_agent",
+    description: "Import an agent from a Kopern export JSON. Creates a new agent with all skills, tools, extensions, and grading suites. No LLM cost.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        data: {
+          type: "object",
+          description: "The full Kopern agent export JSON (from kopern_export_agent)",
+        },
+      },
+      required: ["data"],
+    },
+  },
 };
 
-/** Tools available with agent-bound key (all 19) */
+/** Tools available with agent-bound key (all 32) */
 function buildToolList(agent: Record<string, unknown>) {
-  // Customize kopern_chat description with agent name
   const chat = {
     ...TOOL_DEFS.kopern_chat,
     description: `Send a message to the "${agent.name}" agent and get a response. The agent uses its configured tools, skills, and extensions.`,
@@ -443,6 +636,7 @@ function buildToolList(agent: Record<string, unknown>) {
   return [
     chat,
     TOOL_DEFS.kopern_agent_info,
+    // V1 platform
     TOOL_DEFS.kopern_list_templates,
     TOOL_DEFS.kopern_list_agents,
     TOOL_DEFS.kopern_grade_prompt,
@@ -461,12 +655,27 @@ function buildToolList(agent: Record<string, unknown>) {
     TOOL_DEFS.kopern_connect_whatsapp,
     TOOL_DEFS.kopern_connect_slack,
     TOOL_DEFS.kopern_connect_webhook,
+    // V2 ecosystem
+    TOOL_DEFS.kopern_create_pipeline,
+    TOOL_DEFS.kopern_run_pipeline,
+    TOOL_DEFS.kopern_list_sessions,
+    TOOL_DEFS.kopern_get_session,
+    TOOL_DEFS.kopern_manage_memory,
+    TOOL_DEFS.kopern_compliance_report,
+    TOOL_DEFS.kopern_get_grading_results,
+    TOOL_DEFS.kopern_list_grading_runs,
+    TOOL_DEFS.kopern_connect_email,
+    TOOL_DEFS.kopern_connect_calendar,
+    TOOL_DEFS.kopern_get_usage,
+    TOOL_DEFS.kopern_export_agent,
+    TOOL_DEFS.kopern_import_agent,
   ];
 }
 
-/** Tools available with user-level key (17 platform tools, no kopern_chat / kopern_agent_info) */
+/** Tools available with user-level key (30 platform tools, no kopern_chat / kopern_agent_info) */
 function buildPlatformToolList() {
   return [
+    // V1
     TOOL_DEFS.kopern_list_templates,
     TOOL_DEFS.kopern_list_agents,
     TOOL_DEFS.kopern_grade_prompt,
@@ -485,6 +694,20 @@ function buildPlatformToolList() {
     TOOL_DEFS.kopern_connect_whatsapp,
     TOOL_DEFS.kopern_connect_slack,
     TOOL_DEFS.kopern_connect_webhook,
+    // V2
+    TOOL_DEFS.kopern_create_pipeline,
+    TOOL_DEFS.kopern_run_pipeline,
+    TOOL_DEFS.kopern_list_sessions,
+    TOOL_DEFS.kopern_get_session,
+    TOOL_DEFS.kopern_manage_memory,
+    TOOL_DEFS.kopern_compliance_report,
+    TOOL_DEFS.kopern_get_grading_results,
+    TOOL_DEFS.kopern_list_grading_runs,
+    TOOL_DEFS.kopern_connect_email,
+    TOOL_DEFS.kopern_connect_calendar,
+    TOOL_DEFS.kopern_get_usage,
+    TOOL_DEFS.kopern_export_agent,
+    TOOL_DEFS.kopern_import_agent,
   ];
 }
 
@@ -796,6 +1019,7 @@ async function executeListAgents(userId: string) {
 
 /** Set of tool names that work with any key type (user-level or agent-bound) */
 const PLATFORM_TOOLS = new Set([
+  // V1
   "kopern_list_templates",
   "kopern_list_agents",
   "kopern_grade_prompt",
@@ -814,6 +1038,20 @@ const PLATFORM_TOOLS = new Set([
   "kopern_connect_whatsapp",
   "kopern_connect_slack",
   "kopern_connect_webhook",
+  // V2
+  "kopern_create_pipeline",
+  "kopern_run_pipeline",
+  "kopern_list_sessions",
+  "kopern_get_session",
+  "kopern_manage_memory",
+  "kopern_compliance_report",
+  "kopern_get_grading_results",
+  "kopern_list_grading_runs",
+  "kopern_connect_email",
+  "kopern_connect_calendar",
+  "kopern_get_usage",
+  "kopern_export_agent",
+  "kopern_import_agent",
 ]);
 
 /** Dispatch a platform tool call. Returns null if the tool is not a platform tool. */
@@ -860,6 +1098,33 @@ async function dispatchPlatformTool(
       return await executeConnectSlack(userId, toolArgs);
     case "kopern_connect_webhook":
       return await executeConnectWebhook(userId, toolArgs);
+    // V2
+    case "kopern_create_pipeline":
+      return await executeCreatePipeline(userId, toolArgs);
+    case "kopern_run_pipeline":
+      return await executeRunPipeline(userId, toolArgs);
+    case "kopern_list_sessions":
+      return await executeListSessions(userId, toolArgs);
+    case "kopern_get_session":
+      return await executeGetSession(userId, toolArgs);
+    case "kopern_manage_memory":
+      return await executeManageMemory(userId, toolArgs);
+    case "kopern_compliance_report":
+      return await executeComplianceReport(userId, toolArgs);
+    case "kopern_get_grading_results":
+      return await executeGetGradingResults(userId, toolArgs);
+    case "kopern_list_grading_runs":
+      return await executeListGradingRuns(userId, toolArgs);
+    case "kopern_connect_email":
+      return await executeConnectEmail(userId, toolArgs);
+    case "kopern_connect_calendar":
+      return await executeConnectCalendar(userId, toolArgs);
+    case "kopern_get_usage":
+      return await executeGetUsage(userId, toolArgs);
+    case "kopern_export_agent":
+      return await executeExportAgent(userId, toolArgs);
+    case "kopern_import_agent":
+      return await executeImportAgent(userId, toolArgs);
     default:
       return null;
   }
@@ -912,8 +1177,8 @@ export async function POST(request: NextRequest) {
         },
         serverInfo: {
           name: "kopern",
-          version: "1.1.0",
-          description: "Full AI agent lifecycle: create, grade, optimize, deploy, orchestrate — 19 tools via MCP.",
+          version: "2.0.0",
+          description: "Full AI agent lifecycle: create, grade, optimize, deploy, orchestrate, monitor — 32 tools via MCP.",
         },
       });
     }
@@ -941,7 +1206,7 @@ export async function POST(request: NextRequest) {
       // ── Platform tools (work with both key types) ──
       if (PLATFORM_TOOLS.has(toolName)) {
         // Plan limit checks for LLM-consuming tools
-        if (["kopern_grade_prompt", "kopern_run_grading", "kopern_run_autoresearch", "kopern_run_team"].includes(toolName)) {
+        if (["kopern_grade_prompt", "kopern_run_grading", "kopern_run_autoresearch", "kopern_run_team", "kopern_run_pipeline"].includes(toolName)) {
           const tokenCheck = await checkPlanLimits(userId, "tokens");
           if (!tokenCheck.allowed) {
             return jsonOk(body.id, { isError: true, content: [{ type: "text", text: tokenCheck.reason || "Plan limit reached" }] });
@@ -953,15 +1218,20 @@ export async function POST(request: NextRequest) {
             return jsonOk(body.id, { isError: true, content: [{ type: "text", text: gradeCheck.reason || "Grading run limit reached" }] });
           }
         }
-        if (["kopern_create_team", "kopern_run_team"].includes(toolName)) {
+        if (["kopern_create_team", "kopern_run_team", "kopern_create_pipeline", "kopern_run_pipeline"].includes(toolName)) {
           const teamCheck = await checkPlanLimits(userId, "teams");
           if (!teamCheck.allowed) {
             return jsonOk(body.id, { isError: true, content: [{ type: "text", text: teamCheck.reason || "Teams limit reached" }] });
           }
         }
 
-        const result = await dispatchPlatformTool(toolName, toolArgs, userId, agentId);
-        if (result) return jsonOk(body.id, result);
+        try {
+          const result = await dispatchPlatformTool(toolName, toolArgs, userId, agentId);
+          if (result) return jsonOk(body.id, result);
+        } catch (e) {
+          console.error(`[MCP] Tool ${toolName} error:`, e);
+          return jsonOk(body.id, { isError: true, content: [{ type: "text", text: `Internal error: ${e instanceof Error ? e.message : String(e)}` }] });
+        }
       }
 
       // ── Agent-bound tools (require agent key) ──

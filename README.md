@@ -348,18 +348,19 @@ whatsappPhones/{phoneId}            # WhatsApp phone routing
 
 ## MCP Integration
 
-Kopern agents work as MCP servers for Claude Code, Cursor, and any MCP client.
+Kopern exposes its **entire platform** as an MCP server — 32 tools for the full agent lifecycle, from creation to deployment to monitoring. Works with Claude Code, Cursor, Windsurf, and any MCP client.
 
 ### Setup
 
-1. Create an agent in Kopern
-2. Go to **MCP Servers** > **New Server** — copy the API key
+**Option A — Platform key** (recommended for most use cases):
+1. Sign up on kopern.ai
+2. Go to **Settings** > **Personal API Key** — generate a key
 3. Add to your `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
-    "my-kopern-agent": {
+    "kopern": {
       "type": "http",
       "url": "https://kopern.ai/api/mcp/server",
       "headers": {
@@ -370,12 +371,73 @@ Kopern agents work as MCP servers for Claude Code, Cursor, and any MCP client.
 }
 ```
 
-### Available MCP Tools
+**Option B — Agent-bound key** (for chat + agent-specific tools):
+1. Create an agent in Kopern
+2. Go to **MCP/API** tab > generate an API key
+3. Same `.mcp.json` format — this key unlocks `kopern_chat` and `kopern_agent_info` in addition to all platform tools.
 
+### Available MCP Tools (32)
+
+#### Agent-Bound Only (require agent key)
 | Tool | Description |
 |------|-------------|
-| `kopern_chat` | Send a message to the agent (with optional conversation history) |
-| `kopern_agent_info` | Get agent metadata (name, description, model, config) |
+| `kopern_chat` | Send a message to the agent with tool calling |
+| `kopern_agent_info` | Get agent metadata |
+
+#### Agent CRUD
+| Tool | Description | LLM Cost |
+|------|-------------|----------|
+| `kopern_create_agent` | Create agent with system prompt, skills, tools | Free |
+| `kopern_get_agent` | Full agent details + subcollection counts | Free |
+| `kopern_update_agent` | Update prompt, model, tools, config | Free |
+| `kopern_delete_agent` | Permanent delete with cascade | Free |
+| `kopern_list_agents` | List all agents with scores | Free |
+
+#### Templates
+| Tool | Description | LLM Cost |
+|------|-------------|----------|
+| `kopern_list_templates` | Browse 37 templates (28 general + 9 vertical) | Free |
+| `kopern_deploy_template` | 1-click deploy with onboarding variables | Free |
+
+#### Grading & Optimization
+| Tool | Description | LLM Cost |
+|------|-------------|----------|
+| `kopern_grade_prompt` | Grade a system prompt inline (no agent needed) | Your keys |
+| `kopern_create_grading_suite` | Define test cases on an agent | Free |
+| `kopern_run_grading` | Run all test cases, get detailed scores | Your keys |
+| `kopern_run_autoresearch` | AutoTune iterative optimization | Your keys |
+| `kopern_get_grading_results` | Detailed results of a grading run | Free |
+| `kopern_list_grading_runs` | Score history over time | Free |
+
+#### Teams & Pipelines
+| Tool | Description | LLM Cost |
+|------|-------------|----------|
+| `kopern_create_team` | Multi-agent team (parallel/sequential/conditional) | Free |
+| `kopern_run_team` | Execute team on a prompt | Your keys |
+| `kopern_create_pipeline` | Multi-step pipeline with input mapping | Free |
+| `kopern_run_pipeline` | Execute pipeline sequentially | Your keys |
+
+#### Connectors
+| Tool | Description | LLM Cost |
+|------|-------------|----------|
+| `kopern_connect_widget` | Embeddable chat widget + embed code | Free |
+| `kopern_connect_telegram` | Telegram bot via @BotFather | Free |
+| `kopern_connect_whatsapp` | WhatsApp Business via Meta Cloud API | Free |
+| `kopern_connect_slack` | Slack OAuth install URL | Free |
+| `kopern_connect_webhook` | Inbound/outbound webhooks (n8n, Zapier, Make) | Free |
+| `kopern_connect_email` | Gmail/Outlook OAuth + email tools | Free |
+| `kopern_connect_calendar` | Google/Microsoft Calendar + scheduling tools | Free |
+
+#### Monitoring & Data
+| Tool | Description | LLM Cost |
+|------|-------------|----------|
+| `kopern_list_sessions` | Conversation history with metrics | Free |
+| `kopern_get_session` | Full session detail (events, tool calls) | Free |
+| `kopern_manage_memory` | Agent memory CRUD (remember/recall/forget/list) | Free |
+| `kopern_compliance_report` | EU AI Act compliance report (Art. 6/12/14/52) | Free |
+| `kopern_get_usage` | Token usage, cost, per-agent breakdown | Free |
+| `kopern_export_agent` | Export agent as portable JSON | Free |
+| `kopern_import_agent` | Import agent from Kopern export JSON | Free |
 
 ---
 
@@ -396,7 +458,7 @@ Kopern agents work as MCP servers for Claude Code, Cursor, and any MCP client.
 
 ## Deployment
 
-### Vercel (Recommended)
+### Vercel (Recommended for SaaS)
 
 ```bash
 # 1. Push to GitHub
@@ -404,6 +466,31 @@ Kopern agents work as MCP servers for Claude Code, Cursor, and any MCP client.
 # 3. Add env vars in Vercel dashboard
 # 4. Deploy
 ```
+
+### Self-Hosted (Docker)
+
+Run Kopern on your own infrastructure. Ideal for enterprises with data sovereignty requirements or teams wanting full local operation with Ollama.
+
+```bash
+git clone https://github.com/berch-t/kopern.git
+cd kopern
+cp .env.example .env.local
+# Edit .env.local with your Firebase + LLM keys
+docker compose up -d
+# Open http://localhost:3000
+```
+
+**Full local mode** (no cloud dependencies):
+1. Uncomment the `firebase-emulator` service in `docker-compose.yml`
+2. Uncomment the `ollama` service for local LLMs
+3. Set `FIRESTORE_EMULATOR_HOST=firebase-emulator:8080` in `.env.local`
+4. Set `OLLAMA_BASE_URL=http://ollama:11434` in `.env.local`
+5. No Stripe keys needed — billing features are disabled without them
+
+**Enterprise LLM support**:
+- **Ollama** — already supported, full local, zero API calls
+- **Azure OpenAI** — use `azure-openai` provider with your deployment endpoint
+- **Any OpenAI-compatible endpoint** — use `openai` provider with custom `OPENAI_BASE_URL` for vLLM, TGI, or internal LLMs
 
 ### Stripe Setup
 
@@ -450,7 +537,7 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 - [x] Grading Engine (6 criteria)
 - [x] Optimization Lab (6 modes)
 - [x] 5 Connectors (Widget, Slack, Telegram, WhatsApp, Webhooks)
-- [x] MCP Protocol (Streamable HTTP)
+- [x] MCP Protocol — 32 tools (Streamable HTTP, Vague 1 + 2)
 - [x] Agent Memory + Context Compaction
 - [x] Service Connectors (Gmail, Outlook, Google Calendar, Microsoft Calendar)
 - [x] Operator Dashboard (no-code agent management)
@@ -461,6 +548,8 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 - [x] Agent Teams + Visual Orchestration (React Flow v12)
 - [x] Conversational Tool Approval (Telegram/WhatsApp/Slack)
 - [x] Scheduled Grading + Alerts (Vercel Cron)
+- [x] Self-Hosted Docker deployment (docker-compose + Ollama)
+- [x] Agent Export/Import (portable JSON)
 - [ ] Template Marketplace
 - [ ] Connector Plugin SDK
 - [ ] TypeScript SDK

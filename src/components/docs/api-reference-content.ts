@@ -652,7 +652,7 @@ The endpoint implements MCP's Streamable HTTP transport. Requests and responses 
 | Method | Description |
 |--------|-------------|
 | \`initialize\` | Handshake — returns protocol version and capabilities |
-| \`tools/list\` | List available tools (kopern_chat, kopern_agent_info) |
+| \`tools/list\` | List available tools (32 tools — agent CRUD, grading, optimization, teams, connectors, monitoring, portability) |
 | \`tools/call\` | Execute a tool |
 | \`ping\` | Keepalive check |
 
@@ -678,7 +678,7 @@ Response:
   "result": {
     "protocolVersion": "2024-11-05",
     "capabilities": { "tools": {} },
-    "serverInfo": { "name": "kopern-mcp", "version": "1.0.0" }
+    "serverInfo": { "name": "kopern-mcp", "version": "2.0.0" }
   },
   "id": 1
 }
@@ -694,50 +694,26 @@ Response:
 }
 \`\`\`
 
-Response:
+Response returns up to **32 tools** depending on key type:
 
-\`\`\`json
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "tools": [
-      {
-        "name": "kopern_chat",
-        "description": "Send a message to the agent and get a response.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "message": { "type": "string", "description": "The message to send" },
-            "history": {
-              "type": "array",
-              "description": "Optional conversation history",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "role": { "type": "string", "enum": ["user", "assistant"] },
-                  "content": { "type": "string" }
-                },
-                "required": ["role", "content"]
-              }
-            }
-          },
-          "required": ["message"]
-        }
-      },
-      {
-        "name": "kopern_agent_info",
-        "description": "Get metadata about the agent.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "required": []
-        }
-      }
-    ]
-  },
-  "id": 2
-}
-\`\`\`
+| Key Type | Tools |
+|----------|-------|
+| **Agent-bound** | All 32 tools (includes kopern_chat, kopern_agent_info) |
+| **User-level** | 31 platform tools (excludes kopern_chat, kopern_agent_info) |
+
+#### Tool Categories
+
+| Category | Tools |
+|----------|-------|
+| **Agent CRUD** | kopern_create_agent, kopern_get_agent, kopern_update_agent, kopern_delete_agent, kopern_list_agents |
+| **Templates** | kopern_list_templates, kopern_deploy_template |
+| **Chat** | kopern_chat, kopern_agent_info (agent-bound only) |
+| **Grading** | kopern_grade_prompt, kopern_create_grading_suite, kopern_run_grading, kopern_get_grading_results, kopern_list_grading_runs |
+| **Optimization** | kopern_run_autoresearch |
+| **Teams & Pipelines** | kopern_create_team, kopern_run_team, kopern_create_pipeline, kopern_run_pipeline |
+| **Connectors** | kopern_connect_widget, kopern_connect_telegram, kopern_connect_whatsapp, kopern_connect_slack, kopern_connect_webhook, kopern_connect_email, kopern_connect_calendar |
+| **Monitoring** | kopern_list_sessions, kopern_get_session, kopern_manage_memory, kopern_compliance_report, kopern_get_usage |
+| **Portability** | kopern_export_agent, kopern_import_agent |
 
 ### Tools Call — kopern_chat
 
@@ -1186,6 +1162,8 @@ func main() {
 | 2026-03-15 | Added Slack bot connector |
 | 2026-03-12 | Added webhook inbound/outbound with HMAC |
 | 2026-03-10 | Added embeddable widget (chat, config, script) |
+| 2026-04-02 | MCP v2.0.0 — 32 tools covering full agent lifecycle, user-level keys, self-hosted Docker |
+| 2026-04-01 | MCP v1.1.0 — 19 tools (agent CRUD, grading, teams, connectors) |
 | 2026-03-01 | Added MCP Streamable HTTP server |
 | 2026-02-15 | Initial API with MCP legacy endpoint |
 `;

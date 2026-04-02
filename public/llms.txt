@@ -46,16 +46,24 @@ Any Kopern agent works as an MCP server for Claude Code, Cursor, and any MCP cli
 }
 ```
 
-19 tools covering the full agent lifecycle:
+32 tools covering the full agent lifecycle:
 - **Agent CRUD**: `kopern_create_agent`, `kopern_get_agent`, `kopern_update_agent`, `kopern_delete_agent`, `kopern_list_agents`
 - **Templates**: `kopern_list_templates`, `kopern_deploy_template` (1-click deploy with skills, tools, grading)
 - **Chat**: `kopern_chat` (agent-bound key), `kopern_agent_info` (agent-bound key)
-- **Grading**: `kopern_grade_prompt` (inline), `kopern_create_grading_suite`, `kopern_run_grading`
+- **Grading**: `kopern_grade_prompt` (inline), `kopern_create_grading_suite`, `kopern_run_grading`, `kopern_get_grading_results`, `kopern_list_grading_runs`
 - **Optimization**: `kopern_run_autoresearch` (AutoTune iterative prompt optimization)
-- **Teams**: `kopern_create_team`, `kopern_run_team` (parallel/sequential/conditional)
-- **Connectors**: `kopern_connect_widget`, `kopern_connect_telegram`, `kopern_connect_whatsapp`, `kopern_connect_slack`, `kopern_connect_webhook`
+- **Teams & Pipelines**: `kopern_create_team`, `kopern_run_team`, `kopern_create_pipeline`, `kopern_run_pipeline`
+- **Connectors**: `kopern_connect_widget`, `kopern_connect_telegram`, `kopern_connect_whatsapp`, `kopern_connect_slack`, `kopern_connect_webhook`, `kopern_connect_email`, `kopern_connect_calendar`
+- **Monitoring**: `kopern_list_sessions`, `kopern_get_session`, `kopern_manage_memory`, `kopern_compliance_report`, `kopern_get_usage`
+- **Portability**: `kopern_export_agent`, `kopern_import_agent`
 
-Two key types: **user-level** (17 platform tools, no agent needed) and **agent-bound** (all 19 tools, includes chat).
+Two key types: **user-level** (30 platform tools, no agent needed) and **agent-bound** (all 32 tools, includes chat).
+
+## Self-Hosted
+
+Docker deployment for enterprises with data sovereignty requirements:
+- `docker compose up` with `docker-compose.yml` (Next.js + Redis + optional Ollama + optional Firebase Emulator)
+- Supports Ollama (full local), Azure OpenAI, and any OpenAI-compatible endpoint for internal LLMs
 
 ## Architecture
 
