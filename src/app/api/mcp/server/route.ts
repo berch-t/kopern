@@ -243,13 +243,13 @@ const TOOL_DEFS = {
       type: "object" as const,
       properties: {
         agent_id: { type: "string", description: "The agent ID" },
-        name: { type: "string" },
-        description: { type: "string" },
-        domain: { type: "string" },
-        system_prompt: { type: "string" },
-        provider: { type: "string" },
-        model: { type: "string" },
-        builtin_tools: { type: "array", items: { type: "string" } },
+        name: { type: "string", description: "New agent name" },
+        description: { type: "string", description: "New agent description" },
+        domain: { type: "string", description: "New agent domain/category" },
+        system_prompt: { type: "string", description: "New system prompt" },
+        provider: { type: "string", description: "LLM provider (anthropic, openai, google, mistral, ollama)" },
+        model: { type: "string", description: "Model ID override" },
+        builtin_tools: { type: "array", description: "Built-in tools to enable: web_fetch, memory, github_read, github_write, bug_management, datagouv, piste, service_email, service_calendar", items: { type: "string" } },
       },
       required: ["agent_id"],
     },
@@ -628,6 +628,48 @@ const TOOL_DEFS = {
 };
 
 /** Tools available with agent-bound key (all 32) */
+// MCP tool annotations (readOnlyHint, destructiveHint, idempotentHint, openWorldHint)
+const TOOL_ANNOTATIONS: Record<string, { readOnlyHint?: boolean; destructiveHint?: boolean; idempotentHint?: boolean; openWorldHint?: boolean }> = {
+  kopern_chat: { readOnlyHint: false, openWorldHint: true },
+  kopern_agent_info: { readOnlyHint: true },
+  kopern_list_templates: { readOnlyHint: true },
+  kopern_list_agents: { readOnlyHint: true },
+  kopern_grade_prompt: { readOnlyHint: true, openWorldHint: true },
+  kopern_create_agent: { readOnlyHint: false, idempotentHint: false },
+  kopern_get_agent: { readOnlyHint: true },
+  kopern_update_agent: { readOnlyHint: false, idempotentHint: true },
+  kopern_delete_agent: { readOnlyHint: false, destructiveHint: true },
+  kopern_deploy_template: { readOnlyHint: false, idempotentHint: false },
+  kopern_create_grading_suite: { readOnlyHint: false, idempotentHint: false },
+  kopern_run_grading: { readOnlyHint: false, openWorldHint: true },
+  kopern_run_autoresearch: { readOnlyHint: false, openWorldHint: true },
+  kopern_create_team: { readOnlyHint: false, idempotentHint: false },
+  kopern_run_team: { readOnlyHint: false, openWorldHint: true },
+  kopern_connect_widget: { readOnlyHint: false, idempotentHint: true },
+  kopern_connect_telegram: { readOnlyHint: false, idempotentHint: true },
+  kopern_connect_whatsapp: { readOnlyHint: false, idempotentHint: true },
+  kopern_connect_slack: { readOnlyHint: true },
+  kopern_connect_webhook: { readOnlyHint: false, idempotentHint: false },
+  kopern_create_pipeline: { readOnlyHint: false, idempotentHint: false },
+  kopern_run_pipeline: { readOnlyHint: false, openWorldHint: true },
+  kopern_list_sessions: { readOnlyHint: true },
+  kopern_get_session: { readOnlyHint: true },
+  kopern_manage_memory: { readOnlyHint: false },
+  kopern_compliance_report: { readOnlyHint: true },
+  kopern_get_grading_results: { readOnlyHint: true },
+  kopern_list_grading_runs: { readOnlyHint: true },
+  kopern_connect_email: { readOnlyHint: false },
+  kopern_connect_calendar: { readOnlyHint: false },
+  kopern_get_usage: { readOnlyHint: true },
+  kopern_export_agent: { readOnlyHint: true },
+  kopern_import_agent: { readOnlyHint: false, idempotentHint: false },
+};
+
+function withAnnotations(tool: Record<string, unknown>) {
+  const annotations = TOOL_ANNOTATIONS[tool.name as string];
+  return annotations ? { ...tool, annotations } : tool;
+}
+
 function buildToolList(agent: Record<string, unknown>) {
   const chat = {
     ...TOOL_DEFS.kopern_chat,
@@ -669,7 +711,7 @@ function buildToolList(agent: Record<string, unknown>) {
     TOOL_DEFS.kopern_get_usage,
     TOOL_DEFS.kopern_export_agent,
     TOOL_DEFS.kopern_import_agent,
-  ];
+  ].map(withAnnotations);
 }
 
 /** Tools available with user-level key (30 platform tools, no kopern_chat / kopern_agent_info) */
@@ -708,7 +750,7 @@ function buildPlatformToolList() {
     TOOL_DEFS.kopern_get_usage,
     TOOL_DEFS.kopern_export_agent,
     TOOL_DEFS.kopern_import_agent,
-  ];
+  ].map(withAnnotations);
 }
 
 // ─── Tool execution (agent-bound only: chat + agent_info) ───────────
@@ -1174,13 +1216,27 @@ export async function POST(request: NextRequest) {
         protocolVersion: "2024-11-05",
         capabilities: {
           tools: {},
+          prompts: {},
+          resources: {},
         },
         serverInfo: {
-          name: "kopern",
+          name: "Kopern",
           version: "2.0.0",
           description: "Full AI agent lifecycle: create, grade, optimize, deploy, orchestrate, monitor — 32 tools via MCP.",
+          homepage: "https://kopern.ai",
+          icon: "https://kopern.ai/logo_small.png",
         },
       });
+    }
+
+    // ── Prompts (empty) ──
+    case "prompts/list": {
+      return jsonOk(body.id, { prompts: [] });
+    }
+
+    // ── Resources (empty) ──
+    case "resources/list": {
+      return jsonOk(body.id, { resources: [] });
     }
 
     // ── Ping ──

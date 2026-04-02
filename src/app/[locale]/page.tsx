@@ -1147,15 +1147,16 @@ export default function LandingPage() {
               </p>
             </motion.div>
 
-            {/* Install snippet */}
+            {/* Two-column layout: snippets left, CLI info right */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.15 }}
-              className="mb-12"
+              className="grid lg:grid-cols-[3fr_2fr] gap-8 lg:gap-10 items-start"
             >
-              <div className="max-w-2xl mx-auto space-y-4">
+              {/* Left — Code snippets */}
+              <div className="space-y-4">
                 {/* Claude Code one-liner */}
                 <div className="rounded-xl border bg-card overflow-hidden">
                   <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/50">
@@ -1205,92 +1206,77 @@ export default function LandingPage() {
 }`}</code></pre>
                 </div>
               </div>
-            </motion.div>
 
-            {/* CLI Mode description */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="text-center mb-10"
-            >
-              <h3 className="text-xl font-semibold mb-2">{t.mcpSection.cliTitle}</h3>
-              <p className="text-muted-foreground max-w-xl mx-auto text-sm">{t.mcpSection.cliDescription}</p>
-            </motion.div>
+              {/* Right — CLI mode + categories + badges */}
+              <div className="space-y-6">
+                {/* CLI Mode description */}
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">{t.mcpSection.cliTitle}</h3>
+                  <p className="text-muted-foreground text-sm">{t.mcpSection.cliDescription}</p>
+                </div>
 
-            {/* Tool categories grid */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.25 }}
-              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-12"
-            >
-              {[
-                { name: t.mcpSection.categories.agents, count: t.mcpSection.categories.agentsCount, icon: Bot, color: "text-blue-500" },
-                { name: t.mcpSection.categories.grading, count: t.mcpSection.categories.gradingCount, icon: ClipboardCheck, color: "text-emerald-500" },
-                { name: t.mcpSection.categories.teams, count: t.mcpSection.categories.teamsCount, icon: Users, color: "text-violet-500" },
-                { name: t.mcpSection.categories.connectors, count: t.mcpSection.categories.connectorsCount, icon: Cable, color: "text-amber-500" },
-                { name: t.mcpSection.categories.sessions, count: t.mcpSection.categories.sessionsCount, icon: MessageSquare, color: "text-pink-500" },
-                { name: t.mcpSection.categories.utilities, count: t.mcpSection.categories.utilitiesCount, icon: Shield, color: "text-cyan-500" },
-              ].map((cat) => (
-                <BorderGlow key={cat.name} className="bg-card" glowRadius={28}>
-                  <div className="flex items-center gap-3 p-4">
-                    <cat.icon className={`h-5 w-5 ${cat.color} shrink-0`} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">{cat.name}</p>
-                      <p className="text-xs text-muted-foreground">{cat.count}</p>
-                    </div>
-                  </div>
-                </BorderGlow>
-              ))}
-            </motion.div>
+                {/* Tool categories grid */}
+                <div className="grid gap-2">
+                  {[
+                    { name: t.mcpSection.categories.agents, count: t.mcpSection.categories.agentsCount, icon: Bot, color: "text-blue-500" },
+                    { name: t.mcpSection.categories.grading, count: t.mcpSection.categories.gradingCount, icon: ClipboardCheck, color: "text-emerald-500" },
+                    { name: t.mcpSection.categories.teams, count: t.mcpSection.categories.teamsCount, icon: Users, color: "text-violet-500" },
+                    { name: t.mcpSection.categories.connectors, count: t.mcpSection.categories.connectorsCount, icon: Cable, color: "text-amber-500" },
+                    { name: t.mcpSection.categories.sessions, count: t.mcpSection.categories.sessionsCount, icon: MessageSquare, color: "text-pink-500" },
+                    { name: t.mcpSection.categories.utilities, count: t.mcpSection.categories.utilitiesCount, icon: Shield, color: "text-cyan-500" },
+                  ].map((cat) => (
+                    <BorderGlow key={cat.name} className="bg-card" glowRadius={28}>
+                      <div className="flex items-center gap-2.5 p-3">
+                        <cat.icon className={`h-4 w-4 ${cat.color} shrink-0`} />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium leading-tight">{cat.name}</p>
+                          <p className="text-[11px] text-muted-foreground">{cat.count}</p>
+                        </div>
+                      </div>
+                    </BorderGlow>
+                  ))}
+                </div>
 
-            {/* Registry badges */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              className="flex flex-wrap items-center justify-center gap-3"
-            >
-              <a href="https://www.npmjs.com/package/@kopern/mcp-server" target="_blank" rel="noopener noreferrer">
-                <span className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover:bg-muted/50 transition-colors">
-                  <Package className="h-4 w-4 text-red-500" />
-                  npm
-                </span>
-              </a>
-              <a href="https://smithery.ai/server/@kopern/mcp-server" target="_blank" rel="noopener noreferrer">
-                <span className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover:bg-muted/50 transition-colors">
-                  <Blocks className="h-4 w-4 text-violet-500" />
-                  Smithery
-                </span>
-              </a>
-              <a href="https://glama.ai/mcp/servers/@kopern/mcp-server" target="_blank" rel="noopener noreferrer">
-                <span className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover:bg-muted/50 transition-colors">
-                  <Sparkles className="h-4 w-4 text-amber-500" />
-                  Glama
-                </span>
-              </a>
-              <a href="https://opentools.com/@kopern/mcp-server" target="_blank" rel="noopener noreferrer">
-                <span className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover:bg-muted/50 transition-colors">
-                  <Plug className="h-4 w-4 text-emerald-500" />
-                  Open Tools
-                </span>
-              </a>
-              <a href="https://mcp.tools/@kopern/mcp-server" target="_blank" rel="noopener noreferrer">
-                <span className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium hover:bg-muted/50 transition-colors">
-                  <Terminal className="h-4 w-4 text-blue-500" />
-                  MCPT
-                </span>
-              </a>
+                {/* Registry badges */}
+                <div className="flex flex-wrap justify-center gap-2">
+                  <a href="https://www.npmjs.com/package/@kopern/mcp-server" target="_blank" rel="noopener noreferrer">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted/50 transition-colors">
+                      <Package className="h-3.5 w-3.5 text-red-500" />
+                      npm
+                    </span>
+                  </a>
+                  <a href="https://smithery.ai/server/@kopern/mcp-server" target="_blank" rel="noopener noreferrer">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted/50 transition-colors">
+                      <Blocks className="h-3.5 w-3.5 text-violet-500" />
+                      Smithery
+                    </span>
+                  </a>
+                  <a href="https://glama.ai/mcp/servers/@kopern/mcp-server" target="_blank" rel="noopener noreferrer">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted/50 transition-colors">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                      Glama
+                    </span>
+                  </a>
+                  <a href="https://opentools.com/@kopern/mcp-server" target="_blank" rel="noopener noreferrer">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted/50 transition-colors">
+                      <Plug className="h-3.5 w-3.5 text-emerald-500" />
+                      Open Tools
+                    </span>
+                  </a>
+                  <a href="https://mcp.tools/@kopern/mcp-server" target="_blank" rel="noopener noreferrer">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted/50 transition-colors">
+                      <Terminal className="h-3.5 w-3.5 text-blue-500" />
+                      MCPT
+                    </span>
+                  </a>
+                </div>
+              </div>
             </motion.div>
           </div>
         </div>
 
         {/* Features */}
-        <div style={{ background: "var(--landing-section-alt)" }}>
+        <div>
       <div className="max-w-6xl mx-auto px-4 md:px-6">
         <motion.section
           initial={{ opacity: 0, y: 30 }}
@@ -1490,6 +1476,7 @@ export default function LandingPage() {
       </div>
 
         {/* Observability & Billing */}
+      <div style={{ background: "var(--landing-section-alt)" }}>
       <div className="max-w-6xl mx-auto px-4 md:px-6">
         <motion.section
           initial={{ opacity: 0, y: 30 }}
@@ -1535,9 +1522,10 @@ export default function LandingPage() {
           </div>
         </motion.section>
       </div>
+      </div>
 
       {/* How it Works — Full documentation */}
-      <div style={{ background: "var(--landing-section-alt)" }}>
+      <div>
         <DocsBoundary>
           <Suspense fallback={null}>
             <HowItWorks id="how-it-works" />
