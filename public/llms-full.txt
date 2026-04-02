@@ -223,12 +223,15 @@ Any Kopern agent works as an MCP server:
 ```
 - Streamable HTTP transport (MCP spec 2024-11-05)
 - Compatible with Claude Code, Cursor, Windsurf, and any MCP client
-- Tools:
-  - `kopern_chat` — Send a message to an agent and get a response (with tool calling)
-  - `kopern_agent_info` — Get agent metadata (name, model, config)
-  - `kopern_list_templates` — Browse all 37 ready-to-use templates (28 general + 9 vertical)
-  - `kopern_grade_prompt` — Evaluate a system prompt against test cases with 6 criteria types
-  - `kopern_list_agents` — List all your agents with scores and metadata
+- **19 tools** covering the full agent lifecycle:
+  - **Agent CRUD**: `kopern_create_agent`, `kopern_get_agent`, `kopern_update_agent`, `kopern_delete_agent`, `kopern_list_agents`
+  - **Templates**: `kopern_list_templates`, `kopern_deploy_template` (1-click deploy with skills, tools, grading)
+  - **Chat**: `kopern_chat` (agent-bound key), `kopern_agent_info` (agent-bound key)
+  - **Grading**: `kopern_grade_prompt` (inline), `kopern_create_grading_suite`, `kopern_run_grading`
+  - **Optimization**: `kopern_run_autoresearch` (AutoTune iterative prompt optimization)
+  - **Teams**: `kopern_create_team`, `kopern_run_team` (parallel/sequential/conditional)
+  - **Connectors**: `kopern_connect_widget`, `kopern_connect_telegram`, `kopern_connect_whatsapp`, `kopern_connect_slack`, `kopern_connect_webhook`
+- Two key types: **user-level** (17 platform tools, no agent needed) and **agent-bound** (all 19, includes chat)
 - API key authentication (`kpn_` prefix, SHA-256 hashed, expiry support, rotation)
 
 ## Service Connectors (OAuth)

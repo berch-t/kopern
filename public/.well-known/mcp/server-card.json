@@ -1,37 +1,37 @@
 {
   "serverInfo": {
     "name": "kopern",
-    "version": "1.0.0",
-    "title": "Kopern — AI Agent Builder",
-    "description": "Build, grade, and deploy AI agents. Chat with agents, evaluate system prompts against 6 quality criteria, browse 37 ready-to-use templates, and manage your agent fleet — all via MCP.",
+    "version": "1.1.0",
+    "title": "Kopern — AI Agent Builder, Grader & Orchestrator",
+    "description": "Full AI agent lifecycle via MCP: create agents, deploy from 37 templates, grade with test suites, optimize with AutoTune, orchestrate multi-agent teams, and deploy to Widget/Telegram/WhatsApp/Slack/Webhooks — 19 tools.",
     "homepage": "https://kopern.ai",
     "logo": "https://kopern.ai/logo_small.png"
   },
   "authentication": {
     "type": "bearer",
-    "instructions": "Create an API key at kopern.ai → Agent → MCP/API tab. Keys start with 'kpn_'. Pass via Authorization: Bearer kpn_..."
+    "instructions": "Create an API key at kopern.ai → Settings → Personal API Key (user-level, all platform tools) or Agent → MCP/API tab (agent-bound, adds chat). Keys start with 'kpn_'. Pass via Authorization: Bearer kpn_..."
   },
   "tools": [
-    {
-      "name": "kopern_chat",
-      "description": "Send a message to your Kopern agent and get a response. The agent may use its internal tools (GitHub, web fetch, code interpreter, email, calendar, etc.) to answer."
-    },
-    {
-      "name": "kopern_agent_info",
-      "description": "Get metadata about the connected agent (name, description, model, domain, configuration)."
-    },
-    {
-      "name": "kopern_list_templates",
-      "description": "List all 37 available AI agent templates (28 general + 9 vertical/business). Returns slug, title, domain, tagline. No LLM cost."
-    },
-    {
-      "name": "kopern_grade_prompt",
-      "description": "Grade an AI system prompt against test cases. Runs the agent with each input and evaluates using 6 criteria types (output_match, schema_validation, tool_usage, safety_check, custom_script, llm_judge). Returns score 0-1. Uses YOUR API keys."
-    },
-    {
-      "name": "kopern_list_agents",
-      "description": "List all your Kopern agents with name, description, model, domain, latest grading score. No LLM cost."
-    }
+    { "name": "kopern_chat", "description": "Send a message to an agent and get a response with tool calling (agent-bound key only)." },
+    { "name": "kopern_agent_info", "description": "Get agent metadata (agent-bound key only)." },
+    { "name": "kopern_list_templates", "description": "List all 37 agent templates (28 general + 9 vertical). No LLM cost." },
+    { "name": "kopern_list_agents", "description": "List all your agents. No LLM cost." },
+    { "name": "kopern_grade_prompt", "description": "Grade a system prompt against inline test cases (6 criteria types). Uses your API keys." },
+    { "name": "kopern_create_agent", "description": "Create a new agent with system prompt, model, and optional skills." },
+    { "name": "kopern_get_agent", "description": "Get full agent details (prompt, model, counts)." },
+    { "name": "kopern_update_agent", "description": "Update agent configuration (prompt, model, tools, etc.)." },
+    { "name": "kopern_delete_agent", "description": "Permanently delete an agent and all its data." },
+    { "name": "kopern_deploy_template", "description": "Deploy agent from a template with skills, tools, and grading suite in one shot." },
+    { "name": "kopern_create_grading_suite", "description": "Create a grading suite with test cases on an agent." },
+    { "name": "kopern_run_grading", "description": "Run a grading suite and get detailed scores per case. Uses your API keys." },
+    { "name": "kopern_run_autoresearch", "description": "Run AutoTune to iteratively optimize an agent's system prompt. Uses your API keys." },
+    { "name": "kopern_create_team", "description": "Create a multi-agent team (parallel, sequential, or conditional)." },
+    { "name": "kopern_run_team", "description": "Execute a team on a prompt. Uses your API keys." },
+    { "name": "kopern_connect_widget", "description": "Enable embeddable chat widget. Returns embed code." },
+    { "name": "kopern_connect_telegram", "description": "Connect agent to Telegram bot." },
+    { "name": "kopern_connect_whatsapp", "description": "Connect agent to WhatsApp Business." },
+    { "name": "kopern_connect_slack", "description": "Get Slack OAuth install URL." },
+    { "name": "kopern_connect_webhook", "description": "Create inbound/outbound webhook (n8n, Zapier, Make compatible)." }
   ],
   "resources": [],
   "prompts": []
