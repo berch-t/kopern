@@ -1,3 +1,4 @@
+export const maxDuration = 600;
 import { NextRequest, NextResponse } from "next/server";
 import { createSSEStream, sseResponse } from "@/lib/utils/sse";
 import { calculateTokenCost } from "@/lib/billing/pricing";
