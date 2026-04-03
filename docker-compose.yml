@@ -36,9 +36,11 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - CODE_INTERPRETER_URL=http://code-interpreter:8080
     restart: unless-stopped
     depends_on:
       - redis
+      - code-interpreter
 
   # ── Redis (rate limiting) ───────────────────────────────────────
   # Optional: rate limiting gracefully degrades without Redis.
@@ -49,6 +51,24 @@ services:
     volumes:
       - redis_data:/data
     restart: unless-stopped
+
+  # ── Code Interpreter (sandboxed execution) ─────────────────────
+  # Python/Node.js/Bash execution for code_interpreter builtin tool.
+  # Auth: CODE_INTERPRETER_SECRET shared between kopern and this service.
+  code-interpreter:
+    build:
+      context: ./code-interpreter
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env.local
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   # ── Ollama (local LLM — optional) ──────────────────────────────
   # Uncomment to run LLMs locally. GPU passthrough requires
