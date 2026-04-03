@@ -48,7 +48,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
-              "connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com https://apis.google.com https://api.stripe.com https://*.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com wss://*.firebaseio.com https://cdn.jsdelivr.net",
+              "connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://storage.googleapis.com https://accounts.google.com https://apis.google.com https://api.stripe.com https://*.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com wss://*.firebaseio.com https://cdn.jsdelivr.net",
               "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://accounts.google.com https://apis.google.com https://*.firebaseapp.com",
               "object-src 'none'",
               "base-uri 'self'",

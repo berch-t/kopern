@@ -107,14 +107,24 @@ async function getGcpIdToken(targetAudience: string): Promise<string | null> {
       body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.error("[CODE_INTERPRETER] GCP token exchange failed:", res.status, errText.slice(0, 300));
+      return null;
+    }
     const data = await res.json();
     const idToken = data.id_token;
+    if (!idToken) {
+      console.error("[CODE_INTERPRETER] No id_token in response:", JSON.stringify(data).slice(0, 300));
+      return null;
+    }
 
     // Cache the token (1 hour validity)
     cachedIdToken = { token: idToken, expiresAt: Date.now() + 3500_000 };
+    console.log("[CODE_INTERPRETER] GCP ID token obtained, expires in 1h");
     return idToken;
-  } catch {
+  } catch (err) {
+    console.error("[CODE_INTERPRETER] GCP auth error:", err instanceof Error ? err.message : String(err));
     return null;
   }
 }
@@ -161,6 +171,7 @@ export async function executeCodeInterpreterTool(
 
     // Authenticate: GCP IAM token (for Cloud Run) + app-level Bearer secret
     const idToken = await getGcpIdToken(CODE_INTERPRETER_URL);
+    console.log("[CODE_INTERPRETER] Auth:", idToken ? "GCP IAM token" : CODE_INTERPRETER_SECRET ? "Bearer secret fallback" : "none");
     const authHeader = idToken
       ? `Bearer ${idToken}` // GCP IAM ID token (passes Cloud Run auth)
       : CODE_INTERPRETER_SECRET

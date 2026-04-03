@@ -21,6 +21,7 @@ export const BUILTIN_TOOLS = [
   { id: "service_calendar", name: "Calendar (Google/Outlook)", description: "List events, check availability, create/update/cancel calendar events" },
   { id: "web_fetch", name: "Web Fetch", description: "Fetch any URL and extract text content — web pages, APIs, RSS feeds, robots.txt, sitemaps" },
   { id: "code_interpreter", name: "Code Interpreter", description: "Execute Python, Node.js, or Bash code in a secure cloud sandbox — data analysis, charts, scraping, file processing" },
+  { id: "image_generation", name: "Image Generation", description: "Generate images from text prompts via Google Gemini — infographics, diagrams, illustrations, banners, social media visuals" },
 ] as const;
 
 export function buildCustomTool(toolDoc: ToolDoc): BuiltTool {

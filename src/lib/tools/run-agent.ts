@@ -19,6 +19,7 @@ import { getMemoryTools, executeMemoryTool, isMemoryTool, injectMemoryContext } 
 import { getEmailTools, getCalendarTools, executeServiceTool, isServiceTool } from "@/lib/tools/service-tools";
 import { WEB_FETCH_TOOLS, executeWebFetchTool, isWebFetchTool } from "@/lib/tools/web-fetch-tool";
 import { CODE_INTERPRETER_TOOLS, executeCodeInterpreterTool, isCodeInterpreterTool } from "@/lib/tools/code-interpreter-tool";
+import { IMAGE_GEN_TOOLS, executeImageGenTool, isImageGenTool } from "@/lib/tools/image-gen-tool";
 import { runExtensions } from "@/lib/extensions/extension-runner";
 import { fireOutboundWebhooks } from "@/lib/connectors/webhook";
 import type { ExtensionEventType } from "@/lib/firebase/firestore";
@@ -152,6 +153,7 @@ export async function runAgentWithTools(
   const hasServiceCalendar = agentBuiltinTools.includes("service_calendar");
   const hasWebFetch = agentBuiltinTools.includes("web_fetch");
   const hasCodeInterpreter = agentBuiltinTools.includes("code_interpreter");
+  const hasImageGen = agentBuiltinTools.includes("image_generation");
 
   // GitHub tools (with write access if agent has github_write builtin)
   if (connectedRepos.length > 0) {
@@ -196,6 +198,11 @@ export async function runAgentWithTools(
   // Code interpreter (Cloud Run Docker sandbox)
   if (hasCodeInterpreter) {
     tools.push(...CODE_INTERPRETER_TOOLS);
+  }
+
+  // Image generation (Google Gemini)
+  if (hasImageGen) {
+    tools.push(...IMAGE_GEN_TOOLS);
   }
 
   // Slack tools (loaded when agent has a Slack connection with valid bot token)
@@ -415,12 +422,14 @@ export async function runAgentWithTools(
                               ? await executeWebFetchTool(tc.name, tc.input)
                               : isCodeInterpreterTool(tc.name)
                                 ? await executeCodeInterpreterTool(tc.name, tc.input)
-                                : await executeTool(tc, toolCtx);
+                                : isImageGenTool(tc.name)
+                                  ? await executeImageGenTool(tc.name, tc.input, config.userId || "")
+                                  : await executeTool(tc, toolCtx);
                   // Count tool result tokens as additional input
                   inputTokens += estimateTokens(result.result);
                   callbacks.onToolEnd?.({
                     name: tc.name,
-                    result: result.result.slice(0, 500),
+                    result: result.result.slice(0, 2000),
                     isError: result.isError,
                   });
                   fireExtension(result.isError ? "tool_call_error" : "tool_call_end", {
