@@ -1174,6 +1174,8 @@ async function dispatchPlatformTool(
 
 // ─── POST handler (MCP Streamable HTTP) ──────────────────────────────
 
+export const maxDuration = 300;
+
 export async function POST(request: NextRequest) {
   // 1. Authenticate (supports both agent-bound and user-level keys)
   const auth = await authenticate(request);

@@ -16,6 +16,7 @@ import type { LLMMessage } from "@/lib/llm/client";
 import { useCases } from "@/data/use-cases";
 import { verticalTemplates } from "@/data/vertical-templates";
 import { generateComplianceReport } from "@/lib/compliance/generate-report";
+import { createSessionServer, appendSessionEvents, endSessionServer } from "@/lib/billing/track-usage-server";
 
 // ─── Response helpers ───────────────────────────────────────────────
 
@@ -503,12 +504,25 @@ export async function executeRunGrading(
     systemPrompt += `\n\n<skills>\n${xml}\n</skills>`;
   }
 
-  // Execute each case
+  // Execute each case — with session logging for observability
+  let caseIndex = 0;
   const executeCase = async (inputPrompt: string) => {
     const collector = createEventCollector();
     const messages: LLMMessage[] = [{ role: "user" as const, content: inputPrompt }];
+    const caseName = gradingCases[caseIndex]?.name || `Case ${caseIndex + 1}`;
+    caseIndex++;
 
-    await new Promise<AgentRunMetrics>((resolve, reject) => {
+    // Create session for this grading case
+    let sessionId = "";
+    try {
+      sessionId = await createSessionServer(userId, agentId, {
+        purpose: `[Grading] ${caseName}`,
+        modelUsed: model,
+        providerUsed: provider,
+      });
+    } catch { /* continue without session */ }
+
+    const metrics = await new Promise<AgentRunMetrics>((resolve, reject) => {
       runAgentWithTools(
         {
           provider,
@@ -535,6 +549,17 @@ export async function executeRunGrading(
         }
       );
     });
+
+    // Log session events + close
+    if (sessionId) {
+      try {
+        await appendSessionEvents(userId, agentId, sessionId, [
+          { type: "user_message", data: { content: inputPrompt } },
+          { type: "assistant_message", data: { content: collector.assistantOutput } },
+        ]);
+        await endSessionServer(userId, agentId, sessionId);
+      } catch { /* best-effort logging */ }
+    }
 
     return collector;
   };

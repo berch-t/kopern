@@ -10,6 +10,7 @@ import { logAppError } from "@/lib/errors/logger";
 import { buildCriterionConfig } from "@/lib/grading/build-criterion-config";
 import { generateImprovementNotes } from "@/lib/grading/improvement-notes";
 import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
+import { createSessionServer, appendSessionEvents, endSessionServer } from "@/lib/billing/track-usage-server";
 
 export async function POST(
   request: NextRequest,
@@ -131,6 +132,18 @@ export async function POST(
         const collector = createEventCollector();
         let caseMetrics: AgentRunMetrics | null = null;
 
+        // Create session for this grading case
+        let caseSessionId = "";
+        if (userId) {
+          try {
+            caseSessionId = await createSessionServer(userId, agentId, {
+              purpose: `[Grading] ${testCase.name}`,
+              modelUsed: modelId,
+              providerUsed: modelProvider,
+            });
+          } catch { /* continue without session */ }
+        }
+
         await runAgentWithTools(
           {
             provider: modelProvider,
@@ -175,6 +188,18 @@ export async function POST(
             },
           }
         );
+
+        // Log grading session events
+        if (caseSessionId && userId) {
+          try {
+            collector.finalize();
+            await appendSessionEvents(userId, agentId, caseSessionId, [
+              { type: "user_message", data: { content: testCase.inputPrompt } },
+              { type: "assistant_message", data: { content: collector.assistantOutput } },
+            ]);
+            await endSessionServer(userId, agentId, caseSessionId);
+          } catch { /* best-effort logging */ }
+        }
 
         collector.finalize();
 

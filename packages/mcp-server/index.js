@@ -36,7 +36,7 @@ if (!API_KEY) {
   process.exit(1);
 }
 
-process.stderr.write(`[kopern-mcp] Kopern MCP Server v2.0.0 — 32 tools\n`);
+process.stderr.write(`[kopern-mcp] Kopern MCP Server v2.0.4 — 32 tools\n`);
 process.stderr.write(`[kopern-mcp] Endpoint: ${BASE_URL}\n`);
 
 // ---------- stdio JSON-RPC transport ----------
@@ -93,7 +93,7 @@ async function handleMessage(raw) {
         Authorization: `Bearer ${API_KEY}`,
       },
       body: JSON.stringify(request),
-      signal: AbortSignal.timeout(120_000),
+      signal: AbortSignal.timeout(300_000),
     });
 
     if (!res.ok) {
