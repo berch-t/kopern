@@ -1,42 +1,6 @@
 {
-  "name": "Kopern",
-  "description": "Full AI agent lifecycle platform — create, grade, optimize, deploy and orchestrate AI agents. 32 MCP tools.",
-  "homepage": "https://kopern.ai",
-  "icon": "https://kopern.ai/logo_small.png",
-  "license": "MIT",
-  "author": {
-    "name": "Kopern",
-    "email": "hello@kopern.ai",
-    "url": "https://kopern.ai"
-  },
-  "repository": "https://github.com/berch-t/kopern",
-  "keywords": [
-    "ai-agents",
-    "agent-builder",
-    "grading",
-    "optimization",
-    "orchestration",
-    "multi-agent",
-    "deployment",
-    "tool-calling",
-    "mcp"
-  ],
-  "transport": {
-    "type": "http",
-    "url": "https://kopern.ai/api/mcp/server"
-  },
-  "auth": {
-    "type": "bearer",
-    "description": "Kopern API key (starts with kpn_). Get it free at https://kopern.ai → Settings → Personal API Key."
-  },
-  "tools": 32,
-  "prompts": 3,
-  "categories": [
-    "agent-crud",
-    "templates",
-    "grading",
-    "optimization",
-    "deployment",
-    "orchestration"
+  "$schema": "https://glama.ai/mcp/schemas/server.json",
+  "maintainers": [
+    "berch-t"
   ]
 }
