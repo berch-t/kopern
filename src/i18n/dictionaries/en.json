@@ -203,6 +203,7 @@
       "playground": "Playground",
       "grading": "Grading",
       "mcpServers": "MCP Servers",
+      "apiKeys": "API Keys",
       "overview": "Overview",
       "systemPrompt": "System Prompt",
       "configuration": "Configuration",

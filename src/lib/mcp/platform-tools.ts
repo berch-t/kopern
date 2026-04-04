@@ -33,6 +33,57 @@ function err(message: string): ToolResult {
   return { isError: true, content: [{ type: "text", text: message }] };
 }
 
+// ─── Name Resolution ────────────────────────────────────────────────
+// Accept agent_name / team_name as alternatives to agent_id / team_id.
+// Users don't remember Firestore IDs — names are friendlier.
+
+async function resolveAgentId(userId: string, params: Record<string, unknown>): Promise<string | null> {
+  // 1. Explicit agent_name takes priority for name resolution
+  const name = params.agent_name as string;
+  if (name) {
+    const snap = await adminDb
+      .collection(`users/${userId}/agents`)
+      .where("name", "==", name)
+      .limit(1)
+      .get();
+    return snap.empty ? null : snap.docs[0].id;
+  }
+  // 2. agent_id — try as Firestore ID first, then as name fallback
+  const idOrName = params.agent_id as string;
+  if (!idOrName) return null;
+  const docSnap = await adminDb.doc(`users/${userId}/agents/${idOrName}`).get();
+  if (docSnap.exists) return idOrName;
+  // Fallback: treat agent_id value as a name
+  const nameSnap = await adminDb
+    .collection(`users/${userId}/agents`)
+    .where("name", "==", idOrName)
+    .limit(1)
+    .get();
+  return nameSnap.empty ? null : nameSnap.docs[0].id;
+}
+
+async function resolveTeamId(userId: string, params: Record<string, unknown>): Promise<string | null> {
+  const name = params.team_name as string;
+  if (name) {
+    const snap = await adminDb
+      .collection(`users/${userId}/agentTeams`)
+      .where("name", "==", name)
+      .limit(1)
+      .get();
+    return snap.empty ? null : snap.docs[0].id;
+  }
+  const idOrName = params.team_id as string;
+  if (!idOrName) return null;
+  const docSnap = await adminDb.doc(`users/${userId}/agentTeams/${idOrName}`).get();
+  if (docSnap.exists) return idOrName;
+  const nameSnap = await adminDb
+    .collection(`users/${userId}/agentTeams`)
+    .where("name", "==", idOrName)
+    .limit(1)
+    .get();
+  return nameSnap.empty ? null : nameSnap.docs[0].id;
+}
+
 // ─── Agent CRUD ─────────────────────────────────────────────────────
 
 export async function executeCreateAgent(
@@ -99,8 +150,8 @@ export async function executeGetAgent(
   userId: string,
   params: Record<string, unknown>
 ): Promise<ToolResult> {
-  const agentId = params.agent_id as string;
-  if (!agentId) return err("agent_id is required");
+  const agentId = await resolveAgentId(userId, params);
+  if (!agentId) return err("agent_id or agent_name is required");
 
   const snap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
   if (!snap.exists) return err(`Agent ${agentId} not found`);
@@ -139,8 +190,8 @@ export async function executeUpdateAgent(
   userId: string,
   params: Record<string, unknown>
 ): Promise<ToolResult> {
-  const agentId = params.agent_id as string;
-  if (!agentId) return err("agent_id is required");
+  const agentId = await resolveAgentId(userId, params);
+  if (!agentId) return err("agent_id or agent_name is required");
 
   const snap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
   if (!snap.exists) return err(`Agent ${agentId} not found`);
@@ -169,8 +220,8 @@ export async function executeDeleteAgent(
   userId: string,
   params: Record<string, unknown>
 ): Promise<ToolResult> {
-  const agentId = params.agent_id as string;
-  if (!agentId) return err("agent_id is required");
+  const agentId = await resolveAgentId(userId, params);
+  if (!agentId) return err("agent_id or agent_name is required");
 
   const snap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
   if (!snap.exists) return err(`Agent ${agentId} not found`);
@@ -395,8 +446,8 @@ export async function executeCreateGradingSuite(
   userId: string,
   params: Record<string, unknown>
 ): Promise<ToolResult> {
-  const agentId = params.agent_id as string;
-  if (!agentId) return err("agent_id is required");
+  const agentId = await resolveAgentId(userId, params);
+  if (!agentId) return err("agent_id or agent_name is required");
 
   const cases = params.cases as { name: string; input: string; expected: string; criterion_type?: string }[];
   if (!cases?.length) return err("cases is required (array of test cases)");
@@ -725,9 +776,9 @@ export async function executeRunTeam(
   userId: string,
   params: Record<string, unknown>
 ): Promise<ToolResult> {
-  const teamId = params.team_id as string;
+  const teamId = await resolveTeamId(userId, params);
   const prompt = params.prompt as string;
-  if (!teamId) return err("team_id is required");
+  if (!teamId) return err("team_id or team_name is required");
   if (!prompt) return err("prompt is required");
 
   // Load team
@@ -838,8 +889,8 @@ export async function executeConnectWidget(
   userId: string,
   params: Record<string, unknown>
 ): Promise<ToolResult> {
-  const agentId = params.agent_id as string;
-  if (!agentId) return err("agent_id is required");
+  const agentId = await resolveAgentId(userId, params);
+  if (!agentId) return err("agent_id or agent_name is required");
 
   const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
   if (!agentSnap.exists) return err(`Agent ${agentId} not found`);
@@ -892,8 +943,8 @@ export async function executeConnectWebhook(
   userId: string,
   params: Record<string, unknown>
 ): Promise<ToolResult> {
-  const agentId = params.agent_id as string;
-  if (!agentId) return err("agent_id is required");
+  const agentId = await resolveAgentId(userId, params);
+  if (!agentId) return err("agent_id or agent_name is required");
 
   const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
   if (!agentSnap.exists) return err(`Agent ${agentId} not found`);
@@ -1077,8 +1128,8 @@ export async function executeConnectSlack(
   userId: string,
   params: Record<string, unknown>
 ): Promise<ToolResult> {
-  const agentId = params.agent_id as string;
-  if (!agentId) return err("agent_id is required");
+  const agentId = await resolveAgentId(userId, params);
+  if (!agentId) return err("agent_id or agent_name is required");
 
   const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
   if (!agentSnap.exists) return err(`Agent ${agentId} not found`);
@@ -1272,8 +1323,8 @@ export async function executeListSessions(
   userId: string,
   params: Record<string, unknown>
 ): Promise<ToolResult> {
-  const agentId = params.agent_id as string;
-  if (!agentId) return err("agent_id is required");
+  const agentId = await resolveAgentId(userId, params);
+  if (!agentId) return err("agent_id or agent_name is required");
 
   const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
   if (!agentSnap.exists) return err(`Agent ${agentId} not found`);
@@ -1438,8 +1489,8 @@ export async function executeComplianceReport(
   userId: string,
   params: Record<string, unknown>
 ): Promise<ToolResult> {
-  const agentId = params.agent_id as string;
-  if (!agentId) return err("agent_id is required");
+  const agentId = await resolveAgentId(userId, params);
+  if (!agentId) return err("agent_id or agent_name is required");
 
   const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
   if (!agentSnap.exists) return err(`Agent ${agentId} not found`);
@@ -1667,8 +1718,8 @@ export async function executeExportAgent(
   userId: string,
   params: Record<string, unknown>
 ): Promise<ToolResult> {
-  const agentId = params.agent_id as string;
-  if (!agentId) return err("agent_id is required");
+  const agentId = await resolveAgentId(userId, params);
+  if (!agentId) return err("agent_id or agent_name is required");
 
   const agentSnap = await adminDb.doc(`users/${userId}/agents/${agentId}`).get();
   if (!agentSnap.exists) return err(`Agent ${agentId} not found`);

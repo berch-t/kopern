@@ -203,6 +203,7 @@
       "playground": "Playground",
       "grading": "Notation",
       "mcpServers": "Serveurs MCP",
+      "apiKeys": "Cles API",
       "overview": "Vue d'ensemble",
       "systemPrompt": "Prompt Système",
       "configuration": "Configuration",

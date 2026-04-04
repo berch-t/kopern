@@ -17,14 +17,36 @@ Kopern expose toute sa plateforme via le **Model Context Protocol (MCP)** — un
 
 ### Option 1 : Package NPM (Recommande)
 
-\`\`\`bash
-# Claude Code — une seule commande
-claude mcp add kopern -- npx -y @kopern/mcp-server
+**Claude Code** — une seule commande :
 
-# Cursor / Windsurf — ajoutez dans .mcp.json
+\`\`\`bash
+claude mcp add kopern -- npx -y @kopern/mcp-server
 \`\`\`
 
-Configurez votre cle API :
+**Cursor / Windsurf** — ajoutez dans votre \`.mcp.json\` :
+
+\`\`\`json
+{
+  "mcpServers": {
+    "kopern": {
+      "command": "npx",
+      "args": ["-y", "@kopern/mcp-server"],
+      "env": {
+        "KOPERN_API_KEY": "kpn_votre_cle"
+      }
+    }
+  }
+}
+\`\`\`
+
+### Obtenir votre cle API
+
+1. Connectez-vous sur [kopern.ai](https://kopern.ai)
+2. **Cle liee a un agent** : ouvrez votre agent → onglet **API Keys** → **Generer une cle**
+3. **Cle personnelle** : allez dans **Parametres** → **Cle API personnelle** → **Generer**
+4. Copiez la cle immediatement — elle n'est affichee qu'une seule fois
+
+Puis configurez-la en variable d'environnement :
 
 \`\`\`bash
 export KOPERN_API_KEY=kpn_votre_cle

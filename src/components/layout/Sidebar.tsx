@@ -9,7 +9,7 @@ import {
   BookOpen,
   AlertTriangle,
   Bug,
-  Cable,
+  Key,
   Code2,
   Server,
   CreditCard,
@@ -45,7 +45,7 @@ function useNavItems() {
     { href: "/agents", label: t.nav.agents, icon: Bot },
     { href: "/teams", label: t.nav.teams, icon: Users },
     { href: "/billing", label: t.nav.billing, icon: CreditCard },
-    { href: "/api-keys", label: t.nav.api, icon: Cable },
+    { href: "/api-keys", label: t.nav.api, icon: Key },
     { href: "/examples", label: t.nav.examples, icon: Lightbulb },
     { href: "/settings", label: t.nav.settings, icon: Settings },
   ];

@@ -231,7 +231,7 @@ const TOOL_DEFS = {
     inputSchema: {
       type: "object" as const,
       properties: {
-        agent_id: { type: "string", description: "The agent ID" },
+        agent_id: { type: "string", description: "The agent ID or name" },
       },
       required: ["agent_id"],
     },
@@ -242,7 +242,7 @@ const TOOL_DEFS = {
     inputSchema: {
       type: "object" as const,
       properties: {
-        agent_id: { type: "string", description: "The agent ID" },
+        agent_id: { type: "string", description: "The agent ID or name" },
         name: { type: "string", description: "New agent name" },
         description: { type: "string", description: "New agent description" },
         domain: { type: "string", description: "New agent domain/category" },
@@ -287,7 +287,7 @@ const TOOL_DEFS = {
     inputSchema: {
       type: "object" as const,
       properties: {
-        agent_id: { type: "string", description: "The agent ID" },
+        agent_id: { type: "string", description: "The agent ID or name" },
         name: { type: "string", description: "Suite name (optional)" },
         description: { type: "string", description: "Suite description (optional)" },
         cases: {
@@ -314,7 +314,7 @@ const TOOL_DEFS = {
     inputSchema: {
       type: "object" as const,
       properties: {
-        agent_id: { type: "string", description: "The agent ID" },
+        agent_id: { type: "string", description: "The agent ID or name" },
         suite_id: { type: "string", description: "The grading suite ID" },
       },
       required: ["agent_id", "suite_id"],
@@ -326,7 +326,7 @@ const TOOL_DEFS = {
     inputSchema: {
       type: "object" as const,
       properties: {
-        agent_id: { type: "string", description: "The agent ID" },
+        agent_id: { type: "string", description: "The agent ID or name" },
         suite_id: { type: "string", description: "The grading suite ID to optimize against" },
         max_iterations: { type: "number", description: "Max optimization iterations (1-20). Default: 5" },
         target_score: { type: "number", description: "Stop when this score is reached (0-1). Optional" },
@@ -367,7 +367,7 @@ const TOOL_DEFS = {
     inputSchema: {
       type: "object" as const,
       properties: {
-        team_id: { type: "string", description: "The team ID" },
+        team_id: { type: "string", description: "The team ID or name" },
         prompt: { type: "string", description: "The task/prompt to send to the team" },
       },
       required: ["team_id", "prompt"],
@@ -379,7 +379,7 @@ const TOOL_DEFS = {
     inputSchema: {
       type: "object" as const,
       properties: {
-        agent_id: { type: "string", description: "The agent ID" },
+        agent_id: { type: "string", description: "The agent ID or name" },
         welcome_message: { type: "string", description: "Greeting message shown in widget" },
         position: { type: "string", enum: ["bottom-right", "bottom-left"], description: "Widget position. Default: bottom-right" },
         allowed_origins: { type: "array", items: { type: "string" }, description: "Allowed website domains (CORS). Empty = all origins." },
@@ -393,7 +393,7 @@ const TOOL_DEFS = {
     inputSchema: {
       type: "object" as const,
       properties: {
-        agent_id: { type: "string", description: "The agent ID" },
+        agent_id: { type: "string", description: "The agent ID or name" },
         bot_token: { type: "string", description: "Telegram bot token from @BotFather" },
       },
       required: ["agent_id", "bot_token"],
@@ -405,7 +405,7 @@ const TOOL_DEFS = {
     inputSchema: {
       type: "object" as const,
       properties: {
-        agent_id: { type: "string", description: "The agent ID" },
+        agent_id: { type: "string", description: "The agent ID or name" },
         phone_number_id: { type: "string", description: "WhatsApp phone number ID (from Meta dashboard)" },
         access_token: { type: "string", description: "WhatsApp Cloud API access token" },
         verify_token: { type: "string", description: "Webhook verify token (optional)" },
@@ -420,7 +420,7 @@ const TOOL_DEFS = {
     inputSchema: {
       type: "object" as const,
       properties: {
-        agent_id: { type: "string", description: "The agent ID" },
+        agent_id: { type: "string", description: "The agent ID or name" },
       },
       required: ["agent_id"],
     },
@@ -431,7 +431,7 @@ const TOOL_DEFS = {
     inputSchema: {
       type: "object" as const,
       properties: {
-        agent_id: { type: "string", description: "The agent ID" },
+        agent_id: { type: "string", description: "The agent ID or name" },
         type: { type: "string", enum: ["inbound", "outbound"], description: "Webhook direction. Default: inbound" },
         name: { type: "string", description: "Webhook name" },
         target_url: { type: "string", description: "Target URL (required for outbound)" },
@@ -495,7 +495,7 @@ const TOOL_DEFS = {
     inputSchema: {
       type: "object" as const,
       properties: {
-        agent_id: { type: "string", description: "The agent ID" },
+        agent_id: { type: "string", description: "The agent ID or name" },
         limit: { type: "number", description: "Max sessions to return (1-50). Default: 20" },
       },
       required: ["agent_id"],
@@ -507,7 +507,7 @@ const TOOL_DEFS = {
     inputSchema: {
       type: "object" as const,
       properties: {
-        agent_id: { type: "string", description: "The agent ID" },
+        agent_id: { type: "string", description: "The agent ID or name" },
         session_id: { type: "string", description: "The session ID" },
       },
       required: ["agent_id", "session_id"],
@@ -519,7 +519,7 @@ const TOOL_DEFS = {
     inputSchema: {
       type: "object" as const,
       properties: {
-        agent_id: { type: "string", description: "The agent ID" },
+        agent_id: { type: "string", description: "The agent ID or name" },
         action: { type: "string", enum: ["remember", "recall", "forget", "list"], description: "Memory action" },
         key: { type: "string", description: "Memory key (for remember/forget)" },
         value: { type: "string", description: "Memory value (for remember)" },
@@ -535,7 +535,7 @@ const TOOL_DEFS = {
     inputSchema: {
       type: "object" as const,
       properties: {
-        agent_id: { type: "string", description: "The agent ID" },
+        agent_id: { type: "string", description: "The agent ID or name" },
       },
       required: ["agent_id"],
     },
@@ -546,7 +546,7 @@ const TOOL_DEFS = {
     inputSchema: {
       type: "object" as const,
       properties: {
-        agent_id: { type: "string", description: "The agent ID" },
+        agent_id: { type: "string", description: "The agent ID or name" },
         suite_id: { type: "string", description: "The grading suite ID" },
         run_id: { type: "string", description: "The grading run ID" },
       },
@@ -559,7 +559,7 @@ const TOOL_DEFS = {
     inputSchema: {
       type: "object" as const,
       properties: {
-        agent_id: { type: "string", description: "The agent ID" },
+        agent_id: { type: "string", description: "The agent ID or name" },
         suite_id: { type: "string", description: "The grading suite ID" },
       },
       required: ["agent_id", "suite_id"],
@@ -571,7 +571,7 @@ const TOOL_DEFS = {
     inputSchema: {
       type: "object" as const,
       properties: {
-        agent_id: { type: "string", description: "The agent ID" },
+        agent_id: { type: "string", description: "The agent ID or name" },
         provider: { type: "string", enum: ["google", "microsoft"], description: "Email provider" },
       },
       required: ["agent_id", "provider"],
@@ -583,7 +583,7 @@ const TOOL_DEFS = {
     inputSchema: {
       type: "object" as const,
       properties: {
-        agent_id: { type: "string", description: "The agent ID" },
+        agent_id: { type: "string", description: "The agent ID or name" },
         provider: { type: "string", enum: ["google", "microsoft"], description: "Calendar provider" },
       },
       required: ["agent_id", "provider"],

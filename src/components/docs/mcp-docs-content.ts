@@ -17,14 +17,36 @@ Kopern exposes its entire platform through the **Model Context Protocol (MCP)** 
 
 ### Option 1: NPM Package (Recommended)
 
-\`\`\`bash
-# Claude Code — one command
-claude mcp add kopern -- npx -y @kopern/mcp-server
+**Claude Code** — one command:
 
-# Cursor / Windsurf — add to .mcp.json
+\`\`\`bash
+claude mcp add kopern -- npx -y @kopern/mcp-server
 \`\`\`
 
-Set your API key:
+**Cursor / Windsurf** — add to your \`.mcp.json\`:
+
+\`\`\`json
+{
+  "mcpServers": {
+    "kopern": {
+      "command": "npx",
+      "args": ["-y", "@kopern/mcp-server"],
+      "env": {
+        "KOPERN_API_KEY": "kpn_your_key_here"
+      }
+    }
+  }
+}
+\`\`\`
+
+### Get your API key
+
+1. Log in to [kopern.ai](https://kopern.ai)
+2. **Agent-bound key**: open your agent → **API Keys** tab → **Generate Key**
+3. **User-level key**: go to **Settings** → **Personal API Key** → **Generate**
+4. Copy the key immediately — it is shown only once
+
+Then set it as an environment variable:
 
 \`\`\`bash
 export KOPERN_API_KEY=kpn_your_key_here
