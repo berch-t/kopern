@@ -2,23 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  async rewrites() {
-    return [
-      {
-        source: "/__/auth/:path*",
-        destination: "https://kopern.firebaseapp.com/__/auth/:path*",
-      },
-    ];
-  },
   async headers() {
     return [
-      {
-        // Firebase Auth handler: must allow framing for popup/iframe auth flow
-        source: "/__/auth/:path*",
-        headers: [
-          { key: "X-Content-Type-Options", value: "nosniff" },
-        ],
-      },
       {
         // Widget routes: no X-Frame-Options so they can be embedded
         source: "/api/widget/:path*",
@@ -28,7 +13,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: "/((?!_/auth).*)",
+        source: "/(.*)",
         headers: [
           {
             key: "X-Content-Type-Options",
