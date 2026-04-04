@@ -987,6 +987,34 @@ export function serviceConnectorsCollection(userId: string) {
   return typedCollection<ServiceConnectorDoc>(`users/${userId}/serviceConnectors`);
 }
 
+// --- Social Connectors (Bluesky, LinkedIn, Twitter, etc.) ---
+
+export type SocialPlatform = "bluesky" | "linkedin" | "twitter" | "facebook" | "instagram" | "tiktok";
+
+export interface SocialConnectorDoc {
+  platform: SocialPlatform;
+  authType: "app_password" | "oauth2";
+  /** AES-256-GCM encrypted credentials JSON (tokens, secrets) */
+  credentials: string;
+  handle: string;
+  displayName: string;
+  platformUserId: string;
+  enabled: boolean;
+  dailyPostCount: number;
+  dailyPostDate: string; // YYYY-MM-DD, resets daily
+  dailyPostLimit: number; // Default per platform: Bluesky 30, LinkedIn 10, Twitter 17
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export function socialConnectorDoc(userId: string, platform: SocialPlatform) {
+  return doc(db, "users", userId, "socialConnectors", platform);
+}
+
+export function socialConnectorsCollection(userId: string) {
+  return typedCollection<SocialConnectorDoc>(`users/${userId}/socialConnectors`);
+}
+
 // --- GDPR Consent ---
 
 export interface ConsentDoc {

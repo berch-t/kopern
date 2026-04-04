@@ -76,6 +76,14 @@ export const serviceConnectorRateLimit = redis
     })
   : null;
 
+export const graderRateLimit = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(5, "1 d"),
+      prefix: "rl:grader",
+    })
+  : null;
+
 export const defaultRateLimit = redis
   ? new Ratelimit({
       redis,

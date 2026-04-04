@@ -54,6 +54,8 @@ export interface LLMConfig {
   apiKeys?: string[];
   /** Override max output tokens (default 8192). */
   maxTokens?: number;
+  /** Thinking/reasoning level — controls extended thinking depth per provider. */
+  thinking?: "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
 }
 
 /** Resolve tool name from tool_use_id by scanning assistant messages */
@@ -157,10 +159,23 @@ async function streamAnthropic(config: LLMConfig, callbacks: LLMStreamCallbacks)
   const body: Record<string, unknown> = {
     model: config.model,
     max_tokens: config.maxTokens || 8192,
-    system: config.systemPrompt || undefined,
+    // Prompt caching: system as array with cache_control for ~90% cost reduction on repeated calls
+    system: config.systemPrompt
+      ? [{ type: "text", text: config.systemPrompt, cache_control: { type: "ephemeral" } }]
+      : undefined,
     messages,
     stream: true,
   };
+
+  // Extended thinking — budget_tokens mapped from thinkingLevel
+  if (config.thinking && config.thinking !== "off") {
+    const THINKING_BUDGETS: Record<string, number> = {
+      minimal: 1024, low: 4096, medium: 10000, high: 20000, xhigh: 40000,
+    };
+    const budget = THINKING_BUDGETS[config.thinking] || 10000;
+    body.thinking = { type: "enabled", budget_tokens: budget };
+    body.max_tokens = Math.max(body.max_tokens as number, budget + 4096);
+  }
 
   if (config.tools && config.tools.length > 0) {
     // Final safety net — ensure every tool schema is valid for Anthropic API
@@ -182,6 +197,7 @@ async function streamAnthropic(config: LLMConfig, callbacks: LLMStreamCallbacks)
       "Content-Type": "application/json",
       "x-api-key": apiKey,
       "anthropic-version": "2023-06-01",
+      "anthropic-beta": "prompt-caching-2024-07-31",
     },
     body: JSON.stringify(body),
   });
@@ -327,6 +343,14 @@ async function streamOpenAI(config: LLMConfig, callbacks: LLMStreamCallbacks) {
     stream: true,
     max_completion_tokens: config.maxTokens || 8192,
   };
+
+  // Reasoning effort for o-series models (o1, o3, etc.)
+  if (config.thinking && config.thinking !== "off") {
+    const OPENAI_EFFORT: Record<string, string> = {
+      minimal: "low", low: "low", medium: "medium", high: "high", xhigh: "high",
+    };
+    body.reasoning_effort = OPENAI_EFFORT[config.thinking] || "medium";
+  }
 
   if (config.tools && config.tools.length > 0) {
     body.tools = config.tools.map((t) => ({
@@ -483,9 +507,19 @@ async function streamGoogle(config: LLMConfig, callbacks: LLMStreamCallbacks) {
     }
   }
 
+  const generationConfig: Record<string, unknown> = { maxOutputTokens: config.maxTokens || 8192 };
+
+  // Google thinking config (Gemini 2.5+ models)
+  if (config.thinking && config.thinking !== "off") {
+    const GOOGLE_BUDGETS: Record<string, number> = {
+      minimal: 1024, low: 4096, medium: 8192, high: 16384, xhigh: 32768,
+    };
+    generationConfig.thinkingConfig = { thinkingBudget: GOOGLE_BUDGETS[config.thinking] || 8192 };
+  }
+
   const body: Record<string, unknown> = {
     contents,
-    generationConfig: { maxOutputTokens: config.maxTokens || 8192 },
+    generationConfig,
   };
   if (config.systemPrompt) {
     body.systemInstruction = { parts: [{ text: config.systemPrompt }] };

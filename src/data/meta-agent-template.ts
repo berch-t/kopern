@@ -26,6 +26,7 @@ You must understand every feature and configure them when relevant:
   - \`"memory"\` — persistent key-value memory across conversations (remember, recall, forget, search_sessions)
   - \`"service_email"\` — read/send/reply emails via connected Google or Microsoft account
   - \`"service_calendar"\` — list/create/update/cancel calendar events via Google or Microsoft
+  - \`"service_social_media"\` — create posts, read feeds, track metrics, search mentions, reply, delete posts, manage threads across Bluesky/Twitter/LinkedIn (9 tools: social_create_post, social_create_thread, social_read_feed, social_get_metrics, social_search_mentions, social_reply, social_delete_post, social_get_profile, social_list_connected)
   - GitHub tools are auto-loaded when repos are connected (read_file + search_files)
   - Leave \`[]\` if the agent only needs conversation + custom tools
   - **WARNING**: Do NOT reference tools from Claude Code CLI (WebFetch, Bash, Read, Write, Grep) — they do NOT exist in Kopern

@@ -127,6 +127,64 @@ export const teamExecuteSchema = z.object({
   }),
 });
 
+// --- Grader (public) ---
+export const graderRequestSchema = z.object({
+  system_prompt: z.string().min(10).max(10_000),
+  test_cases: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(200),
+        input: z.string().min(1).max(5_000),
+        expected: z.string().min(1).max(5_000),
+      })
+    )
+    .min(1)
+    .max(5),
+  provider: z.enum(["anthropic", "openai", "google"]).optional().default("anthropic"),
+  model: z.string().max(100).optional(),
+});
+
+// --- Grader endpoint mode (public) ---
+const endpointConfigSchema = z.object({
+  url: z.string().url().max(2000),
+  method: z.enum(["POST", "GET"]).default("POST"),
+  authType: z.enum(["none", "bearer", "api_key_header", "api_key_query"]).default("none"),
+  authValue: z.string().max(2000).optional(),
+  authHeaderName: z.string().max(200).optional(),
+  bodyTemplate: z.string().max(10_000).default('{"message":"{{input}}"}'),
+  responsePath: z.string().max(500).optional(),
+});
+
+export const graderEndpointRequestSchema = z.object({
+  mode: z.enum(["prompt", "endpoint"]),
+  // Mode prompt fields
+  system_prompt: z.string().min(10).max(10_000).optional(),
+  provider: z.enum(["anthropic", "openai", "google"]).optional().default("anthropic"),
+  model: z.string().max(100).optional(),
+  // Shared
+  test_cases: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(200),
+        input: z.string().min(1).max(5_000),
+        expected: z.string().min(1).max(5_000),
+      })
+    )
+    .min(1)
+    .max(5),
+  // Mode endpoint fields
+  endpoint: endpointConfigSchema.optional(),
+});
+
+export const graderProbeSchema = z.object({
+  url: z.string().url().max(2000),
+  method: z.enum(["POST", "GET"]).default("POST"),
+  authType: z.enum(["none", "bearer", "api_key_header", "api_key_query"]).default("none"),
+  authValue: z.string().max(2000).optional(),
+  authHeaderName: z.string().max(200).optional(),
+  bodyTemplate: z.string().max(10_000).default('{"message":"{{input}}"}'),
+});
+
 /**
  * Validate a request body against a Zod schema.
  * Returns `{ data }` on success or `{ error: NextResponse }` on failure.

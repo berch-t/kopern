@@ -16,6 +16,11 @@ const DESTRUCTIVE_BUILTIN_TOOLS = new Set([
   "create_event",
   "update_event",
   "cancel_event",
+  // Social media destructive operations
+  "social_delete_post",
+  "social_create_post",
+  "social_create_thread",
+  "social_reply",
 ]);
 
 export function isDestructiveBuiltin(toolName: string): boolean {

@@ -22,6 +22,7 @@ export const BUILTIN_TOOLS = [
   { id: "web_fetch", name: "Web Fetch", description: "Fetch any URL and extract text content — web pages, APIs, RSS feeds, robots.txt, sitemaps" },
   { id: "code_interpreter", name: "Code Interpreter", description: "Execute Python, Node.js, or Bash code in a secure cloud sandbox — data analysis, charts, scraping, file processing" },
   { id: "image_generation", name: "Image Generation", description: "Generate images from text prompts via Google Gemini — infographics, diagrams, illustrations, banners, social media visuals" },
+  { id: "service_social_media", name: "Social Media", description: "Create posts, read feeds, track metrics, search mentions, reply, and manage engagement across Bluesky, Twitter, LinkedIn" },
 ] as const;
 
 export function buildCustomTool(toolDoc: ToolDoc): BuiltTool {

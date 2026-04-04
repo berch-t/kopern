@@ -20,6 +20,7 @@ import { getEmailTools, getCalendarTools, executeServiceTool, isServiceTool } fr
 import { WEB_FETCH_TOOLS, executeWebFetchTool, isWebFetchTool } from "@/lib/tools/web-fetch-tool";
 import { CODE_INTERPRETER_TOOLS, executeCodeInterpreterTool, isCodeInterpreterTool } from "@/lib/tools/code-interpreter-tool";
 import { IMAGE_GEN_TOOLS, executeImageGenTool, isImageGenTool } from "@/lib/tools/image-gen-tool";
+import { getSocialMediaTools, executeSocialMediaTool, isSocialMediaTool } from "@/lib/tools/social-tools";
 import { runExtensions } from "@/lib/extensions/extension-runner";
 import { fireOutboundWebhooks } from "@/lib/connectors/webhook";
 import type { ExtensionEventType } from "@/lib/firebase/firestore";
@@ -61,6 +62,8 @@ export interface AgentRunConfig {
   maxToolResultChars?: number;
   /** Optional storage path prefix for generated images (e.g. "teams/{teamId}/runs/{runId}"). */
   imageStoragePrefix?: string;
+  /** Thinking/reasoning level — falls back to agentDoc.thinkingLevel, then "off". */
+  thinkingLevel?: "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
 }
 
 export interface AgentRunCallbacks {
@@ -108,6 +111,7 @@ export async function runAgentWithTools(
   const policy = config.toolApprovalPolicy || "auto";
   let maxIterations = config.maxToolIterations || MAX_TOOL_ITERATIONS;
   let maxToolResultChars = config.maxToolResultChars || 100_000;
+  let thinkingLevel = config.thinkingLevel || "off";
 
   // Load tools from Firestore
   if (config.userId && config.agentId) {
@@ -156,6 +160,10 @@ export async function runAgentWithTools(
         if (!config.maxToolResultChars && agentData.maxToolResultChars) {
           maxToolResultChars = Math.min(Math.max(agentData.maxToolResultChars, 1_000), 500_000);
         }
+        // Per-agent thinkingLevel (config override takes precedence)
+        if (!config.thinkingLevel && agentData.thinkingLevel) {
+          thinkingLevel = agentData.thinkingLevel;
+        }
       }
     } catch {
       // Skip
@@ -173,6 +181,7 @@ export async function runAgentWithTools(
   const hasWebFetch = agentBuiltinTools.includes("web_fetch");
   const hasCodeInterpreter = agentBuiltinTools.includes("code_interpreter");
   const hasImageGen = agentBuiltinTools.includes("image_generation");
+  const hasSocialMedia = agentBuiltinTools.includes("service_social_media");
 
   // GitHub tools (with write access if agent has github_write builtin)
   if (connectedRepos.length > 0) {
@@ -222,6 +231,11 @@ export async function runAgentWithTools(
   // Image generation (Google Gemini)
   if (hasImageGen) {
     tools.push(...IMAGE_GEN_TOOLS);
+  }
+
+  // Social media tools (Bluesky, Twitter, LinkedIn, etc.)
+  if (hasSocialMedia) {
+    tools.push(...getSocialMediaTools());
   }
 
   // Slack tools (loaded when agent has a Slack connection with valid bot token)
@@ -363,6 +377,7 @@ export async function runAgentWithTools(
           tools: tools.length > 0 ? tools : undefined,
           apiKey: config.apiKey,
           apiKeys: config.apiKeys,
+          thinking: thinkingLevel !== "off" ? thinkingLevel : undefined,
         },
         {
           onToken: (text) => {
@@ -440,19 +455,21 @@ export async function runAgentWithTools(
                     ? await executeMemoryTool(tc.name, tc.input, config.userId || "", config.agentId || "")
                     : isServiceTool(tc.name)
                       ? await executeServiceTool(tc.name, tc.input, config.userId || "")
-                      : isBugTool(tc.name)
-                        ? await executeBugTool(tc.name, tc.input, config.userId || "")
-                        : isDatagouvTool(tc.name)
-                          ? await executeDatagouvTool(tc.name, tc.input)
-                          : isPisteTool(tc.name)
-                            ? await executePisteTool(tc.name, tc.input)
-                            : isWebFetchTool(tc.name)
-                              ? await executeWebFetchTool(tc.name, tc.input)
-                              : isCodeInterpreterTool(tc.name)
-                                ? await executeCodeInterpreterTool(tc.name, tc.input)
-                                : isImageGenTool(tc.name)
-                                  ? await executeImageGenTool(tc.name, tc.input, config.userId || "", config.imageStoragePrefix)
-                                  : await executeTool(tc, toolCtx);
+                      : isSocialMediaTool(tc.name)
+                        ? await executeSocialMediaTool(tc.name, tc.input, config.userId || "")
+                        : isBugTool(tc.name)
+                          ? await executeBugTool(tc.name, tc.input, config.userId || "")
+                          : isDatagouvTool(tc.name)
+                            ? await executeDatagouvTool(tc.name, tc.input)
+                            : isPisteTool(tc.name)
+                              ? await executePisteTool(tc.name, tc.input)
+                              : isWebFetchTool(tc.name)
+                                ? await executeWebFetchTool(tc.name, tc.input)
+                                : isCodeInterpreterTool(tc.name)
+                                  ? await executeCodeInterpreterTool(tc.name, tc.input)
+                                  : isImageGenTool(tc.name)
+                                    ? await executeImageGenTool(tc.name, tc.input, config.userId || "", config.imageStoragePrefix)
+                                    : await executeTool(tc, toolCtx);
 
                   inputTokens += estimateTokens(result.result);
                   callbacks.onToolEnd?.({
