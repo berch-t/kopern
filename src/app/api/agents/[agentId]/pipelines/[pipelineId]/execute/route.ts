@@ -139,6 +139,9 @@ export async function POST(
               onToolStart: (tc) => {
                 send("step_tool_start", { stepIndex: i, agentId: step.agentId, name: tc.name, args: tc.args });
               },
+              onToolExecStart: (tc) => {
+                send("step_tool_exec_start", { stepIndex: i, agentId: step.agentId, name: tc.name, toolCallId: tc.toolCallId });
+              },
               onToolEnd: (r) => {
                 send("step_tool_end", { stepIndex: i, agentId: step.agentId, name: r.name, result: r.result, isError: r.isError });
               },

@@ -25,6 +25,8 @@ export interface ToolDefinition {
   name: string;
   description: string;
   input_schema: Record<string, unknown>;
+  /** If true, this tool is read-only and can be executed concurrently with other concurrent-safe tools. */
+  concurrencySafe?: boolean;
 }
 
 export interface ToolCallResult {
@@ -36,7 +38,7 @@ export interface ToolCallResult {
 export interface LLMStreamCallbacks {
   onToken: (text: string) => void;
   onToolCall?: (toolCall: ToolCallResult) => void;
-  onDone: (stopReason?: "end_turn" | "tool_use") => void;
+  onDone: (stopReason?: "end_turn" | "tool_use" | "max_tokens") => void;
   onError: (error: Error) => void;
 }
 
@@ -202,7 +204,7 @@ async function streamAnthropic(config: LLMConfig, callbacks: LLMStreamCallbacks)
 
   const decoder = new TextDecoder();
   let buffer = "";
-  let stopReason: "end_turn" | "tool_use" = "end_turn";
+  let stopReason: "end_turn" | "tool_use" | "max_tokens" = "end_turn";
 
   // Track current tool call being built
   let currentToolId = "";
@@ -268,6 +270,7 @@ async function streamAnthropic(config: LLMConfig, callbacks: LLMStreamCallbacks)
                 if (event.delta.stop_reason === "tool_use") {
                   stopReason = "tool_use";
                 } else if (event.delta.stop_reason === "max_tokens") {
+                  stopReason = "max_tokens";
                   console.warn(`[streamLLM] HIT MAX TOKENS — output was truncated`);
                 }
               }
@@ -359,7 +362,7 @@ async function streamOpenAI(config: LLMConfig, callbacks: LLMStreamCallbacks) {
 
   const decoder = new TextDecoder();
   let buffer = "";
-  let stopReason: "end_turn" | "tool_use" = "end_turn";
+  let stopReason: "end_turn" | "tool_use" | "max_tokens" = "end_turn";
 
   // Track tool calls being built incrementally
   const toolCalls: Map<number, { id: string; name: string; args: string }> = new Map();
@@ -406,6 +409,8 @@ async function streamOpenAI(config: LLMConfig, callbacks: LLMStreamCallbacks) {
           // Stop reason
           if (choice.finish_reason === "tool_calls") {
             stopReason = "tool_use";
+          } else if (choice.finish_reason === "length") {
+            stopReason = "max_tokens";
           }
         } catch {
           // skip
@@ -520,7 +525,7 @@ async function streamGoogle(config: LLMConfig, callbacks: LLMStreamCallbacks) {
 
   const decoder = new TextDecoder();
   let buffer = "";
-  let stopReason: "end_turn" | "tool_use" = "end_turn";
+  let stopReason: "end_turn" | "tool_use" | "max_tokens" = "end_turn";
 
   try {
     while (true) {
@@ -537,8 +542,14 @@ async function streamGoogle(config: LLMConfig, callbacks: LLMStreamCallbacks) {
 
         try {
           const event = JSON.parse(data);
-          const parts = event.candidates?.[0]?.content?.parts;
+          const candidate = event.candidates?.[0];
+          const parts = candidate?.content?.parts;
           if (!parts) continue;
+
+          // Google finishReason: "MAX_TOKENS" when output is truncated
+          if (candidate?.finishReason === "MAX_TOKENS") {
+            stopReason = "max_tokens";
+          }
 
           for (const part of parts) {
             if (part.text) {
@@ -637,7 +648,7 @@ async function streamMistral(config: LLMConfig, callbacks: LLMStreamCallbacks) {
 
   const decoder = new TextDecoder();
   let buffer = "";
-  let stopReason: "end_turn" | "tool_use" = "end_turn";
+  let stopReason: "end_turn" | "tool_use" | "max_tokens" = "end_turn";
 
   // Track tool calls being built incrementally (same as OpenAI)
   const toolCalls: Map<number, { id: string; name: string; args: string }> = new Map();
@@ -684,6 +695,8 @@ async function streamMistral(config: LLMConfig, callbacks: LLMStreamCallbacks) {
           // Stop reason
           if (choice.finish_reason === "tool_calls") {
             stopReason = "tool_use";
+          } else if (choice.finish_reason === "length") {
+            stopReason = "max_tokens";
           }
         } catch {
           // skip malformed JSON

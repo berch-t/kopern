@@ -35,6 +35,7 @@ export function getMemoryTools(): ToolDefinition[] {
     },
     {
       name: "recall",
+      concurrencySafe: true,
       description:
         "Search your persistent memory for relevant facts. Use keywords to find previously saved information. Returns the most relevant memories ranked by relevance and recency.",
       input_schema: {
@@ -68,6 +69,7 @@ export function getMemoryTools(): ToolDefinition[] {
     },
     {
       name: "search_sessions",
+      concurrencySafe: true,
       description:
         "Search past conversation sessions for relevant context. Finds messages from previous interactions that match the query. Useful for recalling details from earlier conversations.",
       input_schema: {

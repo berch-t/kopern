@@ -14,6 +14,8 @@ export interface ChatMessage {
 export interface ToolCallInfo {
   name: string;
   args: Record<string, unknown>;
+  /** True when the tool is actively executing (after approval, before result) */
+  executing?: boolean;
   result?: string;
   isError?: boolean;
 }
@@ -110,11 +112,21 @@ export function useAgent(agentId: string, agentConfig: AgentPlaygroundConfig | n
           ];
           setCurrentToolCalls([...toolCallsRef.current]);
           break;
+        case "tool_exec_start": {
+          const execData = data as { name: string; toolCallId: string };
+          toolCallsRef.current = toolCallsRef.current.map((tc) =>
+            tc.name === execData.name && !tc.result && !tc.executing
+              ? { ...tc, executing: true }
+              : tc
+          );
+          setCurrentToolCalls([...toolCallsRef.current]);
+          break;
+        }
         case "tool_end": {
           const toolData = data as ToolCallInfo;
           toolCallsRef.current = toolCallsRef.current.map((tc) =>
             tc.name === toolData.name && !tc.result
-              ? { ...tc, result: toolData.result, isError: toolData.isError }
+              ? { ...tc, executing: false, result: toolData.result, isError: toolData.isError }
               : tc
           );
           setCurrentToolCalls([...toolCallsRef.current]);

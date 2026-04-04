@@ -19,6 +19,7 @@ import {
   Lightbulb,
   DollarSign,
   Code2,
+  Server,
   Github,
   LayoutDashboard,
   Zap,
@@ -167,6 +168,9 @@ export default function PricingPage() {
               <LocalizedLink href="/api-reference">
                 <Button variant="ghost" className="justify-start gap-3 h-11 w-full"><Code2 className="h-4 w-4" />{t.nav.apiReference}</Button>
               </LocalizedLink>
+              <LocalizedLink href="/mcp">
+                <Button variant="ghost" className="justify-start gap-3 h-11 w-full"><Server className="h-4 w-4" />{t.nav.mcpDocs}</Button>
+              </LocalizedLink>
               <LocalizedLink href="/pricing">
                 <Button variant="ghost" className="justify-start gap-3 h-11 w-full"><DollarSign className="h-4 w-4" />{t.nav.pricing}</Button>
               </LocalizedLink>
@@ -198,6 +202,12 @@ export default function PricingPage() {
             <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
               <Code2 className="h-4 w-4" />
               {t.nav.apiReference}
+            </Button>
+          </LocalizedLink>
+          <LocalizedLink href="/mcp">
+            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
+              <Server className="h-4 w-4" />
+              {t.nav.mcpDocs}
             </Button>
           </LocalizedLink>
           <LocalizedLink href="/pricing">

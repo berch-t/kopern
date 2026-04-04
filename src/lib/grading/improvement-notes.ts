@@ -1,4 +1,6 @@
 import { streamLLM } from "@/lib/llm/client";
+import { estimateTokens } from "@/lib/billing/pricing";
+import { trackUsageServer } from "@/lib/billing/track-usage-server";
 
 export interface ImprovementNote {
   category: "system_prompt" | "skill" | "tool" | "general";
@@ -30,7 +32,10 @@ export async function generateImprovementNotes(
   finalScore: number,
   caseResults: CaseResultForAnalysis[],
   locale: string = "en",
-  apiKey?: string
+  apiKey?: string,
+  /** Pass userId + agentId to track token consumption for billing */
+  userId?: string,
+  agentId?: string,
 ): Promise<ImprovementAnalysis> {
   const isFr = locale === "fr";
   // If perfect score, no improvements needed
@@ -113,12 +118,13 @@ Respond ONLY with valid JSON:
 
   try {
     let fullResponse = "";
+    const improvementModel = "claude-sonnet-4-6";
 
     await new Promise<void>((resolve, reject) => {
       streamLLM(
         {
           provider: "anthropic",
-          model: "claude-sonnet-4-6",
+          model: improvementModel,
           systemPrompt: "You are a strict JSON-only evaluator. Always respond with valid JSON only.",
           messages: [{ role: "user", content: prompt }],
           apiKey,
@@ -132,6 +138,14 @@ Respond ONLY with valid JSON:
         }
       );
     });
+
+    // Track improvement analysis token usage (fire-and-forget)
+    if (userId && agentId) {
+      const inputTokens = estimateTokens(prompt);
+      const outputTokens = estimateTokens(fullResponse);
+      trackUsageServer(userId, agentId, "anthropic", inputTokens, outputTokens, 0, improvementModel)
+        .catch(() => {});
+    }
 
     // Extract JSON from response
     const jsonMatch = fullResponse.match(/\{[\s\S]*"summary"[\s\S]*"notes"[\s\S]*\}/);

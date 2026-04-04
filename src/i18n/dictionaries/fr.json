@@ -145,6 +145,7 @@
     "bugs": "Bug Tracker",
     "docs": "Documentation",
     "apiReference": "Référence API",
+    "mcpDocs": "Docs MCP",
     "pricing": "Tarifs"
   },
   "auth": {
@@ -934,6 +935,7 @@
       "utilitiesCount": "4 outils"
     },
     "httpTitle": "Ou utilisez Streamable HTTP directement",
+    "fullDocsLink": "Documentation MCP complete",
     "npmBadge": "npm",
     "smitheryBadge": "Smithery",
     "glamaBadge": "Glama"

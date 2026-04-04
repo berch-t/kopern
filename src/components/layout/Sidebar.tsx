@@ -11,6 +11,7 @@ import {
   Bug,
   Cable,
   Code2,
+  Server,
   CreditCard,
   LayoutDashboard,
   Lightbulb,
@@ -57,6 +58,7 @@ function useNavItems() {
   return {
     main: items,
     apiRef: { href: "/api-reference", label: t.nav.apiReference, icon: Code2 },
+    mcpDocs: { href: "/mcp", label: t.nav.mcpDocs, icon: Server },
     docs: { href: "/docs", label: t.nav.docs, icon: BookOpen },
   };
 }
@@ -65,7 +67,7 @@ function useNavItems() {
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
-  const { main: navItems, apiRef, docs } = useNavItems();
+  const { main: navItems, apiRef, mcpDocs, docs } = useNavItems();
 
   return (
     <motion.aside
@@ -148,7 +150,7 @@ export function Sidebar() {
 
       {/* Bottom nav */}
       <div className="border-t px-2 py-3 space-y-1">
-        {[apiRef, docs].map((item) => {
+        {[apiRef, mcpDocs, docs].map((item) => {
           const isActive = pathname.includes(item.href);
           const link = (
             <LocalizedLink
@@ -195,9 +197,9 @@ export function Sidebar() {
 export function MobileSidebar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const { main: navItems, apiRef, docs } = useNavItems();
+  const { main: navItems, apiRef, mcpDocs, docs } = useNavItems();
 
-  const allItems = [...navItems, apiRef, docs];
+  const allItems = [...navItems, apiRef, mcpDocs, docs];
 
   return (
     <>

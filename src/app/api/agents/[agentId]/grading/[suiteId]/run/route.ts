@@ -214,7 +214,7 @@ export async function POST(
           results: criteriaResults,
           score,
           passed,
-        } = await evaluateAllCriteria(enrichedCriteria, collector, uiLocale, apiKey);
+        } = await evaluateAllCriteria(enrichedCriteria, collector, uiLocale, apiKey, userId, agentId);
 
         totalScore += score;
         if (passed) passedCases++;
@@ -312,7 +312,9 @@ export async function POST(
             finalScore,
             caseResultsForAnalysis,
             uiLocale,
-            improvementApiKey
+            improvementApiKey,
+            userId,
+            agentId,
           );
           send("improvement_notes", {
             summary: analysis.summary,

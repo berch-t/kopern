@@ -62,6 +62,7 @@ import {
   Package,
   Blocks,
   Copy,
+  Server,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
@@ -442,6 +443,12 @@ export default function LandingPage() {
                   {t.nav.apiReference}
                 </Button>
               </LocalizedLink>
+              <LocalizedLink href="/mcp">
+                <Button variant="ghost" className="justify-start gap-3 h-11 w-full">
+                  <Server className="h-4 w-4" />
+                  {t.nav.mcpDocs}
+                </Button>
+              </LocalizedLink>
               <LocalizedLink href="/pricing">
                 <Button variant="ghost" className="justify-start gap-3 h-11 w-full">
                   <DollarSignIcon className="h-4 w-4" />
@@ -495,6 +502,12 @@ export default function LandingPage() {
             <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground hover:!bg-transparent dark:hover:!bg-transparent border border-transparent hover:border-primary/50">
               <Code2 className="h-4 w-4" />
               {t.nav.apiReference}
+            </Button>
+          </LocalizedLink>
+          <LocalizedLink href="/mcp">
+            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground hover:!bg-transparent dark:hover:!bg-transparent border border-transparent hover:border-primary/50">
+              <Server className="h-4 w-4" />
+              {t.nav.mcpDocs}
             </Button>
           </LocalizedLink>
           <LocalizedLink href="/pricing">
@@ -1235,6 +1248,17 @@ export default function LandingPage() {
                       </div>
                     </BorderGlow>
                   ))}
+                </div>
+
+                {/* Full docs link */}
+                <div className="flex justify-center">
+                  <LocalizedLink href="/mcp">
+                    <span className="inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 transition-colors">
+                      <Server className="h-4 w-4" />
+                      {t.mcpSection.fullDocsLink}
+                      <span className="text-xs text-primary/60">→</span>
+                    </span>
+                  </LocalizedLink>
                 </div>
 
                 {/* Registry badges */}

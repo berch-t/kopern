@@ -73,6 +73,7 @@ export function getPisteTools(): ToolDefinition[] {
   return [
     {
       name: "legifrance_search",
+      concurrencySafe: true,
       description:
         "Search across all French legal texts (codes, laws, decrees, conventions collectives). Returns matching articles with titles and references. Use this as the primary search tool for any legal question.",
       input_schema: {
@@ -91,6 +92,7 @@ export function getPisteTools(): ToolDefinition[] {
     },
     {
       name: "legifrance_get_article",
+      concurrencySafe: true,
       description:
         "Get the full text of a specific legal article by its ID. Use after searching to retrieve the complete article content. The article ID comes from search results.",
       input_schema: {
@@ -103,6 +105,7 @@ export function getPisteTools(): ToolDefinition[] {
     },
     {
       name: "legifrance_get_code_toc",
+      concurrencySafe: true,
       description:
         "Get the table of contents (structure) of a French legal code. Useful to find the right section before searching for specific articles. Returns sections and article references.",
       input_schema: {
@@ -119,6 +122,7 @@ export function getPisteTools(): ToolDefinition[] {
     },
     {
       name: "legifrance_list_codes",
+      concurrencySafe: true,
       description:
         "List all available French legal codes (Code du travail, Code civil, Code pénal, etc.) with their IDs. Use this to find the correct code ID before browsing its table of contents.",
       input_schema: {
@@ -131,6 +135,7 @@ export function getPisteTools(): ToolDefinition[] {
     },
     {
       name: "legifrance_list_conventions",
+      concurrencySafe: true,
       description:
         "List national collective labor agreements (conventions collectives nationales). Returns IDCC numbers, titles, and IDs.",
       input_schema: {
@@ -143,6 +148,7 @@ export function getPisteTools(): ToolDefinition[] {
     },
     {
       name: "legifrance_get_convention",
+      concurrencySafe: true,
       description:
         "Get the full content of a specific convention collective by its text ID. Returns articles, sections, and metadata.",
       input_schema: {

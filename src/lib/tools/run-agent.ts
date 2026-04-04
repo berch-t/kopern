@@ -25,6 +25,7 @@ import { fireOutboundWebhooks } from "@/lib/connectors/webhook";
 import type { ExtensionEventType } from "@/lib/firebase/firestore";
 import { truncateToolResults } from "@/lib/context/truncate";
 import { shouldCompact, compactMessages } from "@/lib/context/compact";
+import { microCompactMessages } from "@/lib/context/micro-compact";
 import {
   requiresApproval,
   isDestructiveBuiltin,
@@ -54,11 +55,19 @@ export interface AgentRunConfig {
   skipOutboundWebhooks?: boolean;
   /** EU AI Act risk level — high-risk agents require toolApprovalPolicy !== "auto" */
   riskLevel?: "minimal" | "limited" | "high";
+  /** Max tool call iterations per agent (1-30). Falls back to agent doc, then global default 10. */
+  maxToolIterations?: number;
+  /** Max chars per tool result sent to LLM (default 100K). Full result stays in session for observability. */
+  maxToolResultChars?: number;
+  /** Optional storage path prefix for generated images (e.g. "teams/{teamId}/runs/{runId}"). */
+  imageStoragePrefix?: string;
 }
 
 export interface AgentRunCallbacks {
   onToken: (text: string) => void;
   onToolStart?: (toolCall: { name: string; args: Record<string, unknown> }) => void;
+  /** Emitted when a tool's execution actually begins (after approval check). Useful for per-tool spinners during parallel execution. */
+  onToolExecStart?: (toolCall: { name: string; toolCallId: string }) => void;
   onToolEnd?: (result: { name: string; result: string; isError: boolean }) => void;
   onApprovalRequest?: (request: ApprovalRequest) => Promise<ApprovalDecision>;
   /** Conversational approval for headless connectors (Telegram, WhatsApp, Slack).
@@ -97,6 +106,8 @@ export async function runAgentWithTools(
   const connectedRepos = [...(config.connectedRepos || [])];
   const agentBuiltinTools: string[] = [];
   const policy = config.toolApprovalPolicy || "auto";
+  let maxIterations = config.maxToolIterations || MAX_TOOL_ITERATIONS;
+  let maxToolResultChars = config.maxToolResultChars || 100_000;
 
   // Load tools from Firestore
   if (config.userId && config.agentId) {
@@ -137,6 +148,14 @@ export async function runAgentWithTools(
         }
         const bt: string[] = agentData.builtinTools || [];
         agentBuiltinTools.push(...bt);
+        // Per-agent maxToolIterations (config override takes precedence)
+        if (!config.maxToolIterations && agentData.maxToolIterations) {
+          maxIterations = Math.min(Math.max(agentData.maxToolIterations, 1), 30);
+        }
+        // Per-agent maxToolResultChars (config override takes precedence)
+        if (!config.maxToolResultChars && agentData.maxToolResultChars) {
+          maxToolResultChars = Math.min(Math.max(agentData.maxToolResultChars, 1_000), 500_000);
+        }
       }
     } catch {
       // Skip
@@ -263,6 +282,17 @@ export async function runAgentWithTools(
   let iteration = 0;
   let totalToolCalls = 0;
 
+  // Note: Diminishing returns detection was removed — it incorrectly stopped agents during
+  // productive tool-use iterations (tool calls produce ~0 text tokens but do real work).
+  // maxIterations (configurable per agent, default 10, max 30) is the sufficient guard.
+
+  // Max output tokens recovery — when LLM hits max_tokens, inject continuation message
+  const MAX_OUTPUT_RECOVERY_ATTEMPTS = 3;
+  let outputRecoveryCount = 0;
+
+  // Reactive compact — circuit breaker (1 attempt per session)
+  let hasAttemptedReactiveCompact = false;
+
   // Inject current date (Europe/Paris, with day name and ISO week info) + tool usage reminder
   const now = new Date();
   const parisFmt = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Paris", weekday: "long", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
@@ -315,8 +345,14 @@ export async function runAgentWithTools(
     return new Promise((resolve, reject) => {
       const pendingToolCalls: ToolCallResult[] = [];
 
-      // Truncate verbose tool results before sending to LLM
-      const truncatedMessages = truncateToolResults(messages);
+      // Micro-compact old tool results (replace with short marker, keep last 3 intact)
+      const { messages: microCompacted, tokensFreed } = microCompactMessages(messages);
+      if (tokensFreed > 0) {
+        logAppError({ code: "MICRO_COMPACTION", message: `Freed ~${tokensFreed} tokens from old tool results`, source: "compaction", userId: config.userId, agentId: config.agentId });
+      }
+
+      // Truncate remaining large tool results (content budget — configurable per agent)
+      const truncatedMessages = truncateToolResults(microCompacted, maxToolResultChars);
 
       streamLLM(
         {
@@ -341,7 +377,24 @@ export async function runAgentWithTools(
           },
           onDone: async (stopReason) => {
             try {
-              if (stopReason === "tool_use" && pendingToolCalls.length > 0 && iteration < MAX_TOOL_ITERATIONS) {
+              // Max output tokens recovery — inject continuation message and retry
+              if (stopReason === "max_tokens" && outputRecoveryCount < MAX_OUTPUT_RECOVERY_ATTEMPTS) {
+                outputRecoveryCount++;
+                logAppError({ code: "MAX_TOKENS_RECOVERY", message: `Output truncated, recovery attempt ${outputRecoveryCount}/${MAX_OUTPUT_RECOVERY_ATTEMPTS}`, source: "chat", userId: config.userId, agentId: config.agentId });
+
+                // Push current text as assistant, then inject continuation prompt
+                messages.push({ role: "assistant", content: "[Response truncated due to output token limit]" });
+                messages.push({
+                  role: "user",
+                  content: "Your response was cut off. Resume directly from where you stopped. Do not repeat previous content.",
+                });
+
+                // Retry without counting as a tool iteration
+                resolve(runIteration());
+                return;
+              }
+
+              if (stopReason === "tool_use" && pendingToolCalls.length > 0 && iteration < maxIterations) {
                 iteration++;
 
                 const assistantContent: ContentBlock[] = pendingToolCalls.map((tc) => ({
@@ -352,61 +405,36 @@ export async function runAgentWithTools(
                 }));
                 messages.push({ role: "assistant", content: assistantContent });
 
-                const toolResults: ContentBlock[] = [];
-                for (const tc of pendingToolCalls) {
+                // Execute a single tool call (approval check + dispatch + callbacks)
+                const executeSingleTool = async (tc: ToolCallResult): Promise<ContentBlock> => {
                   // Tool approval check
                   const isDestructive = isDestructiveBuiltin(tc.name) || destructiveCustomTools.has(tc.name);
                   if (policy !== "auto" && requiresApproval(policy, tc.name, isDestructive)) {
                     if (callbacks.onApprovalRequest) {
-                      // Interactive context (Playground/Widget) — ask user
                       const decision = await callbacks.onApprovalRequest({
-                        toolCallId: tc.id,
-                        toolName: tc.name,
-                        args: tc.input,
-                        isDestructive,
+                        toolCallId: tc.id, toolName: tc.name, args: tc.input, isDestructive,
                       });
                       if (decision === "denied") {
-                        toolResults.push({
-                          type: "tool_result",
-                          tool_use_id: tc.id,
-                          content: "Tool execution denied by operator.",
-                          is_error: true,
-                        });
                         callbacks.onToolEnd?.({ name: tc.name, result: "Tool execution denied by operator.", isError: true });
-                        continue;
+                        return { type: "tool_result", tool_use_id: tc.id, content: "Tool execution denied by operator.", is_error: true };
                       }
                     } else if (callbacks.onConversationalApproval) {
-                      // Conversational approval (Telegram, WhatsApp, Slack)
-                      // Send approval message to user and wait for response
                       const decision = await callbacks.onConversationalApproval({
-                        toolCallId: tc.id,
-                        toolName: tc.name,
-                        args: tc.input,
-                        isDestructive,
+                        toolCallId: tc.id, toolName: tc.name, args: tc.input, isDestructive,
                       });
                       if (decision === "denied") {
-                        toolResults.push({
-                          type: "tool_result",
-                          tool_use_id: tc.id,
-                          content: "Tool execution denied by user.",
-                          is_error: true,
-                        });
                         callbacks.onToolEnd?.({ name: tc.name, result: "Tool execution denied by user.", isError: true });
-                        continue;
+                        return { type: "tool_result", tool_use_id: tc.id, content: "Tool execution denied by user.", is_error: true };
                       }
                     } else {
-                      // Headless context with no approval support (Webhook, MCP, etc.)
                       const denyMsg = `Tool "${tc.name}" requires approval but this channel does not support interactive approval. Use the Kopern Playground to execute this action, or set the agent's Tool Approval Policy to "Automatic".`;
-                      toolResults.push({
-                        type: "tool_result",
-                        tool_use_id: tc.id,
-                        content: denyMsg,
-                        is_error: true,
-                      });
                       callbacks.onToolEnd?.({ name: tc.name, result: denyMsg, isError: true });
-                      continue;
+                      return { type: "tool_result", tool_use_id: tc.id, content: denyMsg, is_error: true };
                     }
                   }
+
+                  // Emit per-tool execution start (after approval, before actual execution)
+                  callbacks.onToolExecStart?.({ name: tc.name, toolCallId: tc.id });
 
                   const result = isMemoryTool(tc.name)
                     ? await executeMemoryTool(tc.name, tc.input, config.userId || "", config.agentId || "")
@@ -423,9 +451,9 @@ export async function runAgentWithTools(
                               : isCodeInterpreterTool(tc.name)
                                 ? await executeCodeInterpreterTool(tc.name, tc.input)
                                 : isImageGenTool(tc.name)
-                                  ? await executeImageGenTool(tc.name, tc.input, config.userId || "")
+                                  ? await executeImageGenTool(tc.name, tc.input, config.userId || "", config.imageStoragePrefix)
                                   : await executeTool(tc, toolCtx);
-                  // Count tool result tokens as additional input
+
                   inputTokens += estimateTokens(result.result);
                   callbacks.onToolEnd?.({
                     name: tc.name,
@@ -437,13 +465,33 @@ export async function runAgentWithTools(
                     result: result.result.slice(0, 1000),
                     isError: result.isError,
                   }).catch((err) => logAppError({ code: "EXTENSION_FIRE_FAILED", message: (err as Error).message, source: "chat", userId: config.userId, agentId: config.agentId }));
-                  toolResults.push({
-                    type: "tool_result",
-                    tool_use_id: tc.id,
-                    content: result.result,
-                    is_error: result.isError,
-                  });
+
+                  return { type: "tool_result", tool_use_id: tc.id, content: result.result, is_error: result.isError };
+                };
+
+                // Parallel execution: read-only tools run concurrently, write tools run sequentially
+                // Build a lookup set from tools with concurrencySafe flag
+                const concurrentSafeNames = new Set(tools.filter(t => t.concurrencySafe).map(t => t.name));
+                const readCalls = pendingToolCalls.filter(tc => concurrentSafeNames.has(tc.name));
+                const writeCalls = pendingToolCalls.filter(tc => !concurrentSafeNames.has(tc.name));
+
+                // Execute reads in parallel
+                const readResultsMap = new Map<string, ContentBlock>();
+                if (readCalls.length > 0) {
+                  const readResults = await Promise.all(readCalls.map(tc => executeSingleTool(tc)));
+                  readCalls.forEach((tc, i) => readResultsMap.set(tc.id, readResults[i]));
                 }
+
+                // Execute writes sequentially
+                const writeResultsMap = new Map<string, ContentBlock>();
+                for (const tc of writeCalls) {
+                  writeResultsMap.set(tc.id, await executeSingleTool(tc));
+                }
+
+                // Recombine in original order (FIFO)
+                const toolResults: ContentBlock[] = pendingToolCalls.map(tc =>
+                  readResultsMap.get(tc.id) || writeResultsMap.get(tc.id)!
+                );
                 messages.push({ role: "user", content: toolResults });
 
                 resolve(runIteration());
@@ -484,7 +532,35 @@ export async function runAgentWithTools(
               reject(err);
             }
           },
-          onError: (error) => {
+          onError: async (error) => {
+            // Reactive compact: on prompt_too_long / 413, compact and retry once
+            const msg = error.message || "";
+            const isPromptTooLong =
+              msg.includes("prompt is too long") ||
+              msg.includes("too many tokens") ||
+              msg.includes("context_length_exceeded") ||
+              msg.includes("maximum context length") ||
+              (error as unknown as { status?: number }).status === 413;
+
+            if (isPromptTooLong && !hasAttemptedReactiveCompact) {
+              hasAttemptedReactiveCompact = true;
+              logAppError({ code: "REACTIVE_COMPACT", message: `Prompt too long — compacting and retrying`, source: "chat", userId: config.userId, agentId: config.agentId });
+
+              try {
+                const { messages: compacted } = await compactMessages(
+                  messages,
+                  config.apiKey,
+                  config.apiKeys?.length ? config.apiKeys : undefined
+                );
+                messages.length = 0;
+                messages.push(...compacted);
+                resolve(runIteration());
+                return;
+              } catch {
+                // Compaction itself failed — fall through to error
+              }
+            }
+
             // Still track partial usage on error
             if (config.userId && config.agentId && (inputTokens > 0 || outputTokens > 0)) {
               trackUsageServer(

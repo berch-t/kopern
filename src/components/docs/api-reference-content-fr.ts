@@ -914,6 +914,8 @@ func main() {
 | 2026-03-15 | Ajout du connecteur Slack |
 | 2026-03-12 | Ajout des webhooks entrants/sortants avec HMAC |
 | 2026-03-10 | Ajout du widget embarquable (chat, config, script) |
+| 2026-04-04 | Upgrade moteur agentique — execution parallele, audit billing, generation d'images builtin |
+| 2026-04-03 | Annotations tools, MCP Prompts (3 workflows), Smithery 80/100 |
 | 2026-04-02 | MCP v2.0.0 — 32 outils couvrant le cycle complet agent, cles user-level, self-hosted Docker |
 | 2026-04-01 | MCP v1.1.0 — 19 outils (agent CRUD, grading, equipes, connecteurs) |
 | 2026-03-01 | Ajout du serveur MCP HTTP Streamable |

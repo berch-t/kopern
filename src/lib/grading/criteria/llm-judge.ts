@@ -1,6 +1,8 @@
 import { type CriterionEvaluator, type CriterionResult } from "../types";
 import { type CollectedEvents } from "@/lib/pi-mono/event-collector";
 import { streamLLM } from "@/lib/llm/client";
+import { estimateTokens } from "@/lib/billing/pricing";
+import { trackUsageServer } from "@/lib/billing/track-usage-server";
 
 interface LlmJudgeConfig {
   judgeProvider: string;
@@ -16,7 +18,7 @@ export const llmJudgeEvaluator: CriterionEvaluator = {
   type: "llm_judge",
 
   async evaluate(config: Record<string, unknown>, events: CollectedEvents): Promise<CriterionResult> {
-    const c = config as unknown as LlmJudgeConfig & { _locale?: string; _apiKey?: string };
+    const c = config as unknown as LlmJudgeConfig & { _locale?: string; _apiKey?: string; _userId?: string; _agentId?: string };
     const provider = c.judgeProvider || DEFAULT_PROVIDER;
     const model = c.judgeModel || DEFAULT_MODEL;
     const threshold = c.scoreThreshold ?? 0.7;
@@ -64,6 +66,14 @@ Respond ONLY with valid JSON in this exact format, no other text:
           }
         );
       });
+
+      // Track LLM judge token usage (fire-and-forget)
+      if (c._userId && c._agentId) {
+        const inputTokens = estimateTokens(userPrompt);
+        const outputTokens = estimateTokens(fullResponse);
+        trackUsageServer(c._userId, c._agentId, provider, inputTokens, outputTokens, 0, model)
+          .catch(() => {});
+      }
 
       // Extract JSON from response (handle markdown code blocks or surrounding text)
       const jsonMatch = fullResponse.match(/\{[\s\S]*?"score"[\s\S]*?"reasoning"[\s\S]*?\}/);

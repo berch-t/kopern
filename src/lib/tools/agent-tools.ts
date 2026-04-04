@@ -17,6 +17,7 @@ export function getSlackTools(): ToolDefinition[] {
   return [
     {
       name: "slack_read_messages",
+      concurrencySafe: true,
       description: `Read messages from a Slack channel for a specific date. Returns the message text, author, and timestamp. Use channel IDs (e.g. C0AN6D3L8KT) or channel names as provided by the user. If no date is given, reads recent messages.`,
       input_schema: {
         type: "object",
@@ -30,6 +31,7 @@ export function getSlackTools(): ToolDefinition[] {
     },
     {
       name: "slack_list_channels",
+      concurrencySafe: true,
       description: `List Slack channels the bot has access to. Returns channel names and IDs. Useful to discover available channels before reading messages.`,
       input_schema: {
         type: "object",
@@ -51,6 +53,7 @@ export function getGithubTools(connectedRepos: string[], includeWrite = false): 
   const readTools: ToolDefinition[] = [
     {
       name: "read_file",
+      concurrencySafe: true,
       description: `Read the content of a specific file from a connected GitHub repository. Available repos: ${repoList}. Use the file tree provided in context to find valid file paths.`,
       input_schema: {
         type: "object",
@@ -64,6 +67,7 @@ export function getGithubTools(connectedRepos: string[], includeWrite = false): 
     },
     {
       name: "search_files",
+      concurrencySafe: true,
       description: `Search for files matching a pattern in a connected GitHub repository. Available repos: ${repoList}. Returns matching file paths from the repo tree.`,
       input_schema: {
         type: "object",

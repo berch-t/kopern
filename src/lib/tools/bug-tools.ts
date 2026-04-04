@@ -12,6 +12,7 @@ export function getBugTools(): ToolDefinition[] {
   return [
     {
       name: "list_bugs",
+      concurrencySafe: true,
       description:
         "List bugs from the tracking database. Filter by status to find new bugs to analyze, bugs being fixed, or bugs awaiting review.",
       input_schema: {
@@ -31,6 +32,7 @@ export function getBugTools(): ToolDefinition[] {
     },
     {
       name: "get_bug",
+      concurrencySafe: true,
       description: "Get full details of a specific bug by ID, including analysis, fix branch, PR URL, and notes.",
       input_schema: {
         type: "object",

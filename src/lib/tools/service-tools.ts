@@ -24,6 +24,7 @@ const CALENDAR_DAILY_CREATE_LIMIT = 10;
 const EMAIL_TOOLS: ToolDefinition[] = [
   {
     name: "read_emails",
+    concurrencySafe: true,
     description:
       "Read recent emails from the user's mailbox. Supports search queries (sender, subject, keywords). Returns subject, sender, date, and snippet for each email.",
     input_schema: {
@@ -86,6 +87,7 @@ const EMAIL_TOOLS: ToolDefinition[] = [
 const CALENDAR_TOOLS: ToolDefinition[] = [
   {
     name: "list_events",
+    concurrencySafe: true,
     description:
       "List calendar events within a date range. Returns event title, start/end times, location, and attendees.",
     input_schema: {
@@ -105,6 +107,7 @@ const CALENDAR_TOOLS: ToolDefinition[] = [
   },
   {
     name: "check_availability",
+    concurrencySafe: true,
     description:
       "Check free/busy time slots for a given date range. Use before creating events to avoid conflicts.",
     input_schema: {

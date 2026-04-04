@@ -1,6 +1,6 @@
 # Kopern — AI Agent Builder, Orchestrator & Grader (Full Reference)
 
-> The open-source platform to build, grade, optimize, and deploy AI agents — no code required. 96+ features shipped. Self-hosted via Docker.
+> The open-source platform to build, grade, optimize, and deploy AI agents — no code required. 111 features shipped. Self-hosted via Docker.
 
 ## Platform Overview
 

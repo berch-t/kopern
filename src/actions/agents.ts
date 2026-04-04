@@ -82,6 +82,8 @@ export async function updateAgent(
       | "templateId"
       | "templateVariables"
       | "memoryConfig"
+      | "maxToolIterations"
+      | "maxToolResultChars"
     >
   >
 ) {

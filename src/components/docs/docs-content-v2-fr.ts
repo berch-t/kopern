@@ -1334,156 +1334,67 @@ Comparez les runs entre les versions pour :
 
 ---
 
-## Serveurs MCP (Déploiement API)
+## Protocole MCP (32 Tools)
 
-### Créer un serveur MCP
+Kopern expose toute sa plateforme via le **Model Context Protocol (MCP)** — un standard ouvert pour connecter outils et agents IA. Avec 32 tools couvrant le cycle de vie complet des agents, vous pouvez construire, tester, evaluer, optimiser et deployer des agents depuis votre terminal ou IDE.
 
-Les serveurs MCP vous permettent d'exposer votre agent comme un endpoint API que toute application peut appeler.
+### Connexion
 
-1. Ouvrez votre agent et allez dans l'onglet **Serveurs MCP**
-2. Cliquez sur **Nouveau Serveur**
-3. Donnez un **nom** et une **description** au serveur
-4. Le système génère automatiquement une **clé API** (préfixée par \`kpn_\`)
-5. **Copiez la clé immédiatement** — elle est affichée une seule fois et ne pourra pas être récupérée ensuite
-6. Votre serveur est actif et prêt à recevoir des requêtes
+#### Option 1 : Package NPM (Recommande)
 
----
-
-### Référence API — JSON-RPC
-
-**Endpoint :** \`POST /api/mcp\`
-
-**Authentification :** Header \`Authorization: Bearer kpn_votre_cle_api\`
-
-#### Méthode : initialize
-
-Récupère les informations de l'agent associé au serveur.
-
-\`\`\`json
-{
-  "jsonrpc": "2.0",
-  "method": "initialize",
-  "id": 1
-}
-\`\`\`
-
-**Réponse :**
-\`\`\`json
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "name": "Mon Agent Support",
-    "description": "Agent de support client pour TechStore",
-    "capabilities": ["tools", "streaming"]
-  },
-  "id": 1
-}
-\`\`\`
-
-#### Méthode : completion/create
-
-Envoie un message à l'agent et reçoit une réponse complète (avec exécution d'outils si nécessaire).
-
-\`\`\`json
-{
-  "jsonrpc": "2.0",
-  "method": "completion/create",
-  "params": {
-    "message": "Quel est le statut de ma commande #12345 ?",
-    "history": [
-      { "role": "user", "content": "Bonjour" },
-      { "role": "assistant", "content": "Bonjour ! Comment puis-je vous aider ?" }
-    ]
-  },
-  "id": 2
-}
-\`\`\`
-
-**Réponse :**
-\`\`\`json
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "content": "Votre commande #12345 est en cours de livraison...",
-    "toolCalls": [...],
-    "usage": { "inputTokens": 150, "outputTokens": 89 }
-  },
-  "id": 2
-}
-\`\`\`
-
----
-
-### Exemples de code
-
-**cURL :**
 \`\`\`bash
-curl -X POST https://votre-domaine.com/api/mcp \\
-  -H "Authorization: Bearer kpn_votre_cle_api" \\
-  -H "Content-Type: application/json" \\
-  -d '{"jsonrpc":"2.0","method":"completion/create","params":{"message":"Bonjour"},"id":1}'
+# Claude Code
+claude mcp add kopern -- npx -y @kopern/mcp-server
+
+# Cursor / Windsurf — ajoutez dans .mcp.json
 \`\`\`
 
-**Node.js :**
-\`\`\`javascript
-const response = await fetch("https://votre-domaine.com/api/mcp", {
-  method: "POST",
-  headers: {
-    "Authorization": "Bearer kpn_votre_cle_api",
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    jsonrpc: "2.0",
-    method: "completion/create",
-    params: { message: "Analysez ce code pour les failles de sécurité..." },
-    id: 1,
-  }),
-});
-const { result } = await response.json();
-console.log(result.content);
+Configurez votre cle API : \`export KOPERN_API_KEY=kpn_votre_cle\`
+
+#### Option 2 : HTTP Direct
+
+\`\`\`json
+{
+  "mcpServers": {
+    "kopern": {
+      "type": "http",
+      "url": "https://kopern.ai/api/mcp/server",
+      "headers": { "Authorization": "Bearer kpn_votre_cle" }
+    }
+  }
+}
 \`\`\`
 
-**Python :**
-\`\`\`python
-import requests
+### Deux types de cles
 
-response = requests.post(
-    "https://votre-domaine.com/api/mcp",
-    headers={"Authorization": "Bearer kpn_votre_cle_api"},
-    json={
-        "jsonrpc": "2.0",
-        "method": "completion/create",
-        "params": {"message": "Résumez ce document..."},
-        "id": 1,
-    },
-)
-result = response.json()["result"]
-print(result["content"])
-\`\`\`
+| Type | Portee | Tools | Creation |
+|------|--------|-------|----------|
+| **Liee a un agent** | Un agent specifique | 32 tools | Detail agent → Onglet API Keys |
+| **Personnelle** | Plateforme entiere | 30 tools (sans chat/agent_info) | Parametres → Cle API personnelle |
 
----
+### 32 Tools MCP
 
-### Sécurité des clés API
+| Categorie | Tools | Description |
+|-----------|-------|-------------|
+| **Gestion agents** (8) | create, get, update, delete, list, templates, chat, agent_info | Cycle de vie complet |
+| **Grading** (6) | grade_prompt, create_suite, run_grading, get_results, list_runs, autoresearch | Assurance qualite |
+| **Equipes** (4) | create_team, run_team, create_pipeline, run_pipeline | Orchestration multi-agents |
+| **Connecteurs** (7) | widget, telegram, whatsapp, slack, webhook, email, calendar | Deploiement multi-canal |
+| **Sessions** (5) | list_sessions, get_session, manage_memory, compliance, usage | Monitoring |
+| **Portabilite** (2) | export_agent, import_agent | Portabilite agent |
 
-- Les clés sont préfixées par \`kpn_\` et générées avec **32 octets hexadécimaux aléatoires**
-- Seul le **hash SHA-256** est stocké en base — la clé en clair est affichée une seule fois à la création
-- Chaque serveur a une **limitation de débit configurable** (requêtes par minute)
-- Les clés peuvent être **révoquées** à tout moment depuis le dashboard
-- Effectuez une **rotation régulière** de vos clés pour renforcer la sécurité
+### MCP Prompts (Workflows guides)
 
-### Failover des clés API
+3 workflows pas a pas : **create-agent**, **grade-and-improve**, **deploy-everywhere**.
 
-Ajoutez plusieurs clés API LLM par provider pour un failover automatique. Si une clé atteint sa limite de requêtes (HTTP 429), Kopern réessaie avec la clé suivante. Configurez jusqu'à 4 clés de secours par provider dans **Paramètres → Clés API**. Les clés sont essayées dans l'ordre ; celles en rate limit entrent en cooldown de 60 secondes. Les erreurs non-récupérables (403, clé invalide) ne déclenchent pas de rotation. Toutes les clés sont stockées dans votre profil Firestore.
+### Securite des cles API
 
----
+- Les cles sont prefixees par \`kpn_\` suivies de 32 octets hex aleatoires
+- Seul le **hash SHA-256** est stocke — la cle en clair est affichee une seule fois
+- Rotation des cles avec piste d'audit dans les Parametres
+- Limite : 30 requetes/minute par cle (fenetre glissante)
 
-### Suivi d'utilisation
-
-L'utilisation de tokens est suivie automatiquement pour chaque serveur MCP :
-
-- **Par mois** — tokens en entrée, tokens en sortie, coût estimé
-- **Par requête** — chaque appel est comptabilisé
-- Consultez les statistiques dans la page **Clés API** ou dans le détail de chaque serveur
+Pour la documentation MCP complete avec tous les parametres et exemples, consultez la page [Documentation MCP](/mcp).
 
 ---
 

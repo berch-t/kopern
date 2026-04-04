@@ -45,6 +45,7 @@ import {
   Download,
 } from "lucide-react";
 import { AgentAvatar } from "@/components/agents/AgentAvatar";
+import { MarkdownRenderer } from "@/components/shared/MarkdownRenderer";
 import { ActivityTimeline } from "@/components/teams/ActivityTimeline";
 import { KanbanBoard } from "@/components/teams/KanbanBoard";
 import { RoutineEditor } from "@/components/teams/RoutineEditor";
@@ -53,6 +54,7 @@ import { GoalTree } from "@/components/teams/GoalTree";
 import { logTeamActivity } from "@/actions/team-activity";
 import { createTeamRun, completeTeamRun, listTeamRuns } from "@/actions/team-runs";
 import type { TeamRunDoc, TeamRunMemberResult } from "@/lib/firebase/firestore";
+import { calculateTokenCost } from "@/lib/billing/pricing";
 
 const FlowEditor = lazy(() => import("@/components/teams/FlowEditor"));
 
@@ -90,6 +92,14 @@ export default function TeamDetailPage({
   const [results, setResults] = useState<
     { agentId: string; status: "pending" | "running" | "completed" | "failed"; output: string }[]
   >([]);
+  /** Per-agent metrics collected from member_done SSE events */
+  const [agentMetrics, setAgentMetrics] = useState<
+    Record<string, { inputTokens: number; outputTokens: number; toolCallCount: number; toolIterations: number; startedAt: number }>
+  >({});
+  /** Per-agent tool activity: current executing tool + completed tool log */
+  const [toolActivity, setToolActivity] = useState<
+    Record<string, { current: string | null; log: { name: string; isError: boolean; timestamp: number }[] }>
+  >({});
   const [pastRuns, setPastRuns] = useState<(TeamRunDoc & { id: string })[]>([]);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
@@ -184,6 +194,7 @@ export default function TeamDetailPage({
       output: "",
     }));
     setResults(initialResults);
+    setToolActivity({});
 
     // Reset node status for flow view
     const initialNodeStatus: Record<string, "idle" | "running" | "completed" | "failed"> = {};
@@ -223,6 +234,7 @@ export default function TeamDetailPage({
         }),
       };
 
+      console.log(`[Team Run] Starting: "${team.name}" (${team.executionMode}), ${team.agents.length} agents, prompt: "${prompt.slice(0, 80)}..."`);
       const res = await fetch(`/api/teams/${teamId}/execute`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -240,6 +252,8 @@ export default function TeamDetailPage({
       const decoder = new TextDecoder();
       let buffer = "";
       let currentEvent: string | undefined;
+      // Local metrics accumulator (avoids React state closure issue in persist block)
+      const metricsAccum: Record<string, { inputTokens: number; outputTokens: number; toolCallCount: number; toolIterations: number; startedAt: number }> = {};
 
       while (true) {
         const { done, value } = await reader.read();
@@ -256,43 +270,110 @@ export default function TeamDetailPage({
             try {
               const data = JSON.parse(line.slice(6));
               if (currentEvent === "member_start") {
+                const agentId = data.agentId as string;
                 setResults((prev) =>
                   prev.map((r) =>
-                    r.agentId === data.agentId ? { ...r, status: "running" } : r
+                    r.agentId === agentId ? { ...r, status: "running" } : r
                   )
                 );
                 setNodeStatus((prev) => ({
                   ...prev,
-                  [`agent-${data.agentId}`]: "running",
+                  [`agent-${agentId}`]: "running",
+                }));
+                // Track start time for duration calculation
+                metricsAccum[agentId] = { inputTokens: 0, outputTokens: 0, toolCallCount: 0, toolIterations: 0, startedAt: Date.now() };
+                setAgentMetrics((prev) => ({
+                  ...prev,
+                  [agentId]: metricsAccum[agentId],
                 }));
               } else if (currentEvent === "member_token") {
                 // Accumulate streamed tokens per agent
                 setResults((prev) =>
                   prev.map((r) =>
-                    r.agentId === data.agentId ? { ...r, output: r.output + (data.token ?? "") } : r
+                    r.agentId === data.agentId ? { ...r, output: r.output + (data.text ?? "") } : r
                   )
                 );
               } else if (currentEvent === "member_done") {
+                const agentId = data.agentId as string;
                 // Use final result if provided, otherwise keep accumulated tokens
                 setResults((prev) =>
                   prev.map((r) =>
-                    r.agentId === data.agentId ? { ...r, status: "completed", output: data.result || r.output } : r
+                    r.agentId === agentId ? { ...r, status: "completed", output: data.result || r.output } : r
                   )
                 );
                 setNodeStatus((prev) => ({
                   ...prev,
-                  [`agent-${data.agentId}`]: "completed",
+                  [`agent-${agentId}`]: "completed",
+                }));
+                // Capture metrics from backend
+                if (data.metrics) {
+                  const m = data.metrics as { inputTokens?: number; outputTokens?: number; toolCallCount?: number; toolIterations?: number };
+                  const updated = {
+                    inputTokens: m.inputTokens ?? 0,
+                    outputTokens: m.outputTokens ?? 0,
+                    toolCallCount: m.toolCallCount ?? 0,
+                    toolIterations: m.toolIterations ?? 0,
+                    startedAt: metricsAccum[agentId]?.startedAt ?? Date.now(),
+                  };
+                  metricsAccum[agentId] = updated;
+                  setAgentMetrics((prev) => ({ ...prev, [agentId]: updated }));
+                }
+                // Clear tool activity — stops shimmer
+                setToolActivity((prev) => ({
+                  ...prev,
+                  [agentId]: { current: null, log: prev[agentId]?.log ?? [] },
                 }));
               } else if (currentEvent === "member_error") {
+                const agentId = data.agentId as string;
+                const errorMsg = (data.message || data.error || "Unknown error") as string;
+                console.error(`[Team Run] Agent ${getAgentName(agentId)} (${agentId}) failed:`, errorMsg);
                 setResults((prev) =>
                   prev.map((r) =>
-                    r.agentId === data.agentId ? { ...r, status: "failed", output: data.error || "Error" } : r
+                    r.agentId === agentId ? { ...r, status: "failed", output: errorMsg } : r
                   )
                 );
                 setNodeStatus((prev) => ({
                   ...prev,
-                  [`agent-${data.agentId}`]: "failed",
+                  [`agent-${agentId}`]: "failed",
                 }));
+                // Clear tool activity on failure
+                setToolActivity((prev) => ({
+                  ...prev,
+                  [agentId]: { ...prev[agentId], current: null },
+                }));
+              } else if (currentEvent === "member_tool_start") {
+                // LLM requested a tool — log it
+                const agentId = data.agentId as string;
+                const toolName = data.name as string;
+                setToolActivity((prev) => ({
+                  ...prev,
+                  [agentId]: { ...prev[agentId], current: toolName, log: prev[agentId]?.log ?? [] },
+                }));
+              } else if (currentEvent === "member_tool_exec_start") {
+                // Tool execution actually started (after approval)
+                const agentId = data.agentId as string;
+                const toolName = data.name as string;
+                setToolActivity((prev) => ({
+                  ...prev,
+                  [agentId]: { ...prev[agentId], current: toolName, log: prev[agentId]?.log ?? [] },
+                }));
+              } else if (currentEvent === "member_tool_end") {
+                const agentId = data.agentId as string;
+                const toolName = data.name as string;
+                const isError = data.isError as boolean;
+                if (isError) {
+                  console.warn(`[Team Run] Tool error: ${toolName} (agent ${getAgentName(agentId)}):`, (data.result as string)?.slice(0, 200));
+                }
+                setToolActivity((prev) => {
+                  const entry = prev[agentId] ?? { current: null, log: [] };
+                  return {
+                    ...prev,
+                    [agentId]: {
+                      current: null,
+                      log: [...entry.log, { name: toolName, isError, timestamp: Date.now() }],
+                    },
+                  };
+                });
               } else if (currentEvent === "team_done") {
                 // Mark output node as completed
                 setNodeStatus((prev) => ({
@@ -307,41 +388,57 @@ export default function TeamDetailPage({
           }
         }
       }
-      // Persist completed run
+      // Persist completed run — use setResults callback to read latest state synchronously
       if (runId && user) {
-        const finalResults: TeamRunMemberResult[] = [];
-        // Read current results from state via a ref-safe approach
         setResults((prev) => {
-          for (const r of prev) {
-            finalResults.push({
+          const now = Date.now();
+          const finalResults: TeamRunMemberResult[] = prev.map((r) => {
+            const m = metricsAccum[r.agentId];
+            return {
               agentId: r.agentId,
               agentName: getAgentName(r.agentId),
-              role: team.agents.find((m) => m.agentId === r.agentId)?.role ?? "",
-              status: r.status === "completed" ? "completed" : "failed",
+              role: team.agents.find((mem) => mem.agentId === r.agentId)?.role ?? "",
+              status: r.status === "completed" ? "completed" as const : "failed" as const,
               output: r.output,
-              inputTokens: 0,
-              outputTokens: 0,
-              toolCallCount: 0,
-              durationMs: 0,
-            });
-          }
+              inputTokens: m?.inputTokens ?? 0,
+              outputTokens: m?.outputTokens ?? 0,
+              toolCallCount: m?.toolCallCount ?? 0,
+              durationMs: m?.startedAt ? now - m.startedAt : 0,
+            };
+          });
+          const totalIn = finalResults.reduce((s, r) => s + r.inputTokens, 0);
+          const totalOut = finalResults.reduce((s, r) => s + r.outputTokens, 0);
+          // Estimate cost from first agent's model (all agents may use different models but this is a reasonable approximation)
+          const firstAgent = team.agents[0] ? getAgent(team.agents[0].agentId) : null;
+          const totalCost = calculateTokenCost(
+            firstAgent?.modelProvider ?? "anthropic",
+            totalIn,
+            totalOut,
+            firstAgent?.modelId,
+            user.uid,
+          );
+          completeTeamRun(user.uid, teamId, runId, {
+            status: "completed",
+            results: finalResults,
+            totalCost,
+            totalTokensIn: totalIn,
+            totalTokensOut: totalOut,
+          }).catch(() => {});
+          const totalDurationMs = finalResults.reduce((s, r) => s + r.durationMs, 0);
+          logTeamActivity(user.uid, teamId, "execution_completed", {
+            message: `${finalResults.filter((r) => r.status === "completed").length}/${finalResults.length} agents | ${((totalIn + totalOut) / 1000).toFixed(1)}K tokens | ${totalCost < 0.01 ? "<0.01" : totalCost.toFixed(2)}€ | ${Math.round(totalDurationMs / 1000)}s`,
+          }).catch(() => {});
+          // Refresh past runs after a short delay to let Firestore persist
+          setTimeout(() => {
+            listTeamRuns(user.uid, teamId).then(setPastRuns).catch(() => {});
+          }, 1000);
           return prev;
         });
-        completeTeamRun(user.uid, teamId, runId, {
-          status: "completed",
-          results: finalResults,
-          totalCost: 0,
-          totalTokensIn: 0,
-          totalTokensOut: 0,
-        }).catch(() => {});
-        logTeamActivity(user.uid, teamId, "execution_completed", {
-          message: `${finalResults.filter((r) => r.status === "completed").length}/${finalResults.length} agents completed`,
-        }).catch(() => {});
-        // Refresh past runs
-        listTeamRuns(user.uid, teamId).then(setPastRuns).catch(() => {});
       }
     } catch (err) {
-      console.error("Team execution error:", err);
+      const errorDetail = err instanceof Error ? { message: err.message, stack: err.stack } : String(err);
+      console.error("[Team Run] Execution failed:", errorDetail);
+      console.error("[Team Run] Context:", { teamId, teamName: team.name, mode: team.executionMode, agentCount: team.agents.length, prompt: prompt.slice(0, 100) });
       if (user) {
         if (runId) {
           completeTeamRun(user.uid, teamId, runId, {
@@ -525,7 +622,7 @@ export default function TeamDetailPage({
       {/* Execution Results — visible in all modes when results exist */}
       {results.some((r) => r.output) && (
         <FadeIn delay={0.2}>
-          <Card>
+          <Card id="team-results">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">{t.teams.results}</CardTitle>
@@ -534,11 +631,17 @@ export default function TeamDetailPage({
                   size="sm"
                   className="gap-1.5"
                   onClick={() => {
+                    const totalIn = Object.values(agentMetrics).reduce((s, m) => s + m.inputTokens, 0);
+                    const totalOut = Object.values(agentMetrics).reduce((s, m) => s + m.outputTokens, 0);
                     const md = results
                       .filter((r) => r.output)
-                      .map((r) => `## ${getAgentName(r.agentId)}\n\n${r.output}`)
+                      .map((r) => {
+                        const m = agentMetrics[r.agentId];
+                        const metaLine = m ? `\n> ${((m.inputTokens + m.outputTokens) / 1000).toFixed(1)}K tokens | ${m.toolCallCount} tools | ${m.toolIterations} iterations\n` : "";
+                        return `## ${getAgentName(r.agentId)}${metaLine}\n${r.output}`;
+                      })
                       .join("\n\n---\n\n");
-                    const header = `# ${team.name} — Execution Report\n\n**Prompt:** ${prompt}\n**Date:** ${new Date().toISOString().slice(0, 16)}\n**Mode:** ${team.executionMode}\n**Agents:** ${results.length}\n\n---\n\n`;
+                    const header = `# ${team.name} — Execution Report\n\n**Prompt:** ${prompt}\n**Date:** ${new Date().toISOString().slice(0, 16)}\n**Mode:** ${team.executionMode}\n**Agents:** ${results.length}\n**Tokens:** ${((totalIn + totalOut) / 1000).toFixed(1)}K (${totalIn} in / ${totalOut} out)\n\n---\n\n`;
                     const blob = new Blob([header + md], { type: "text/markdown" });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
@@ -554,8 +657,30 @@ export default function TeamDetailPage({
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Run summary bar */}
+              {results.some((r) => r.status === "completed") && Object.keys(agentMetrics).length > 0 && (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground px-1">
+                  <span className="tabular-nums">{results.filter((r) => r.status === "completed").length}/{results.length} agents</span>
+                  <span className="tabular-nums">
+                    {((Object.values(agentMetrics).reduce((s, m) => s + m.inputTokens + m.outputTokens, 0)) / 1000).toFixed(1)}K tokens
+                  </span>
+                  <span className="tabular-nums">
+                    {(() => {
+                      const totalIn = Object.values(agentMetrics).reduce((s, m) => s + m.inputTokens, 0);
+                      const totalOut = Object.values(agentMetrics).reduce((s, m) => s + m.outputTokens, 0);
+                      const firstAgent = team.agents[0] ? getAgent(team.agents[0].agentId) : null;
+                      const cost = calculateTokenCost(firstAgent?.modelProvider ?? "anthropic", totalIn, totalOut, firstAgent?.modelId, user?.uid);
+                      return cost < 0.01 ? "<0.01" : cost.toFixed(3);
+                    })()}€
+                  </span>
+                  <span className="tabular-nums">
+                    {Object.values(agentMetrics).reduce((s, m) => s + m.toolCallCount, 0)} tools
+                  </span>
+                </div>
+              )}
               {results.map((result) => {
                 const member = team.agents.find((m) => m.agentId === result.agentId);
+                const metrics = agentMetrics[result.agentId];
                 return (
                   <div key={result.agentId} className="rounded-lg border overflow-hidden">
                     {/* Agent header */}
@@ -565,6 +690,16 @@ export default function TeamDetailPage({
                         <p className="text-sm font-medium">{getAgentName(result.agentId)}</p>
                         {member && <p className="text-[11px] text-muted-foreground">{member.role}</p>}
                       </div>
+                      {/* Per-agent metrics */}
+                      {metrics && result.status === "completed" && (metrics.inputTokens > 0 || metrics.outputTokens > 0) && (
+                        <div className="hidden md:flex items-center gap-2.5 text-[10px] text-muted-foreground tabular-nums">
+                          <span>{((metrics.inputTokens + metrics.outputTokens) / 1000).toFixed(1)}K</span>
+                          <span>{metrics.toolCallCount}t</span>
+                          {metrics.startedAt > 0 && (
+                            <span>{Math.round((Date.now() - metrics.startedAt) / 1000) < 120 ? `${Math.round((Date.now() - metrics.startedAt) / 1000)}s` : `${Math.round((Date.now() - metrics.startedAt) / 60000)}m`}</span>
+                          )}
+                        </div>
+                      )}
                       {result.status === "pending" && (
                         <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" />pending</Badge>
                       )}
@@ -578,10 +713,46 @@ export default function TeamDetailPage({
                         <Badge variant="destructive" className="gap-1">failed</Badge>
                       )}
                     </div>
-                    {/* Output content */}
+                    {/* Tool activity — single-line shimmer, replaces on each tool, hidden when done */}
+                    {result.status === "running" && (() => {
+                      const activity = toolActivity[result.agentId];
+                      const currentTool = activity?.current;
+                      const lastCompleted = activity?.log?.length ? activity.log[activity.log.length - 1] : null;
+                      const toolCount = activity?.log?.length ?? 0;
+                      if (!currentTool && !lastCompleted) return null;
+                      return (
+                        <div className="px-4 py-1.5 border-b bg-muted/10 flex items-center gap-2 text-[11px]">
+                          {currentTool ? (
+                            <>
+                              <Loader2 className="h-2.5 w-2.5 animate-spin text-primary flex-shrink-0" />
+                              <span className="shimmer-text font-mono font-medium truncate">
+                                {currentTool}
+                              </span>
+                            </>
+                          ) : lastCompleted ? (
+                            <>
+                              {lastCompleted.isError ? (
+                                <span className="text-destructive flex-shrink-0">✕</span>
+                              ) : (
+                                <CheckCircle className="h-2.5 w-2.5 text-emerald-500 flex-shrink-0" />
+                              )}
+                              <span className={lastCompleted.isError ? "text-destructive font-mono truncate" : "text-muted-foreground font-mono truncate"}>
+                                {lastCompleted.name}
+                              </span>
+                            </>
+                          ) : null}
+                          {toolCount > 0 && (
+                            <span className="ml-auto text-muted-foreground/60 flex-shrink-0">
+                              {toolCount} tool{toolCount > 1 ? "s" : ""}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    {/* Output content — rendered markdown with image support */}
                     {result.output && (
-                      <div className="px-4 py-3 text-sm whitespace-pre-wrap max-h-[400px] overflow-y-auto font-mono text-xs leading-relaxed">
-                        {result.output}
+                      <div className="px-4 py-3 max-h-[500px] overflow-y-auto prose prose-sm dark:prose-invert prose-headings:text-sm prose-p:text-sm prose-li:text-sm max-w-none">
+                        <MarkdownRenderer content={result.output} />
                       </div>
                     )}
                   </div>
@@ -602,7 +773,15 @@ export default function TeamDetailPage({
                   <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
                     const data = pastRuns.map((r) => ({
                       id: r.id, prompt: r.prompt, status: r.status, mode: r.executionMode,
-                      agents: r.results?.length ?? 0, startedAt: r.startedAt?.toDate?.()?.toISOString() ?? "",
+                      agents: r.results?.length ?? 0,
+                      totalTokensIn: r.totalTokensIn ?? 0, totalTokensOut: r.totalTokensOut ?? 0,
+                      totalCost: r.totalCost ?? 0,
+                      startedAt: r.startedAt?.toDate?.()?.toISOString() ?? "",
+                      results: r.results?.map((m) => ({
+                        agentName: m.agentName, role: m.role, status: m.status,
+                        inputTokens: m.inputTokens, outputTokens: m.outputTokens,
+                        toolCallCount: m.toolCallCount, durationMs: m.durationMs,
+                      })),
                     }));
                     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
                     const url = URL.createObjectURL(blob);
@@ -616,39 +795,61 @@ export default function TeamDetailPage({
               </div>
             </CardHeader>
             <CardContent className="p-0 overflow-x-auto">
-              <div className="grid grid-cols-[auto_1fr_100px] md:grid-cols-[auto_1fr_72px_48px_72px_100px] items-center gap-x-3 px-4 py-2 border-b text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+              <div className="grid grid-cols-[auto_1fr_100px] md:grid-cols-[auto_1fr_72px_48px_64px_56px_100px] items-center gap-x-3 px-4 py-2 border-b text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                 <span className="w-2" />
                 <span>Prompt</span>
                 <span className="hidden md:block text-right">Status</span>
                 <span className="hidden md:block text-right">Agents</span>
-                <span className="hidden md:block text-right">Mode</span>
+                <span className="hidden md:block text-right">Tokens</span>
+                <span className="hidden md:block text-right">Cost</span>
                 <span className="text-right">Date</span>
               </div>
               <div className="divide-y">
                 {pastRuns.map((run) => {
-                  const isExpanded = results.length > 0 && false; // TODO: expand on click
+                  const totalTokens = (run.totalTokensIn ?? 0) + (run.totalTokensOut ?? 0);
+                  const cost = run.totalCost ?? 0;
                   return (
-                    <div key={run.id} className="grid grid-cols-[auto_1fr_100px] md:grid-cols-[auto_1fr_72px_48px_72px_100px] items-center gap-x-3 px-4 py-2 hover:bg-muted/50 transition-colors cursor-pointer"
+                    <div key={run.id} className="grid grid-cols-[auto_1fr_100px] md:grid-cols-[auto_1fr_72px_48px_64px_56px_100px] items-center gap-x-3 px-4 py-2 hover:bg-muted/50 transition-colors cursor-pointer"
                       onClick={() => {
-                        // Load this run's results into the results panel
                         if (run.results?.length) {
+                          setPrompt(run.prompt || "");
                           setResults(run.results.map((r) => ({
                             agentId: r.agentId,
                             status: r.status === "completed" ? "completed" as const : "failed" as const,
                             output: r.output,
                           })));
+                          // Restore metrics from persisted run for display
+                          const restored: Record<string, { inputTokens: number; outputTokens: number; toolCallCount: number; toolIterations: number; startedAt: number }> = {};
+                          for (const r of run.results) {
+                            restored[r.agentId] = {
+                              inputTokens: r.inputTokens ?? 0,
+                              outputTokens: r.outputTokens ?? 0,
+                              toolCallCount: r.toolCallCount ?? 0,
+                              toolIterations: 0,
+                              startedAt: 0,
+                            };
+                          }
+                          setAgentMetrics(restored);
+                          setTimeout(() => {
+                            document.getElementById("team-results")?.scrollIntoView({ behavior: "smooth" });
+                          }, 100);
                         }
                       }}
                     >
                       <div className={`h-2 w-2 shrink-0 rounded-full ${run.status === "completed" ? "bg-emerald-500" : run.status === "failed" ? "bg-red-500" : "bg-blue-500 animate-pulse"}`} />
                       <p className="text-sm truncate min-w-0">{run.prompt}</p>
                       <div className="hidden md:block text-right">
-                        <Badge variant={run.status === "completed" ? "secondary" : "destructive"} className="text-[10px] px-1.5 py-0">
+                        <Badge variant={run.status === "completed" ? "secondary" : run.status === "running" ? "outline" : "destructive"} className="text-[10px] px-1.5 py-0">
                           {run.status}
                         </Badge>
                       </div>
                       <span className="hidden md:block text-xs text-muted-foreground text-right tabular-nums">{run.results?.length ?? 0}</span>
-                      <span className="hidden md:block text-xs text-muted-foreground text-right">{run.executionMode}</span>
+                      <span className="hidden md:block text-xs text-muted-foreground text-right tabular-nums">
+                        {totalTokens > 0 ? `${(totalTokens / 1000).toFixed(1)}K` : "—"}
+                      </span>
+                      <span className="hidden md:block text-xs text-muted-foreground text-right tabular-nums">
+                        {cost > 0 ? (cost < 0.01 ? "<0.01€" : `${cost.toFixed(2)}€`) : "—"}
+                      </span>
                       <span className="text-xs text-muted-foreground text-right whitespace-nowrap">
                         {run.startedAt?.toDate?.()?.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) ?? "—"}
                       </span>

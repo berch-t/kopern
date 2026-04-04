@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronRight, Wrench, AlertCircle, Download } from "lucide-react";
+import { ChevronDown, ChevronRight, Wrench, AlertCircle, Download, Loader2 } from "lucide-react";
 import { type ToolCallInfo } from "@/hooks/useAgent";
 import { cn } from "@/lib/utils";
 
@@ -76,11 +76,18 @@ export function ToolCallDisplay({ toolCall }: ToolCallDisplayProps) {
         )}
         {toolCall.isError ? (
           <AlertCircle className="h-3 w-3 text-destructive" />
+        ) : toolCall.executing ? (
+          <Loader2 className="h-3 w-3 text-primary animate-spin" />
         ) : (
           <Wrench className="h-3 w-3 text-muted-foreground" />
         )}
         <span className="font-mono font-medium">{toolCall.name}</span>
-        {hasResult && (
+        {toolCall.executing && (
+          <span className="ml-auto text-primary text-[10px] animate-pulse">
+            Executing...
+          </span>
+        )}
+        {hasResult && !toolCall.executing && (
           <span className="ml-auto text-muted-foreground">
             {toolCall.isError ? "Error" : hasImages ? "Image" : "Done"}
           </span>

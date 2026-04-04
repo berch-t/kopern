@@ -1522,224 +1522,67 @@ Suite Score = Sum(case_scores) / number_of_cases
 
 ---
 
-## MCP Servers (API Deployment)
+## MCP Protocol (32 Tools)
 
-### Creating an MCP Server
+Kopern exposes its entire platform through the **Model Context Protocol (MCP)** — an open standard for connecting AI tools and agents. With 32 tools covering the full agent lifecycle, you can build, test, grade, optimize, and deploy agents from your terminal or IDE.
 
-MCP Servers expose your agent as a callable API endpoint that any application can integrate with.
+### Connection
 
-1. Open your agent's detail page
-2. Go to the **MCP Servers** tab
-3. Click **New Server**
-4. Enter:
-   - **Name**: Server identifier (e.g., "Production API")
-   - **Description**: What this server is for (e.g., "Customer support agent endpoint for the mobile app")
-5. Click **Create**
-6. **Copy the API key immediately** -- it is shown only once and cannot be retrieved later. The key starts with \`kpn_\` followed by 32 random hex bytes.
-7. Save the key securely (environment variable, secrets manager, etc.)
-
-### API Reference
-
-**Endpoint**: \`POST /api/mcp\`
-
-**Authentication**: Include the API key as a Bearer token in the Authorization header.
-
-#### Initialize -- Get Agent Info
-
-\`\`\`json
-{
-  "jsonrpc": "2.0",
-  "method": "initialize",
-  "id": 1
-}
-\`\`\`
-
-**Response:**
-\`\`\`json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": {
-    "name": "Billing Support Agent",
-    "description": "Handles billing inquiries and account lookups",
-    "domain": "support",
-    "provider": "anthropic",
-    "model": "claude-sonnet-4-6"
-  }
-}
-\`\`\`
-
-#### Completion -- Send a Message
-
-\`\`\`json
-{
-  "jsonrpc": "2.0",
-  "method": "completion/create",
-  "params": {
-    "message": "I need help with my billing. I was charged twice for order #12345.",
-    "history": [
-      {"role": "user", "content": "Hello"},
-      {"role": "assistant", "content": "Hi! Welcome to CloudSync support. How can I help you today?"}
-    ]
-  },
-  "id": 2
-}
-\`\`\`
-
-**Response:**
-\`\`\`json
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "result": {
-    "content": "I'm sorry to hear about the double charge. Let me look into order #12345 for you...",
-    "toolCalls": [],
-    "metrics": {
-      "inputTokens": 245,
-      "outputTokens": 180,
-      "cost": 0.0034
-    }
-  }
-}
-\`\`\`
-
-The \`history\` field is optional. Include it for multi-turn conversations to give the agent context from previous exchanges.
-
-### Code Examples
-
-#### cURL
+#### Option 1: NPM Package (Recommended)
 
 \`\`\`bash
-# Get agent info
-curl -X POST https://your-domain.com/api/mcp \\
-  -H "Authorization: Bearer kpn_your_api_key_here" \\
-  -H "Content-Type: application/json" \\
-  -d '{"jsonrpc":"2.0","method":"initialize","id":1}'
+# Claude Code
+claude mcp add kopern -- npx -y @kopern/mcp-server
 
-# Send a message
-curl -X POST https://your-domain.com/api/mcp \\
-  -H "Authorization: Bearer kpn_your_api_key_here" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "completion/create",
-    "params": {
-      "message": "What is my current plan and billing date?"
-    },
-    "id": 2
-  }'
+# Cursor / Windsurf — add to .mcp.json
 \`\`\`
 
-#### Node.js
+Set your API key: \`export KOPERN_API_KEY=kpn_your_key\`
 
-\`\`\`javascript
-async function callAgent(message, history = []) {
-  const response = await fetch("https://your-domain.com/api/mcp", {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer kpn_your_api_key_here",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      method: "completion/create",
-      params: { message, history },
-      id: Date.now(),
-    }),
-  });
+#### Option 2: Direct HTTP
 
-  const { result, error } = await response.json();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return result;
-}
-
-// Simple call
-const result = await callAgent("What are your pricing plans?");
-console.log(result.content);
-
-// Multi-turn conversation
-const history = [];
-const r1 = await callAgent("Hello", history);
-history.push({ role: "user", content: "Hello" });
-history.push({ role: "assistant", content: r1.content });
-
-const r2 = await callAgent("I need help with billing", history);
-console.log(r2.content);
-\`\`\`
-
-#### Python
-
-\`\`\`python
-import requests
-
-API_URL = "https://your-domain.com/api/mcp"
-API_KEY = "kpn_your_api_key_here"
-HEADERS = {
-    "Authorization": f"Bearer {API_KEY}",
-    "Content-Type": "application/json",
-}
-
-
-def call_agent(message: str, history: list = None) -> dict:
-    payload = {
-        "jsonrpc": "2.0",
-        "method": "completion/create",
-        "params": {
-            "message": message,
-            "history": history or [],
-        },
-        "id": 1,
+\`\`\`json
+{
+  "mcpServers": {
+    "kopern": {
+      "type": "http",
+      "url": "https://kopern.ai/api/mcp/server",
+      "headers": { "Authorization": "Bearer kpn_your_key" }
     }
-    response = requests.post(API_URL, headers=HEADERS, json=payload)
-    response.raise_for_status()
-    data = response.json()
-
-    if "error" in data:
-        raise Exception(data["error"]["message"])
-
-    return data["result"]
-
-
-# Simple call
-result = call_agent("Summarize our Q3 sales report")
-print(result["content"])
-
-# Multi-turn conversation
-history = []
-r1 = call_agent("Hello")
-history.append({"role": "user", "content": "Hello"})
-history.append({"role": "assistant", "content": r1["content"]})
-
-r2 = call_agent("What are the pricing tiers?", history)
-print(r2["content"])
-print(f"Tokens used: {r2['metrics']['inputTokens']} in / {r2['metrics']['outputTokens']} out")
-print(f"Cost: \${r2['metrics']['cost']}/.4f}")
+  }
+}
 \`\`\`
+
+### Two Key Types
+
+| Key Type | Scope | Tools | How to Create |
+|----------|-------|-------|---------------|
+| **Agent-bound** | Tied to one agent | All 32 tools | Agent detail → API Keys tab |
+| **User-level** | Platform-wide | 30 tools (no chat/agent_info) | Settings → Personal API Key |
+
+### 32 MCP Tools
+
+| Category | Tools | Description |
+|----------|-------|-------------|
+| **Agent Management** (8) | create, get, update, delete, list, templates, chat, agent_info | Full agent lifecycle |
+| **Grading** (6) | grade_prompt, create_suite, run_grading, get_results, list_runs, autoresearch | Quality assurance |
+| **Teams** (4) | create_team, run_team, create_pipeline, run_pipeline | Multi-agent orchestration |
+| **Connectors** (7) | widget, telegram, whatsapp, slack, webhook, email, calendar | Deploy everywhere |
+| **Sessions** (5) | list_sessions, get_session, manage_memory, compliance, usage | Monitoring |
+| **Portability** (2) | export_agent, import_agent | Agent portability |
+
+### MCP Prompts (Guided Workflows)
+
+3 step-by-step workflows: **create-agent**, **grade-and-improve**, **deploy-everywhere**.
 
 ### API Key Security
 
-- Keys use the \`kpn_\` prefix followed by 32 random hex bytes (64 characters total)
-- **Only the SHA-256 hash** of the key is stored in Firestore -- the plaintext key is shown once at creation and never stored
-- Lookup is O(1): the incoming key is hashed and matched against the stored hash
-- You can create multiple keys per server for key rotation
-- Delete compromised keys immediately from the **API Keys** page
+- Keys use the \`kpn_\` prefix followed by 32 random hex bytes
+- **Only the SHA-256 hash** is stored — the plaintext key is shown once at creation
+- Key rotation with audit trail via Settings
+- Rate limit: 30 requests/minute per key (sliding window)
 
-### API Key Failover
-
-Add multiple LLM API keys per provider for automatic failover. If a key hits a rate limit (HTTP 429), Kopern retries with the next available key. Configure up to 4 failover keys per provider in **Settings → API Keys**. Keys are tried in order; rate-limited keys enter a 60-second cooldown. Non-retryable errors (403, invalid key) do not trigger rotation. All keys are stored in your Firestore user profile.
-
-### Usage Tracking
-
-Token usage is tracked per MCP server per month, stored in Firestore at \`mcpServers/{serverId}/usage/{yearMonth}\`.
-
-View usage in:
-- The **API Keys** page (aggregate across all servers)
-- Each server's detail page (per-server breakdown)
-- The **Billing** page (combined with playground and grading usage)
+For the full MCP documentation with all tool parameters and examples, see the [MCP Documentation](/mcp) page.
 
 ---
 

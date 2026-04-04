@@ -1162,6 +1162,8 @@ func main() {
 | 2026-03-15 | Added Slack bot connector |
 | 2026-03-12 | Added webhook inbound/outbound with HMAC |
 | 2026-03-10 | Added embeddable widget (chat, config, script) |
+| 2026-04-04 | Agentic Engine Upgrade — parallel tool execution, billing audit, image generation builtin |
+| 2026-04-03 | MCP Tool Annotations, MCP Prompts (3 guided workflows), Smithery 80/100 |
 | 2026-04-02 | MCP v2.0.0 — 32 tools covering full agent lifecycle, user-level keys, self-hosted Docker |
 | 2026-04-01 | MCP v1.1.0 — 19 tools (agent CRUD, grading, teams, connectors) |
 | 2026-03-01 | Added MCP Streamable HTTP server |

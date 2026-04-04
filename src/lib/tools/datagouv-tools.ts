@@ -11,6 +11,7 @@ export function getDatagouvTools(): ToolDefinition[] {
   return [
     {
       name: "search_datasets",
+      concurrencySafe: true,
       description:
         "Search for datasets on data.gouv.fr by keywords. Returns datasets with metadata (title, description, organization, tags, resource count).",
       input_schema: {
@@ -25,6 +26,7 @@ export function getDatagouvTools(): ToolDefinition[] {
     },
     {
       name: "get_dataset_info",
+      concurrencySafe: true,
       description:
         "Get detailed information about a specific dataset (metadata, organization, tags, dates, license, etc.).",
       input_schema: {
@@ -37,6 +39,7 @@ export function getDatagouvTools(): ToolDefinition[] {
     },
     {
       name: "list_dataset_resources",
+      concurrencySafe: true,
       description:
         "List all resources (files) in a dataset with their metadata (format, size, type, URL, Tabular API availability).",
       input_schema: {
@@ -49,6 +52,7 @@ export function getDatagouvTools(): ToolDefinition[] {
     },
     {
       name: "get_resource_info",
+      concurrencySafe: true,
       description:
         "Get detailed information about a specific resource (format, size, MIME type, URL, dataset association, Tabular API availability).",
       input_schema: {
@@ -61,6 +65,7 @@ export function getDatagouvTools(): ToolDefinition[] {
     },
     {
       name: "query_resource_data",
+      concurrencySafe: true,
       description:
         "Query data from a specific resource via the Tabular API. Fetches rows from a CSV/XLSX resource to answer questions. Only works on resources with Tabular API enabled.",
       input_schema: {
@@ -76,6 +81,7 @@ export function getDatagouvTools(): ToolDefinition[] {
     },
     {
       name: "search_dataservices",
+      concurrencySafe: true,
       description:
         "Search for dataservices (APIs) registered on data.gouv.fr by keywords. Returns dataservices with metadata (title, description, organization, base API URL, tags).",
       input_schema: {
@@ -90,6 +96,7 @@ export function getDatagouvTools(): ToolDefinition[] {
     },
     {
       name: "get_dataservice_info",
+      concurrencySafe: true,
       description:
         "Get detailed metadata about a specific dataservice (title, description, organization, base API URL, OpenAPI spec URL, license, dates, related datasets).",
       input_schema: {
@@ -102,6 +109,7 @@ export function getDatagouvTools(): ToolDefinition[] {
     },
     {
       name: "get_dataservice_openapi_spec",
+      concurrencySafe: true,
       description:
         "Fetch and summarize the OpenAPI/Swagger specification for a dataservice. Returns a concise overview of available endpoints with their parameters.",
       input_schema: {
@@ -114,6 +122,7 @@ export function getDatagouvTools(): ToolDefinition[] {
     },
     {
       name: "get_metrics",
+      concurrencySafe: true,
       description:
         "Get metrics (visits, downloads) for a dataset and/or a resource.",
       input_schema: {

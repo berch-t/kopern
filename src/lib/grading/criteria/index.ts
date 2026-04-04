@@ -53,15 +53,20 @@ export async function evaluateAllCriteria(
   criteria: CriterionConfig[],
   events: CollectedEvents,
   locale?: string,
-  apiKey?: string
+  apiKey?: string,
+  /** Pass userId + agentId for LLM judge token billing */
+  userId?: string,
+  agentId?: string,
 ): Promise<{ results: CriterionResult[]; score: number; passed: boolean }> {
   const results: CriterionResult[] = [];
 
   for (const criterion of criteria) {
-    // Inject locale and apiKey into config for llm_judge to use
+    // Inject locale, apiKey, and billing context into config for llm_judge to use
     const enrichedConfig = { ...criterion.config };
     if (locale) enrichedConfig._locale = locale;
     if (apiKey) enrichedConfig._apiKey = apiKey;
+    if (userId) enrichedConfig._userId = userId;
+    if (agentId) enrichedConfig._agentId = agentId;
     const enrichedCriterion = { ...criterion, config: enrichedConfig };
     const result = await evaluateCriterion(enrichedCriterion, events);
     results.push(result);

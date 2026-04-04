@@ -12,6 +12,7 @@
 export const WEB_FETCH_TOOLS = [
   {
     name: "web_fetch",
+    concurrencySafe: true,
     description:
       "Fetch a URL and return its text content. Works with web pages (HTML → extracted text), JSON APIs, XML feeds, robots.txt, sitemaps, and any text-based resource. Use this to access external data, verify URLs, scrape content, or call APIs.",
     input_schema: {

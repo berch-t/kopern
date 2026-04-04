@@ -59,6 +59,8 @@ export default function EditAgentPage({
   const [toolApprovalPolicy, setToolApprovalPolicy] = useState<ToolApprovalPolicy>("auto");
   const [riskLevel, setRiskLevel] = useState<RiskLevel>("minimal");
   const [auditLog, setAuditLog] = useState(false);
+  const [maxToolIterations, setMaxToolIterations] = useState(10);
+  const [maxToolResultChars, setMaxToolResultChars] = useState(100_000);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -76,6 +78,8 @@ export default function EditAgentPage({
       setToolApprovalPolicy(agent.toolApprovalPolicy ?? "auto");
       setRiskLevel(agent.riskLevel ?? "minimal");
       setAuditLog(agent.auditLog ?? false);
+      setMaxToolIterations(agent.maxToolIterations ?? 10);
+      setMaxToolResultChars(agent.maxToolResultChars ?? 100_000);
     }
   }, [agent]);
 
@@ -105,6 +109,8 @@ export default function EditAgentPage({
         toolApprovalPolicy,
         riskLevel,
         auditLog,
+        maxToolIterations,
+        maxToolResultChars,
       });
       toast.success("Agent updated");
       router.push(`/agents/${agentId}`);
@@ -213,6 +219,45 @@ export default function EditAgentPage({
           </Select>
           <p className="text-xs text-muted-foreground">
             {t.approval?.policyDescription ?? "Controls whether tool calls require human approval before execution."}
+          </p>
+        </div>
+
+        {/* Max Tool Iterations */}
+        <div className="space-y-2">
+          <Label>Max Tool Iterations</Label>
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={1}
+              max={30}
+              value={maxToolIterations}
+              onChange={(e) => setMaxToolIterations(Number(e.target.value))}
+              className="flex-1"
+            />
+            <span className="text-sm font-mono w-8 text-right">{maxToolIterations}</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Maximum number of tool call rounds per conversation turn. Lower = faster + cheaper. Higher = more thorough.
+          </p>
+        </div>
+
+        {/* Max Tool Result Size */}
+        <div className="space-y-2">
+          <Label>Tool Result Budget</Label>
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={1000}
+              max={500000}
+              step={1000}
+              value={maxToolResultChars}
+              onChange={(e) => setMaxToolResultChars(Number(e.target.value))}
+              className="flex-1"
+            />
+            <span className="text-sm font-mono w-16 text-right">{Math.round(maxToolResultChars / 1000)}K</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Max characters per tool result sent to the LLM. Lower = cheaper. Higher = more context. Full results always saved in session history.
           </p>
         </div>
 

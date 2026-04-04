@@ -244,6 +244,9 @@ export async function POST(request: NextRequest) {
             toolEvents.push({ type: "tool_call", data: { name: tc.name, args: tc.args } });
             send("tool_start", { name: tc.name });
           },
+          onToolExecStart: (tc) => {
+            send("tool_exec_start", { name: tc.name, toolCallId: tc.toolCallId });
+          },
           onToolEnd: (result) => {
             toolEvents.push({ type: "tool_result", data: { name: result.name, result: result.result, isError: result.isError } });
             send("tool_end", {

@@ -79,6 +79,8 @@ export async function executeImageGenTool(
   name: string,
   args: Record<string, unknown>,
   userId: string,
+  /** Optional storage path prefix, e.g. "teams/{teamId}/runs/{runId}" — images stored under generated-images/{userId}/{prefix}/{timestamp}.{ext} */
+  storagePrefix?: string,
 ): Promise<{ result: string; isError: boolean }> {
   if (name !== "generate_image") {
     return { result: `Unknown image gen tool: ${name}`, isError: true };
@@ -170,7 +172,8 @@ export async function executeImageGenTool(
 
     // Upload to Firebase Storage for persistence (team runs, social posting, frontend display)
     const ext = imageMimeType.split("/")[1] || "png";
-    const fileName = `generated-images/${userId}/${Date.now()}.${ext}`;
+    const pathSegment = storagePrefix ? `${userId}/${storagePrefix}` : userId;
+    const fileName = `generated-images/${pathSegment}/${Date.now()}.${ext}`;
     let publicUrl = "";
 
     try {

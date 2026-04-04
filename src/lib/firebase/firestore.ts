@@ -81,6 +81,10 @@ export interface AgentDoc {
   templateId?: string;
   templateVariables?: Record<string, string>;
   memoryConfig?: MemoryConfig;
+  /** Max tool call iterations (1-30, default 10). Overrides the global default per agent. */
+  maxToolIterations?: number;
+  /** Max chars per tool result sent to LLM (1K-500K, default 100K). Full result stays in session. */
+  maxToolResultChars?: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
