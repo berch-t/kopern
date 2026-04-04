@@ -13,6 +13,13 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Firebase Auth handler: must allow framing for popup/iframe auth flow
+        source: "/__/auth/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+        ],
+      },
+      {
         // Widget routes: no X-Frame-Options so they can be embedded
         source: "/api/widget/:path*",
         headers: [
@@ -21,7 +28,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: "/(.*)",
+        source: "/((?!_/auth).*)",
         headers: [
           {
             key: "X-Content-Type-Options",
