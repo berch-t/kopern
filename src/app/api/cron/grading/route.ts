@@ -216,27 +216,10 @@ async function evaluateAlerts(
     }).catch(() => {});
   }
 
-  // Email via existing Gmail infrastructure (fire-and-forget)
+  // Email via Resend (fire-and-forget)
   if (channels.email) {
-    try {
-      const nodemailer = await import("nodemailer");
-      const gmailUser = process.env.GMAIL_USER;
-      const gmailPass = process.env.GMAIL_APP_PASSWORD;
-      if (gmailUser && gmailPass) {
-        const transporter = nodemailer.createTransport({
-          service: "gmail",
-          auth: { user: gmailUser, pass: gmailPass },
-        });
-        await transporter.sendMail({
-          from: gmailUser,
-          to: channels.email,
-          subject: `[Kopern] Grading Alert — ${suite.name}`,
-          text: message,
-        });
-      }
-    } catch {
-      // Fire-and-forget
-    }
+    const { sendGradingAlert } = await import("@/lib/email/resend");
+    sendGradingAlert(channels.email, suite.name, message).catch(() => {});
   }
 }
 

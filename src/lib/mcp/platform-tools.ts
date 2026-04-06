@@ -209,11 +209,93 @@ export async function executeUpdateAgent(
   if (params.model !== undefined) updates.modelId = params.model;
   if (params.builtin_tools !== undefined) updates.builtinTools = params.builtin_tools;
 
-  if (Object.keys(updates).length <= 1) return err("No fields to update. Provide at least one of: name, description, domain, system_prompt, provider, model, builtin_tools");
+  // Subcollection operations
+  const skillsAdd = params.skills_add as { name: string; content: string }[] | undefined;
+  const skillsRemove = params.skills_remove as string[] | undefined;
+  const toolsAdd = params.tools_add as { name: string; label?: string; description: string; parameters_schema: string; execute_code: string }[] | undefined;
+  const toolsRemove = params.tools_remove as string[] | undefined;
+  const extensionsAdd = params.extensions_add as { name: string; description?: string; code: string; events: string[]; blocking?: boolean }[] | undefined;
+  const extensionsRemove = params.extensions_remove as string[] | undefined;
 
-  await adminDb.doc(`users/${userId}/agents/${agentId}`).update(updates);
+  const hasSubOps = skillsAdd?.length || skillsRemove?.length || toolsAdd?.length || toolsRemove?.length || extensionsAdd?.length || extensionsRemove?.length;
 
-  return ok({ agentId, updated: Object.keys(updates).filter(k => k !== "updatedAt" && k !== "version"), message: "Agent updated successfully" });
+  if (Object.keys(updates).length <= 1 && !hasSubOps) return err("No fields to update. Provide at least one of: name, description, domain, system_prompt, provider, model, builtin_tools, skills_add, skills_remove, tools_add, tools_remove, extensions_add, extensions_remove");
+
+  // Update agent doc
+  if (Object.keys(updates).length > 1) {
+    await adminDb.doc(`users/${userId}/agents/${agentId}`).update(updates);
+  }
+
+  const subResults: string[] = [];
+  const basePath = `users/${userId}/agents/${agentId}`;
+
+  // Skills add
+  if (skillsAdd?.length) {
+    const batch = adminDb.batch();
+    for (const s of skillsAdd) {
+      const ref = adminDb.collection(`${basePath}/skills`).doc();
+      batch.set(ref, { name: s.name, description: s.name, content: s.content, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    }
+    await batch.commit();
+    subResults.push(`+${skillsAdd.length} skills`);
+  }
+
+  // Skills remove
+  if (skillsRemove?.length) {
+    let removed = 0;
+    for (const name of skillsRemove) {
+      const snap = await adminDb.collection(`${basePath}/skills`).where("name", "==", name).limit(1).get();
+      if (!snap.empty) { await snap.docs[0].ref.delete(); removed++; }
+    }
+    subResults.push(`-${removed} skills`);
+  }
+
+  // Tools add
+  if (toolsAdd?.length) {
+    const batch = adminDb.batch();
+    for (const t of toolsAdd) {
+      const ref = adminDb.collection(`${basePath}/tools`).doc();
+      batch.set(ref, { name: t.name, label: t.label || t.name, description: t.description, parametersSchema: t.parameters_schema, executeCode: t.execute_code, destructive: false, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    }
+    await batch.commit();
+    subResults.push(`+${toolsAdd.length} tools`);
+  }
+
+  // Tools remove
+  if (toolsRemove?.length) {
+    let removed = 0;
+    for (const name of toolsRemove) {
+      const snap = await adminDb.collection(`${basePath}/tools`).where("name", "==", name).limit(1).get();
+      if (!snap.empty) { await snap.docs[0].ref.delete(); removed++; }
+    }
+    subResults.push(`-${removed} tools`);
+  }
+
+  // Extensions add
+  if (extensionsAdd?.length) {
+    const batch = adminDb.batch();
+    for (const e of extensionsAdd) {
+      const ref = adminDb.collection(`${basePath}/extensions`).doc();
+      batch.set(ref, { name: e.name, description: e.description || e.name, code: e.code, events: e.events, blocking: e.blocking ?? false, enabled: true, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    }
+    await batch.commit();
+    subResults.push(`+${extensionsAdd.length} extensions`);
+  }
+
+  // Extensions remove
+  if (extensionsRemove?.length) {
+    let removed = 0;
+    for (const name of extensionsRemove) {
+      const snap = await adminDb.collection(`${basePath}/extensions`).where("name", "==", name).limit(1).get();
+      if (!snap.empty) { await snap.docs[0].ref.delete(); removed++; }
+    }
+    subResults.push(`-${removed} extensions`);
+  }
+
+  const updatedFields = Object.keys(updates).filter(k => k !== "updatedAt" && k !== "version");
+  if (subResults.length) updatedFields.push(...subResults);
+
+  return ok({ agentId, updated: updatedFields, message: "Agent updated successfully" });
 }
 
 export async function executeDeleteAgent(

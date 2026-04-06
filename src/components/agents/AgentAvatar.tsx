@@ -1,43 +1,9 @@
 "use client";
 
 import type { AgentBranding } from "@/lib/firebase/firestore";
-import {
-  Bot,
-  Brain,
-  Code,
-  Shield,
-  Rocket,
-  Zap,
-  Target,
-  Eye,
-  Database,
-  Globe,
-  Lock,
-  MessageSquare,
-  Search,
-  Terminal,
-  Wand2,
-  type LucideIcon,
-} from "lucide-react";
+import { getIconComponent } from "@/lib/agent-icons";
+import { Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const ICON_MAP: Record<string, LucideIcon> = {
-  Bot,
-  Brain,
-  Code,
-  Shield,
-  Rocket,
-  Zap,
-  Target,
-  Eye,
-  Database,
-  Globe,
-  Lock,
-  MessageSquare,
-  Search,
-  Terminal,
-  Wand2,
-};
 
 interface AgentAvatarProps {
   branding: AgentBranding | null | undefined;
@@ -62,7 +28,7 @@ export function AgentAvatar({ branding, size = "md", className }: AgentAvatarPro
     );
   }
 
-  const IconComponent = ICON_MAP[branding.icon] ?? Bot;
+  const IconComponent = getIconComponent(branding.icon);
 
   return (
     <div

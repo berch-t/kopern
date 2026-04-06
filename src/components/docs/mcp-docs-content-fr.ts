@@ -127,7 +127,7 @@ Authorization: Bearer kpn_votre_cle
 | \`kopern_agent_info\` | Metadata de l'agent | Cle liee uniquement |
 | \`kopern_create_agent\` | Creer un nouvel agent | Toute cle |
 | \`kopern_get_agent\` | Configuration d'un agent | Toute cle |
-| \`kopern_update_agent\` | Modifier les parametres | Toute cle |
+| \`kopern_update_agent\` | Modifier config, skills, tools, extensions | Toute cle |
 | \`kopern_delete_agent\` | Supprimer un agent | Toute cle |
 | \`kopern_list_agents\` | Lister tous les agents | Toute cle |
 | \`kopern_list_templates\` | Lister les templates disponibles | Toute cle |
@@ -185,6 +185,54 @@ Modes d'execution :
 |------|-------------|
 | \`kopern_export_agent\` | Exporter un agent en JSON portable |
 | \`kopern_import_agent\` | Importer un agent depuis un JSON exporte |
+
+---
+
+## Exemples d'appels
+
+### kopern_update_agent
+
+Modifier n'importe quelle partie d'un agent : config, skills, tools, ou extensions.
+
+**Config** (remplacement direct) :
+\`\`\`json
+{
+  "agent_id": "Scout",
+  "system_prompt": "Nouveau prompt...",
+  "builtin_tools": ["web_fetch", "memory"]
+}
+\`\`\`
+
+**Skills, tools, extensions** (ajout/suppression granulaire) :
+\`\`\`json
+{
+  "agent_id": "Scout",
+  "skills_add": [
+    { "name": "Sources OSINT", "content": "## Comment trouver des leads\\n..." }
+  ],
+  "skills_remove": ["Ancienne Skill"],
+  "tools_add": [
+    {
+      "name": "score_calculator",
+      "description": "Calculer un score de lead",
+      "parameters_schema": "{\\"type\\":\\"object\\",\\"properties\\":{\\"revenue\\":{\\"type\\":\\"number\\"}}}",
+      "execute_code": "return { score: args.revenue > 1000000 ? 'high' : 'low' };"
+    }
+  ],
+  "tools_remove": ["old_tool"],
+  "extensions_add": [
+    {
+      "name": "output_logger",
+      "code": "return { action: 'continue' };",
+      "events": ["after_response"],
+      "blocking": false
+    }
+  ],
+  "extensions_remove": ["old_hook"]
+}
+\`\`\`
+
+Tous les champs sont optionnels. \`_add\` ajoute, \`_remove\` supprime par nom.
 
 ---
 

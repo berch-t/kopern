@@ -1,5 +1,5 @@
 // Bug management tools for the Bug Fixer agent
-// Server-side only — uses Firebase Admin SDK + nodemailer
+// Server-side only — uses Firebase Admin SDK + Resend
 
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
@@ -214,33 +214,9 @@ async function executeSendThankYou(
   const reporterEmail = bugSnap.data()?.reporterEmail;
   if (!reporterEmail) return { result: "No reporter email on this bug — cannot send thank-you.", isError: false };
 
-  const gmailUser = process.env.GMAIL_USER;
-  const gmailPass = process.env.GMAIL_APP_PASSWORD;
-  if (!gmailUser || !gmailPass) return { result: "Email service not configured (missing GMAIL_USER/GMAIL_APP_PASSWORD).", isError: true };
-
-  const nodemailer = await import("nodemailer");
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: { user: gmailUser, pass: gmailPass },
-  });
-
-  await transporter.sendMail({
-    from: `"Kopern" <${gmailUser}>`,
-    to: reporterEmail,
-    subject,
-    html: `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
-        <div style="text-align: center; margin-bottom: 24px;">
-          <h2 style="margin: 0; color: #7c3aed;">Kopern</h2>
-        </div>
-        ${message}
-        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
-        <p style="font-size: 12px; color: #9ca3af; text-align: center;">
-          This email was sent by the Kopern Bug Fixer Agent.
-        </p>
-      </div>
-    `,
-  });
+  const { sendThankYouEmail } = await import("@/lib/email/resend");
+  const result = await sendThankYouEmail(reporterEmail, subject, message);
+  if (!result.success) return { result: result.error || "Email send failed", isError: true };
 
   // Mark thank-you as sent
   await adminDb.doc(`users/${userId}/bugs/${bugId}`).update({

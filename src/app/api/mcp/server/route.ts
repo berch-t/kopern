@@ -238,7 +238,7 @@ const TOOL_DEFS = {
   },
   kopern_update_agent: {
     name: "kopern_update_agent",
-    description: "Update an agent's configuration (name, system prompt, model, builtin tools, etc.).",
+    description: "Update any part of an agent: config, skills, tools, or extensions. Use add/remove arrays for granular control over subcollections.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -250,6 +250,12 @@ const TOOL_DEFS = {
         provider: { type: "string", description: "LLM provider (anthropic, openai, google, mistral, ollama)" },
         model: { type: "string", description: "Model ID override" },
         builtin_tools: { type: "array", description: "Built-in tools to enable: web_fetch, memory, github_read, github_write, bug_management, datagouv, piste, service_email, service_calendar", items: { type: "string" } },
+        skills_add: { type: "array", description: "Add skills (domain knowledge blocks)", items: { type: "object", properties: { name: { type: "string" }, content: { type: "string", description: "Skill content (instructions, knowledge)" } }, required: ["name", "content"] } },
+        skills_remove: { type: "array", description: "Remove skills by name", items: { type: "string" } },
+        tools_add: { type: "array", description: "Add custom tools (sandboxed JS)", items: { type: "object", properties: { name: { type: "string" }, label: { type: "string", description: "Display label" }, description: { type: "string" }, parameters_schema: { type: "string", description: "JSON Schema string for tool parameters" }, execute_code: { type: "string", description: "JavaScript code to execute (sandboxed, no network)" } }, required: ["name", "description", "parameters_schema", "execute_code"] } },
+        tools_remove: { type: "array", description: "Remove custom tools by name", items: { type: "string" } },
+        extensions_add: { type: "array", description: "Add extensions (event hooks)", items: { type: "object", properties: { name: { type: "string" }, description: { type: "string" }, code: { type: "string", description: "JavaScript code for the hook" }, events: { type: "array", items: { type: "string", enum: ["before_response", "after_response", "tool_call_start", "tool_call_end", "tool_call_error", "session_start", "session_end", "error"] }, description: "Events to trigger on" }, blocking: { type: "boolean", description: "Whether the extension blocks execution (default: false)" } }, required: ["name", "code", "events"] } },
+        extensions_remove: { type: "array", description: "Remove extensions by name", items: { type: "string" } },
       },
       required: ["agent_id"],
     },

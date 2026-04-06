@@ -21,6 +21,9 @@ const DESTRUCTIVE_BUILTIN_TOOLS = new Set([
   "social_create_post",
   "social_create_thread",
   "social_reply",
+  // Campaign email (cold outreach)
+  "send_campaign_email",
+  "update_prospect",
 ]);
 
 export function isDestructiveBuiltin(toolName: string): boolean {

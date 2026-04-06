@@ -19,7 +19,7 @@
     { "name": "kopern_grade_prompt", "description": "Grade a system prompt against inline test cases. Uses your API keys." },
     { "name": "kopern_create_agent", "description": "Create a new agent with system prompt, model, and optional skills." },
     { "name": "kopern_get_agent", "description": "Get full agent details (prompt, model, counts)." },
-    { "name": "kopern_update_agent", "description": "Update agent configuration." },
+    { "name": "kopern_update_agent", "description": "Update agent config, skills, tools, and extensions (granular add/remove)." },
     { "name": "kopern_delete_agent", "description": "Permanently delete an agent and all its data." },
     { "name": "kopern_deploy_template", "description": "Deploy agent from a template with skills, tools, and grading suite." },
     { "name": "kopern_create_grading_suite", "description": "Create a grading suite with test cases on an agent." },

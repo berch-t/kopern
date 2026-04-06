@@ -23,6 +23,8 @@ export const BUILTIN_TOOLS = [
   { id: "code_interpreter", name: "Code Interpreter", description: "Execute Python, Node.js, or Bash code in a secure cloud sandbox — data analysis, charts, scraping, file processing" },
   { id: "image_generation", name: "Image Generation", description: "Generate images from text prompts via Google Gemini — infographics, diagrams, illustrations, banners, social media visuals" },
   { id: "service_social_media", name: "Social Media", description: "Create posts, read feeds, track metrics, search mentions, reply, and manage engagement across Bluesky, Twitter, LinkedIn" },
+  { id: "campaign_email", name: "Campaign Email", description: "Send cold outreach emails via Resend (contact@mail.kopern.ai), with daily quota and memory logging (admin)", adminOnly: true },
+  { id: "campaign_tracker", name: "Campaign Tracker", description: "Track prospects, log replies, export CSV for analysis, conversion funnel stats (admin)", adminOnly: true },
 ] as const;
 
 export function buildCustomTool(toolDoc: ToolDoc): BuiltTool {

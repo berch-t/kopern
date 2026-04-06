@@ -209,7 +209,7 @@ Response:
 | \`kopern_agent_info\` | Get agent metadata | Agent-bound only |
 | \`kopern_create_agent\` | Create a new agent | Any |
 | \`kopern_get_agent\` | Get agent configuration | Any |
-| \`kopern_update_agent\` | Update agent settings | Any |
+| \`kopern_update_agent\` | Update agent config, skills, tools, extensions | Any |
 | \`kopern_delete_agent\` | Delete an agent | Any |
 | \`kopern_list_agents\` | List all agents | Any |
 | \`kopern_list_templates\` | List available templates (general + vertical) | Any |
@@ -233,6 +233,9 @@ Response:
 
 #### kopern_update_agent
 
+Update any part of an agent: config fields, skills, tools, or extensions.
+
+**Config fields** (replace on write):
 \`\`\`json
 {
   "agent_id": "abc123",
@@ -241,7 +244,36 @@ Response:
 }
 \`\`\`
 
-Only provided fields are updated. Omitted fields remain unchanged.
+**Skills, tools, extensions** (granular add/remove):
+\`\`\`json
+{
+  "agent_id": "Scout",
+  "skills_add": [
+    { "name": "OSINT Sources", "content": "## How to find leads\\n..." }
+  ],
+  "skills_remove": ["Old Skill Name"],
+  "tools_add": [
+    {
+      "name": "score_calculator",
+      "description": "Calculate lead score",
+      "parameters_schema": "{\\"type\\":\\"object\\",\\"properties\\":{\\"revenue\\":{\\"type\\":\\"number\\"}}}",
+      "execute_code": "return { score: args.revenue > 1000000 ? 'high' : 'low' };"
+    }
+  ],
+  "tools_remove": ["old_tool"],
+  "extensions_add": [
+    {
+      "name": "output_logger",
+      "code": "return { action: 'continue' };",
+      "events": ["after_response"],
+      "blocking": false
+    }
+  ],
+  "extensions_remove": ["old_hook"]
+}
+\`\`\`
+
+All fields are optional. Only provided fields are updated. \`_add\` appends, \`_remove\` deletes by name.
 
 #### kopern_deploy_template
 

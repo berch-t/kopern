@@ -1,59 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import { useDictionary } from "@/providers/LocaleProvider";
 import type { AgentBranding } from "@/lib/firebase/firestore";
+import { ICON_OPTIONS, ICON_CATEGORIES, getIconComponent } from "@/lib/agent-icons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import {
-  Palette,
-  Bot,
-  Brain,
-  Code,
-  Shield,
-  Rocket,
-  Zap,
-  Target,
-  Eye,
-  Database,
-  Globe,
-  Lock,
-  MessageSquare,
-  Search,
-  Terminal,
-  Wand2,
-  type LucideIcon,
-} from "lucide-react";
+import { Palette } from "lucide-react";
 
 interface BrandingEditorProps {
   branding: AgentBranding | null;
   onChange: (branding: AgentBranding | null) => void;
 }
 
-const ICON_OPTIONS: { name: string; Icon: LucideIcon }[] = [
-  { name: "Bot", Icon: Bot },
-  { name: "Brain", Icon: Brain },
-  { name: "Code", Icon: Code },
-  { name: "Shield", Icon: Shield },
-  { name: "Rocket", Icon: Rocket },
-  { name: "Zap", Icon: Zap },
-  { name: "Target", Icon: Target },
-  { name: "Eye", Icon: Eye },
-  { name: "Database", Icon: Database },
-  { name: "Globe", Icon: Globe },
-  { name: "Lock", Icon: Lock },
-  { name: "MessageSquare", Icon: MessageSquare },
-  { name: "Search", Icon: Search },
-  { name: "Terminal", Icon: Terminal },
-  { name: "Wand2", Icon: Wand2 },
-];
-
-function getIconComponent(name: string): LucideIcon {
-  return ICON_OPTIONS.find((o) => o.name === name)?.Icon ?? Bot;
-}
+const categories = Object.keys(ICON_CATEGORIES);
 
 export function BrandingEditor({ branding, onChange }: BrandingEditorProps) {
   const t = useDictionary();
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const current: AgentBranding = branding ?? {
     themeColor: "#6366f1",
@@ -66,6 +31,10 @@ export function BrandingEditor({ branding, onChange }: BrandingEditorProps) {
   }
 
   const SelectedIcon = getIconComponent(current.icon);
+
+  const filteredIcons = activeCategory
+    ? ICON_OPTIONS.filter((o) => o.category === activeCategory)
+    : ICON_OPTIONS;
 
   return (
     <Card>
@@ -118,22 +87,53 @@ export function BrandingEditor({ branding, onChange }: BrandingEditorProps) {
         <Separator />
 
         {/* Icon selector */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           <Label>{t.agentBranding.icon}</Label>
-          <div className="grid grid-cols-5 gap-2">
-            {ICON_OPTIONS.map(({ name, Icon }) => (
+
+          {/* Category filter tabs */}
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() => setActiveCategory(null)}
+              className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                activeCategory === null
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              All
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
+                className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                  activeCategory === cat
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                {ICON_CATEGORIES[cat]}
+              </button>
+            ))}
+          </div>
+
+          {/* Icon grid */}
+          <div className="grid grid-cols-8 sm:grid-cols-10 gap-1.5 max-h-48 overflow-y-auto rounded-md border border-input p-2">
+            {filteredIcons.map(({ name, Icon }) => (
               <button
                 key={name}
                 type="button"
                 onClick={() => handleUpdate({ icon: name })}
-                className={`flex h-12 w-full items-center justify-center rounded-md border transition-colors ${
+                className={`flex h-9 w-full items-center justify-center rounded-md border transition-colors ${
                   current.icon === name
                     ? "border-primary bg-primary/10 text-primary"
-                    : "border-input bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                    : "border-transparent bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
                 title={name}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className="h-4 w-4" />
               </button>
             ))}
           </div>

@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import nodemailer from "nodemailer";
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { bugReportSchema, validateBody } from "@/lib/security/validation";
 import { checkRateLimit, bugReportRateLimit } from "@/lib/security/rate-limit";
+import { sendEmail } from "@/lib/email/resend";
 
-const GMAIL_USER = process.env.GMAIL_USER;
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
 const TO_EMAIL = "berchet.thomas@gmail.com";
 // The user ID that owns the bug fixer agent (set in env or defaults to your account)
 const BUG_FIXER_OWNER_ID = process.env.BUG_FIXER_OWNER_ID;
@@ -53,45 +51,28 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 2. Send email notification (keep existing behavior)
-  if (GMAIL_USER && GMAIL_APP_PASSWORD) {
-    try {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
-      });
-
-      const html = `
-        <h2>Bug Report</h2>
-        <table style="border-collapse:collapse;font-family:sans-serif;">
-          <tr>
-            <td style="padding:4px 12px 4px 0;font-weight:bold;vertical-align:top;">Severity</td>
-            <td style="padding:4px 0;">${severityLabel}</td>
-          </tr>
-          <tr>
-            <td style="padding:4px 12px 4px 0;font-weight:bold;vertical-align:top;">Page</td>
-            <td style="padding:4px 0;">${pageUrl || "N/A"}</td>
-          </tr>
-          ${reporterEmail ? `<tr><td style="padding:4px 12px 4px 0;font-weight:bold;vertical-align:top;">Reporter</td><td style="padding:4px 0;">${reporterEmail}</td></tr>` : ""}
-          ${bugId ? `<tr><td style="padding:4px 12px 4px 0;font-weight:bold;vertical-align:top;">Bug ID</td><td style="padding:4px 0;font-family:monospace;">${bugId}</td></tr>` : ""}
-        </table>
-        <hr style="margin:16px 0;border:none;border-top:1px solid #e5e5e5;" />
-        <p style="white-space:pre-wrap;font-family:sans-serif;">${description.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
-        <hr style="margin:16px 0;border:none;border-top:1px solid #e5e5e5;" />
-        <p style="color:#888;font-size:12px;">Sent from Kopern Bug Reporter</p>
-      `;
-
-      await transporter.sendMail({
-        from: `"Kopern Bug Reporter" <${GMAIL_USER}>`,
-        to: TO_EMAIL,
-        subject: `[Kopern] [${severityLabel}] Bug Report${bugId ? ` #${bugId.slice(0, 8)}` : ""}`,
-        html,
-      });
-    } catch (err) {
-      console.error("Failed to send bug report email:", err);
-      // Don't fail the request — bug is already persisted
-    }
-  }
+  // 2. Send email notification via Resend
+  sendEmail({
+    to: TO_EMAIL,
+    subject: `[Kopern] [${severityLabel}] Bug Report${bugId ? ` #${bugId.slice(0, 8)}` : ""}`,
+    html: `
+      <h2>Bug Report</h2>
+      <table style="border-collapse:collapse;font-family:sans-serif;">
+        <tr>
+          <td style="padding:4px 12px 4px 0;font-weight:bold;vertical-align:top;">Severity</td>
+          <td style="padding:4px 0;">${severityLabel}</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 12px 4px 0;font-weight:bold;vertical-align:top;">Page</td>
+          <td style="padding:4px 0;">${pageUrl || "N/A"}</td>
+        </tr>
+        ${reporterEmail ? `<tr><td style="padding:4px 12px 4px 0;font-weight:bold;vertical-align:top;">Reporter</td><td style="padding:4px 0;">${reporterEmail}</td></tr>` : ""}
+        ${bugId ? `<tr><td style="padding:4px 12px 4px 0;font-weight:bold;vertical-align:top;">Bug ID</td><td style="padding:4px 0;font-family:monospace;">${bugId}</td></tr>` : ""}
+      </table>
+      <hr style="margin:16px 0;border:none;border-top:1px solid #e5e5e5;" />
+      <p style="white-space:pre-wrap;font-family:sans-serif;">${description.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+    `,
+  }).catch((err) => console.error("Failed to send bug report email:", err));
 
   // 3. Auto-trigger bug fixer agent (fire-and-forget)
   if (BUG_FIXER_OWNER_ID && BUG_FIXER_AGENT_ID && bugId) {

@@ -4,11 +4,23 @@ import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { BUILTIN_TOOLS } from "@/lib/pi-mono/tool-builder";
 import { useAuth } from "@/hooks/useAuth";
 import { useDictionary } from "@/providers/LocaleProvider";
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
+import {
+  Check,
+  Brain,
+  Mail,
+  CalendarDays,
+  Globe,
+  Terminal,
+  ImagePlus,
+  Share2,
+  SendHorizonal,
+  BarChart3,
+} from "lucide-react";
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -45,11 +57,20 @@ function LegifranceIcon({ className }: { className?: string }) {
 }
 
 const TOOL_ICONS: Record<string, React.ReactNode> = {
-  github_write: <GitHubIcon className="h-5 w-5" />,
-  slack_read: <SlackIcon className="h-5 w-5" />,
-  datagouv: <DatagouvIcon className="h-5 w-5" />,
-  piste: <LegifranceIcon className="h-5 w-5" />,
-  bug_management: <Image src="/logo_small.png" alt="Kopern" width={20} height={20} className="h-5 w-5 object-contain" />,
+  github_write: <GitHubIcon className="h-4 w-4" />,
+  slack_read: <SlackIcon className="h-4 w-4" />,
+  datagouv: <DatagouvIcon className="h-4 w-4" />,
+  piste: <LegifranceIcon className="h-4 w-4" />,
+  bug_management: <Image src="/logo_small.png" alt="Kopern" width={16} height={16} className="h-4 w-4 object-contain" />,
+  memory: <Brain className="h-4 w-4" />,
+  service_email: <Mail className="h-4 w-4" />,
+  service_calendar: <CalendarDays className="h-4 w-4" />,
+  web_fetch: <Globe className="h-4 w-4" />,
+  code_interpreter: <Terminal className="h-4 w-4" />,
+  image_generation: <ImagePlus className="h-4 w-4" />,
+  service_social_media: <Share2 className="h-4 w-4" />,
+  campaign_email: <SendHorizonal className="h-4 w-4" />,
+  campaign_tracker: <BarChart3 className="h-4 w-4" />,
 };
 
 const ADMIN_UIDS = (process.env.NEXT_PUBLIC_ADMIN_UID ?? "").split(",").filter(Boolean);
@@ -73,56 +94,94 @@ export function BuiltinToolSelector({ selected, onChange }: BuiltinToolSelectorP
     }
   }
 
-  const visibleTools = BUILTIN_TOOLS.filter(
+  const allVisible = BUILTIN_TOOLS.filter(
     (tool) => !("adminOnly" in tool && tool.adminOnly) || isAdmin
   );
+  const adminTools = allVisible.filter((tool) => "adminOnly" in tool && tool.adminOnly);
+  const userTools = allVisible.filter((tool) => !("adminOnly" in tool && tool.adminOnly));
 
   return (
     <div className="space-y-2">
       <Label>Built-in Tools</Label>
-      <div className="grid gap-2 grid-cols-1 md:grid-cols-2">
-        {visibleTools.map((tool) => {
-          const isSelected = selected.includes(tool.id);
-          const isAdminTool = "adminOnly" in tool && tool.adminOnly;
-          return (
-            <Card
-              key={tool.id}
-              className={cn(
-                "cursor-pointer transition-all",
-                isSelected
-                  ? "border-primary bg-primary/5"
-                  : "hover:border-primary/50"
-              )}
-              onClick={() => toggle(tool.id)}
-            >
-              <CardContent className="flex items-center gap-3 p-3">
-                <div
-                  className={cn(
-                    "flex h-5 w-5 shrink-0 items-center justify-center rounded border",
-                    isSelected
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-muted-foreground/30"
-                  )}
-                >
-                  {isSelected && <Check className="h-3 w-3" />}
-                </div>
-                {TOOL_ICONS[tool.id] && (
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted/50">
-                    {TOOL_ICONS[tool.id]}
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-medium">{tool.name}</p>
-                    {isAdminTool && <Badge variant="outline" className="text-[10px] px-1 py-0">Admin</Badge>}
-                  </div>
-                  <p className="text-xs text-muted-foreground">{descriptions[tool.id] || tool.description}</p>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+      <div className="flex flex-col gap-1.5">
+        {/* Admin tools — visible only to admins, displayed first */}
+        {isAdmin && adminTools.length > 0 && (
+          <>
+            {adminTools.map((tool) => (
+              <ToolRow
+                key={tool.id}
+                tool={tool}
+                isSelected={selected.includes(tool.id)}
+                isAdminTool
+                description={descriptions[tool.id] || tool.description}
+                onToggle={() => toggle(tool.id)}
+              />
+            ))}
+            <Separator className="my-1.5" />
+          </>
+        )}
+
+        {/* User tools */}
+        {userTools.map((tool) => (
+          <ToolRow
+            key={tool.id}
+            tool={tool}
+            isSelected={selected.includes(tool.id)}
+            isAdminTool={false}
+            description={descriptions[tool.id] || tool.description}
+            onToggle={() => toggle(tool.id)}
+          />
+        ))}
       </div>
     </div>
+  );
+}
+
+function ToolRow({
+  tool,
+  isSelected,
+  isAdminTool,
+  description,
+  onToggle,
+}: {
+  tool: (typeof BUILTIN_TOOLS)[number];
+  isSelected: boolean;
+  isAdminTool: boolean;
+  description: string;
+  onToggle: () => void;
+}) {
+  return (
+    <Card
+      className={cn(
+        "cursor-pointer transition-all",
+        isSelected
+          ? "border-primary bg-primary/5"
+          : "hover:border-primary/50"
+      )}
+      onClick={onToggle}
+    >
+      <CardContent className="flex items-center gap-3 px-3 py-2">
+        <div
+          className={cn(
+            "flex h-5 w-5 shrink-0 items-center justify-center rounded border",
+            isSelected
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-muted-foreground/30"
+          )}
+        >
+          {isSelected && <Check className="h-3 w-3" />}
+        </div>
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted/50">
+          {TOOL_ICONS[tool.id] ?? <Terminal className="h-4 w-4 text-muted-foreground" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <p className="text-sm font-medium">{tool.name}</p>
+            {isAdminTool && <Badge variant="outline" className="text-[10px] px-1 py-0">Admin</Badge>}
+          </div>
+          <p className="text-xs text-muted-foreground line-clamp-1">{description}</p>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -312,7 +312,7 @@ function tryParseJSON(response: string): ParsedSpec | null {
       }
 
       // Builtin tools — filter valid values
-      const VALID_BUILTINS = ["memory", "service_email", "service_calendar", "github_write", "bug_management", "slack_read"];
+      const VALID_BUILTINS = ["memory", "service_email", "service_calendar", "github_write", "bug_management", "slack_read", "campaign_email", "campaign_tracker"];
       const builtinTools = Array.isArray(raw.builtinTools)
         ? raw.builtinTools.filter((t: unknown) => typeof t === "string" && VALID_BUILTINS.includes(t as string))
         : [];

@@ -21,6 +21,8 @@ import { WEB_FETCH_TOOLS, executeWebFetchTool, isWebFetchTool } from "@/lib/tool
 import { CODE_INTERPRETER_TOOLS, executeCodeInterpreterTool, isCodeInterpreterTool } from "@/lib/tools/code-interpreter-tool";
 import { IMAGE_GEN_TOOLS, executeImageGenTool, isImageGenTool } from "@/lib/tools/image-gen-tool";
 import { getSocialMediaTools, executeSocialMediaTool, isSocialMediaTool } from "@/lib/tools/social-tools";
+import { getCampaignEmailTools, executeCampaignEmailTool, isCampaignEmailTool } from "@/lib/tools/campaign-email-tools";
+import { getCampaignTrackerTools, executeCampaignTrackerTool, isCampaignTrackerTool } from "@/lib/tools/campaign-tracker-tools";
 import { runExtensions } from "@/lib/extensions/extension-runner";
 import { fireOutboundWebhooks } from "@/lib/connectors/webhook";
 import type { ExtensionEventType } from "@/lib/firebase/firestore";
@@ -182,6 +184,8 @@ export async function runAgentWithTools(
   const hasCodeInterpreter = agentBuiltinTools.includes("code_interpreter");
   const hasImageGen = agentBuiltinTools.includes("image_generation");
   const hasSocialMedia = agentBuiltinTools.includes("service_social_media");
+  const hasCampaignEmail = agentBuiltinTools.includes("campaign_email");
+  const hasCampaignTracker = agentBuiltinTools.includes("campaign_tracker");
 
   // GitHub tools (with write access if agent has github_write builtin)
   if (connectedRepos.length > 0) {
@@ -236,6 +240,16 @@ export async function runAgentWithTools(
   // Social media tools (Bluesky, Twitter, LinkedIn, etc.)
   if (hasSocialMedia) {
     tools.push(...getSocialMediaTools());
+  }
+
+  // Campaign email tools (admin-only — cold outreach via Resend)
+  if (hasCampaignEmail) {
+    tools.push(...getCampaignEmailTools());
+  }
+
+  // Campaign tracker tools (admin-only — prospect tracking, CSV export, stats)
+  if (hasCampaignTracker) {
+    tools.push(...getCampaignTrackerTools());
   }
 
   // Slack tools (loaded when agent has a Slack connection with valid bot token)
@@ -457,19 +471,23 @@ export async function runAgentWithTools(
                       ? await executeServiceTool(tc.name, tc.input, config.userId || "")
                       : isSocialMediaTool(tc.name)
                         ? await executeSocialMediaTool(tc.name, tc.input, config.userId || "")
-                        : isBugTool(tc.name)
-                          ? await executeBugTool(tc.name, tc.input, config.userId || "")
-                          : isDatagouvTool(tc.name)
-                            ? await executeDatagouvTool(tc.name, tc.input)
-                            : isPisteTool(tc.name)
-                              ? await executePisteTool(tc.name, tc.input)
-                              : isWebFetchTool(tc.name)
-                                ? await executeWebFetchTool(tc.name, tc.input)
-                                : isCodeInterpreterTool(tc.name)
-                                  ? await executeCodeInterpreterTool(tc.name, tc.input)
-                                  : isImageGenTool(tc.name)
-                                    ? await executeImageGenTool(tc.name, tc.input, config.userId || "", config.imageStoragePrefix)
-                                    : await executeTool(tc, toolCtx);
+                        : isCampaignEmailTool(tc.name)
+                          ? await executeCampaignEmailTool(tc.name, tc.input, config.userId || "", config.agentId || "")
+                          : isCampaignTrackerTool(tc.name)
+                            ? await executeCampaignTrackerTool(tc.name, tc.input, config.userId || "")
+                            : isBugTool(tc.name)
+                            ? await executeBugTool(tc.name, tc.input, config.userId || "")
+                            : isDatagouvTool(tc.name)
+                              ? await executeDatagouvTool(tc.name, tc.input)
+                              : isPisteTool(tc.name)
+                                ? await executePisteTool(tc.name, tc.input)
+                                : isWebFetchTool(tc.name)
+                                  ? await executeWebFetchTool(tc.name, tc.input)
+                                  : isCodeInterpreterTool(tc.name)
+                                    ? await executeCodeInterpreterTool(tc.name, tc.input)
+                                    : isImageGenTool(tc.name)
+                                      ? await executeImageGenTool(tc.name, tc.input, config.userId || "", config.imageStoragePrefix)
+                                      : await executeTool(tc, toolCtx);
 
                   inputTokens += estimateTokens(result.result);
                   callbacks.onToolEnd?.({
