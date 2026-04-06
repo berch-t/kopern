@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users } from "lucide-react";
 import { type AgentTeamDoc } from "@/lib/firebase/firestore";
+import { TeamColorPicker } from "./TeamColorPicker";
 
 interface TeamCardProps {
   team: AgentTeamDoc & { id: string };
@@ -21,10 +22,16 @@ export function TeamCard({ team }: TeamCardProps) {
 
   return (
     <LocalizedLink href={`/teams/${team.id}`}>
-      <Card className="cursor-pointer transition-shadow hover:shadow-md">
+      <Card
+        className="cursor-pointer transition-shadow hover:shadow-md"
+        style={team.color ? { borderTopWidth: 3, borderTopColor: team.color } : undefined}
+      >
         <CardHeader className="flex flex-row items-center gap-3 pb-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <Users className="h-5 w-5 text-primary" />
+          <div
+            className="flex h-10 w-10 items-center justify-center rounded-lg"
+            style={team.color ? { backgroundColor: `${team.color}20` } : undefined}
+          >
+            <Users className="h-5 w-5" style={team.color ? { color: team.color } : undefined} />
           </div>
           <div className="flex-1 space-y-1">
             <CardTitle className="text-base">{team.name}</CardTitle>
@@ -32,6 +39,7 @@ export function TeamCard({ team }: TeamCardProps) {
               {team.executionMode}
             </Badge>
           </div>
+          <TeamColorPicker teamId={team.id} currentColor={team.color} />
         </CardHeader>
         <CardContent>
           <p className="line-clamp-2 text-sm text-muted-foreground">

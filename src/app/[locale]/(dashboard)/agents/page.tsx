@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { LocalizedLink } from "@/components/LocalizedLink";
 import { useDictionary, useLocale } from "@/providers/LocaleProvider";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,12 +10,14 @@ import { agentsCollection, agentTeamsCollection, type AgentDoc, type AgentTeamDo
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Sparkles, Users, Bot, LayoutDashboard, ExternalLink } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Plus, Sparkles, Users, Bot, LayoutDashboard } from "lucide-react";
 import { AgentAvatar } from "@/components/agents/AgentAvatar";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { MetaAgentWizard } from "@/components/agents/MetaAgentWizard";
 import { WelcomeWizard } from "@/components/onboarding/WelcomeWizard";
+import { TeamColorPicker } from "@/components/teams/TeamColorPicker";
 
 const DOMAIN_COLORS: Record<string, string> = {
   devops: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
@@ -32,6 +34,47 @@ const MODE_COLORS: Record<string, string> = {
   sequential: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
   conditional: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
 };
+
+type AgentWithId = AgentDoc & { id: string };
+type TeamWithId = AgentTeamDoc & { id: string };
+
+function AgentRow({ agent, teamColor, router }: { agent: AgentWithId; teamColor?: string; router: ReturnType<typeof useLocalizedRouter> }) {
+  const domainColor = DOMAIN_COLORS[agent.domain?.toLowerCase() ?? ""] ?? "bg-gray-500/10 text-gray-700 dark:text-gray-400";
+  return (
+    <div
+      className="grid grid-cols-[1fr_36px] md:grid-cols-[1fr_80px_120px_64px_80px_36px] items-center gap-x-3 px-4 py-2.5 hover:bg-muted/50 transition-colors cursor-pointer"
+      style={teamColor ? { backgroundColor: `${teamColor}30` } : undefined}
+      onClick={() => router.push(`/agents/${agent.id}`)}
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <AgentAvatar branding={agent.branding} size="sm" className="shrink-0" />
+        <div className="min-w-0">
+          <p className="text-sm font-medium truncate">{agent.name}</p>
+          {agent.description && (
+            <p className="text-[11px] text-muted-foreground truncate">{agent.description}</p>
+          )}
+        </div>
+      </div>
+      <span className={`hidden md:inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${domainColor}`}>
+        {agent.domain || "—"}
+      </span>
+      <span className="hidden md:block text-xs text-muted-foreground truncate">
+        {agent.modelId || "—"}
+      </span>
+      <span className="hidden md:block text-xs text-right tabular-nums">
+        {agent.latestGradingScore != null
+          ? `${Math.round(agent.latestGradingScore * 100)}%`
+          : "—"}
+      </span>
+      <span className="hidden md:block text-xs text-muted-foreground text-right">
+        v{agent.version ?? 1}
+      </span>
+      <LocalizedLink href={`/agents/${agent.id}/operator`} onClick={(e) => e.stopPropagation()}>
+        <LayoutDashboard className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors" />
+      </LocalizedLink>
+    </div>
+  );
+}
 
 export default function AgentsPage() {
   const { user } = useAuth();
@@ -56,6 +99,32 @@ export default function AgentsPage() {
     }
   }, [loading, agents.length, user]);
 
+  // Group agents by team
+  const { teamGroups, standaloneAgents } = useMemo(() => {
+    const agentMap = new Map(agents.map((a) => [a.id, a]));
+    const assignedIds = new Set<string>();
+    const groups: { team: TeamWithId; members: AgentWithId[] }[] = [];
+
+    for (const team of teams) {
+      const members: AgentWithId[] = [];
+      for (const m of team.agents ?? []) {
+        const agent = agentMap.get(m.agentId);
+        if (agent) {
+          members.push(agent);
+          assignedIds.add(m.agentId);
+        }
+      }
+      if (members.length > 0) {
+        groups.push({ team, members });
+      }
+    }
+
+    const standalone = agents.filter((a) => !assignedIds.has(a.id));
+    return { teamGroups: groups, standaloneAgents: standalone };
+  }, [agents, teams]);
+
+  const hasTeamGroups = teamGroups.length > 0;
+
   return (
     <div className="space-y-8">
       <SlideUp>
@@ -77,7 +146,7 @@ export default function AgentsPage() {
         </div>
       </SlideUp>
 
-      {/* Agents Table */}
+      {/* Agents */}
       {loading ? (
         <div className="space-y-2">
           {[...Array(4)].map((_, i) => (
@@ -102,6 +171,7 @@ export default function AgentsPage() {
         <FadeIn>
           <Card>
             <CardContent className="p-0 overflow-x-auto">
+              {/* Column header */}
               <div className="grid grid-cols-[1fr_36px] md:grid-cols-[1fr_80px_120px_64px_80px_36px] items-center gap-x-3 px-4 py-2 border-b text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                 <span>Agent</span>
                 <span className="hidden md:block">Domain</span>
@@ -110,51 +180,64 @@ export default function AgentsPage() {
                 <span className="hidden md:block text-right">Version</span>
                 <span />
               </div>
+
               <div className="divide-y">
-                {agents.map((agent) => {
-                  const domainColor = DOMAIN_COLORS[agent.domain?.toLowerCase() ?? ""] ?? "bg-gray-500/10 text-gray-700 dark:text-gray-400";
+                {/* Team groups */}
+                {teamGroups.map(({ team, members }) => {
+                  const modeColor = MODE_COLORS[team.executionMode] ?? MODE_COLORS.sequential;
                   return (
-                    <div
-                      key={agent.id}
-                      className="grid grid-cols-[1fr_36px] md:grid-cols-[1fr_80px_120px_64px_80px_36px] items-center gap-x-3 px-4 py-2.5 hover:bg-muted/50 transition-colors cursor-pointer"
-                      onClick={() => router.push(`/agents/${agent.id}`)}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <AgentAvatar branding={agent.branding} size="sm" className="shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{agent.name}</p>
-                          {agent.description && (
-                            <p className="text-[11px] text-muted-foreground truncate">{agent.description}</p>
-                          )}
+                    <div key={team.id}>
+                      {/* Team header */}
+                      <div
+                        className="flex items-center gap-2.5 px-4 py-2 border-b"
+                        style={team.color ? { backgroundColor: `${team.color}18`, borderLeftWidth: 3, borderLeftColor: team.color } : undefined}
+                      >
+                        <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <LocalizedLink
+                          href={`/teams/${team.id}`}
+                          className="text-xs font-semibold hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {team.name}
+                        </LocalizedLink>
+                        <Badge variant="secondary" className={`text-[9px] px-1 py-0 ${modeColor}`}>
+                          {team.executionMode}
+                        </Badge>
+                        <span className="text-[10px] text-muted-foreground">
+                          {members.length} agent{members.length !== 1 ? "s" : ""}
+                        </span>
+                        <div className="ml-auto">
+                          <TeamColorPicker teamId={team.id} currentColor={team.color} />
                         </div>
                       </div>
-                      <span className={`hidden md:inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${domainColor}`}>
-                        {agent.domain || "—"}
-                      </span>
-                      <span className="hidden md:block text-xs text-muted-foreground truncate">
-                        {agent.modelId || "—"}
-                      </span>
-                      <span className="hidden md:block text-xs text-right tabular-nums">
-                        {agent.latestGradingScore != null
-                          ? `${Math.round(agent.latestGradingScore * 100)}%`
-                          : "—"}
-                      </span>
-                      <span className="hidden md:block text-xs text-muted-foreground text-right">
-                        v{agent.version ?? 1}
-                      </span>
-                      <LocalizedLink href={`/agents/${agent.id}/operator`} onClick={(e) => e.stopPropagation()}>
-                        <LayoutDashboard className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors" />
-                      </LocalizedLink>
+                      {/* Team members */}
+                      {members.map((agent) => (
+                        <AgentRow key={agent.id} agent={agent} teamColor={team.color} router={router} />
+                      ))}
                     </div>
                   );
                 })}
+
+                {/* Separator between teams and standalone */}
+                {hasTeamGroups && standaloneAgents.length > 0 && (
+                  <div className="px-4 py-2 border-b">
+                    <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                      {isFr ? "Agents individuels" : "Standalone agents"}
+                    </span>
+                  </div>
+                )}
+
+                {/* Standalone agents */}
+                {standaloneAgents.map((agent) => (
+                  <AgentRow key={agent.id} agent={agent} router={router} />
+                ))}
               </div>
             </CardContent>
           </Card>
         </FadeIn>
       )}
 
-      {/* Teams Table */}
+      {/* Teams Table (keep for overview, only if teams exist and some have no members in agents list) */}
       {teams.length > 0 && (
         <SlideUp delay={0.2}>
           <div className="space-y-3">
@@ -187,7 +270,12 @@ export default function AgentsPage() {
                         className="grid grid-cols-[1fr_90px] sm:grid-cols-[1fr_90px_64px_100px] items-center gap-x-3 px-4 py-2.5 hover:bg-muted/50 transition-colors cursor-pointer"
                         onClick={() => router.push(`/teams/${team.id}`)}
                       >
-                        <p className="text-sm font-medium truncate">{team.name}</p>
+                        <div className="flex items-center gap-2">
+                          {team.color && (
+                            <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: team.color }} />
+                          )}
+                          <p className="text-sm font-medium truncate">{team.name}</p>
+                        </div>
                         <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${modeColor}`}>
                           {team.executionMode}
                         </span>

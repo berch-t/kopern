@@ -320,6 +320,7 @@ export interface AgentTeamDoc {
   description: string;
   agents: AgentTeamMember[];
   executionMode: "parallel" | "sequential" | "conditional";
+  color?: string;
   flowNodes?: FlowNode[];
   flowEdges?: FlowEdge[];
   budgetPolicy?: BudgetPolicy;
