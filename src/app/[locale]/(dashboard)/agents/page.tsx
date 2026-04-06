@@ -39,11 +39,17 @@ type AgentWithId = AgentDoc & { id: string };
 type TeamWithId = AgentTeamDoc & { id: string };
 
 function AgentRow({ agent, teamColor, router }: { agent: AgentWithId; teamColor?: string; router: ReturnType<typeof useLocalizedRouter> }) {
+  const [hovered, setHovered] = useState(false);
   const domainColor = DOMAIN_COLORS[agent.domain?.toLowerCase() ?? ""] ?? "bg-gray-500/10 text-gray-700 dark:text-gray-400";
   return (
     <div
-      className="grid grid-cols-[1fr_36px] md:grid-cols-[1fr_80px_120px_64px_80px_36px] items-center gap-x-3 px-4 py-2.5 hover:bg-muted/50 transition-colors cursor-pointer"
-      style={teamColor ? { backgroundColor: `${teamColor}30` } : undefined}
+      className="grid grid-cols-[1fr_36px] md:grid-cols-[1fr_80px_120px_64px_80px_36px] items-center gap-x-3 px-4 py-2.5 hover:bg-muted/50 cursor-pointer"
+      style={{
+        ...(teamColor ? { backgroundColor: `${teamColor}${hovered ? "10" : "30"}` } : {}),
+        transition: hovered ? "background-color 0.3s ease" : "background-color 0.8s ease",
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onClick={() => router.push(`/agents/${agent.id}`)}
     >
       <div className="flex items-center gap-3 min-w-0">

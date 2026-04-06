@@ -68,7 +68,7 @@ After V2, the MCP server had **32 tools** at version 2.0.0. Testing found 2 bugs
 
 ## Two Key Types
 
-![Kopern: Two Key Types](/blog/mcp_journey/two_key.jpeg)
+![Kopern: Two Key Types](/blog/mcp_journey/two_keys.jpeg)
 
 A subtle but important design decision: we support two types of API keys.
 

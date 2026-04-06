@@ -140,13 +140,14 @@
     "teams": "Équipes",
     "billing": "Facturation",
     "api": "API",
-    "examples": "Exemples",
+    "examples": "Templates",
     "settings": "Paramètres",
     "bugs": "Bug Tracker",
     "docs": "Documentation",
     "apiReference": "Référence API",
     "mcpDocs": "Docs MCP",
-    "pricing": "Tarifs"
+    "pricing": "Tarifs",
+    "blog": "Blog"
   },
   "auth": {
     "title": "Kopern",

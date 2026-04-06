@@ -14,7 +14,7 @@ import {
   Server,
   CreditCard,
   LayoutDashboard,
-  Lightbulb,
+  Sparkles,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -46,7 +46,7 @@ function useNavItems() {
     { href: "/teams", label: t.nav.teams, icon: Users },
     { href: "/billing", label: t.nav.billing, icon: CreditCard },
     { href: "/api-keys", label: t.nav.api, icon: Key },
-    { href: "/examples", label: t.nav.examples, icon: Lightbulb },
+    { href: "/examples", label: t.nav.examples, icon: Sparkles },
     { href: "/settings", label: t.nav.settings, icon: Settings },
   ];
 
