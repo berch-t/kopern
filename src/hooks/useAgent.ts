@@ -114,21 +114,27 @@ export function useAgent(agentId: string, agentConfig: AgentPlaygroundConfig | n
           break;
         case "tool_exec_start": {
           const execData = data as { name: string; toolCallId: string };
-          toolCallsRef.current = toolCallsRef.current.map((tc) =>
-            tc.name === execData.name && !tc.result && !tc.executing
-              ? { ...tc, executing: true }
-              : tc
-          );
+          let execUpdated = false;
+          toolCallsRef.current = toolCallsRef.current.map((tc) => {
+            if (!execUpdated && tc.name === execData.name && !tc.result && !tc.executing) {
+              execUpdated = true;
+              return { ...tc, executing: true };
+            }
+            return tc;
+          });
           setCurrentToolCalls([...toolCallsRef.current]);
           break;
         }
         case "tool_end": {
           const toolData = data as ToolCallInfo;
-          toolCallsRef.current = toolCallsRef.current.map((tc) =>
-            tc.name === toolData.name && !tc.result
-              ? { ...tc, executing: false, result: toolData.result, isError: toolData.isError }
-              : tc
-          );
+          let endUpdated = false;
+          toolCallsRef.current = toolCallsRef.current.map((tc) => {
+            if (!endUpdated && tc.name === toolData.name && !tc.result) {
+              endUpdated = true;
+              return { ...tc, executing: false, result: toolData.result, isError: toolData.isError };
+            }
+            return tc;
+          });
           setCurrentToolCalls([...toolCallsRef.current]);
           break;
         }

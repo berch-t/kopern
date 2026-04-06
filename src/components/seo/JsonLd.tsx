@@ -11,8 +11,17 @@ export function OrganizationJsonLd() {
       "Build, test, deploy, and connect production-grade AI agents with tool calling, deterministic grading, multi-agent teams, MCP endpoints, and external connectors.",
     sameAs: [
       "https://github.com/berch-t/kopern",
+      "https://www.npmjs.com/package/@kopern/mcp-server",
+      "https://www.linkedin.com/company/kopern",
     ],
     foundingDate: "2024",
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "customer support",
+      email: "contact@kopern.ai",
+      url: `${SITE_URL}/en/pricing`,
+      availableLanguage: ["English", "French"],
+    },
     knowsAbout: [
       "Artificial Intelligence",
       "AI Agents",
@@ -232,12 +241,40 @@ export function BreadcrumbJsonLd({ items }: { items: { name: string; url: string
   );
 }
 
+export function WebSiteJsonLd() {
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Kopern",
+    url: SITE_URL,
+    description:
+      "Build, test, grade, and deploy production-grade AI agents without code.",
+    inLanguage: ["en", "fr"],
+    publisher: {
+      "@type": "Organization",
+      name: "Kopern",
+      url: SITE_URL,
+    },
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+
 export function PricingJsonLd() {
   const data = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: "Kopern AI Agent Builder",
     description: "Build, test, deploy, and connect production-grade AI agents",
+    image: [
+      `${SITE_URL}/opengraph-image`,
+      `${SITE_URL}/logo_small.png`,
+    ],
     brand: {
       "@type": "Brand",
       name: "Kopern",

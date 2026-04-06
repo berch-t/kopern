@@ -19,6 +19,7 @@ import {
   LayoutDashboard,
   Github,
   Menu,
+  BookOpen,
 } from "lucide-react";
 import { BugReportDialog } from "@/components/feedback/BugReportDialog";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -94,6 +95,9 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
               <LocalizedLink href="/pricing">
                 <Button variant="ghost" className="justify-start gap-3 h-11 w-full"><DollarSign className="h-4 w-4" />{t.nav.pricing}</Button>
               </LocalizedLink>
+              <LocalizedLink href="/blog">
+                <Button variant="ghost" className="justify-start gap-3 h-11 w-full"><BookOpen className="h-4 w-4" />Blog</Button>
+              </LocalizedLink>
               <Separator className="my-2" />
               <a href="https://github.com/berch-t/kopern" target="_blank" rel="noopener noreferrer">
                 <Button variant="ghost" className="justify-start gap-3 h-11 w-full"><Github className="h-4 w-4" />GitHub</Button>
@@ -132,6 +136,12 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
               <DollarSign className="h-4 w-4" />
               {t.nav.pricing}
+            </Button>
+          </LocalizedLink>
+          <LocalizedLink href="/blog">
+            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
+              <BookOpen className="h-4 w-4" />
+              Blog
             </Button>
           </LocalizedLink>
         </div>

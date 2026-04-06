@@ -87,6 +87,7 @@ export interface AgentRunMetrics {
   outputTokens: number;
   toolCallCount: number;
   toolIterations: number;
+  imageGenCount?: number;
 }
 
 /**
@@ -101,7 +102,7 @@ export async function runAgentWithTools(
   // EU AI Act Art. 6: high-risk agents MUST have tool approval enabled
   if (config.riskLevel === "high" && (!config.toolApprovalPolicy || config.toolApprovalPolicy === "auto")) {
     callbacks.onError?.(new Error("High-risk agents (EU AI Act) require a tool approval policy. Set to 'confirm_destructive' or 'confirm_all' in agent settings."));
-    callbacks.onDone({ inputTokens: 0, outputTokens: 0, toolCallCount: 0, toolIterations: 0 });
+    callbacks.onDone({ inputTokens: 0, outputTokens: 0, toolCallCount: 0, toolIterations: 0, imageGenCount: 0 });
     return;
   }
 
@@ -309,6 +310,7 @@ export async function runAgentWithTools(
   const messages = [...config.messages];
   let iteration = 0;
   let totalToolCalls = 0;
+  let totalImageGens = 0;
 
   // Note: Diminishing returns detection was removed — it incorrectly stopped agents during
   // productive tool-use iterations (tool calls produce ~0 text tokens but do real work).
@@ -490,6 +492,7 @@ export async function runAgentWithTools(
                                       : await executeTool(tc, toolCtx);
 
                   inputTokens += estimateTokens(result.result);
+                  if (isImageGenTool(tc.name) && !result.isError) totalImageGens++;
                   callbacks.onToolEnd?.({
                     name: tc.name,
                     result: result.result.slice(0, 2000),
@@ -559,6 +562,7 @@ export async function runAgentWithTools(
                   outputTokens,
                   toolCallCount: totalToolCalls,
                   toolIterations: iteration,
+                  imageGenCount: totalImageGens,
                 };
                 callbacks.onDone(metrics);
                 resolve();

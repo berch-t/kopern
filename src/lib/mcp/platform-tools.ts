@@ -229,6 +229,16 @@ export async function executeUpdateAgent(
   const subResults: string[] = [];
   const basePath = `users/${userId}/agents/${agentId}`;
 
+  // Skills remove FIRST (before add, to avoid deleting the newly added skill with same name)
+  if (skillsRemove?.length) {
+    let removed = 0;
+    for (const name of skillsRemove) {
+      const snap = await adminDb.collection(`${basePath}/skills`).where("name", "==", name).get();
+      for (const doc of snap.docs) { await doc.ref.delete(); removed++; }
+    }
+    subResults.push(`-${removed} skills`);
+  }
+
   // Skills add
   if (skillsAdd?.length) {
     const batch = adminDb.batch();
@@ -240,14 +250,14 @@ export async function executeUpdateAgent(
     subResults.push(`+${skillsAdd.length} skills`);
   }
 
-  // Skills remove
-  if (skillsRemove?.length) {
+  // Tools remove FIRST (before add)
+  if (toolsRemove?.length) {
     let removed = 0;
-    for (const name of skillsRemove) {
-      const snap = await adminDb.collection(`${basePath}/skills`).where("name", "==", name).limit(1).get();
-      if (!snap.empty) { await snap.docs[0].ref.delete(); removed++; }
+    for (const name of toolsRemove) {
+      const snap = await adminDb.collection(`${basePath}/tools`).where("name", "==", name).get();
+      for (const doc of snap.docs) { await doc.ref.delete(); removed++; }
     }
-    subResults.push(`-${removed} skills`);
+    subResults.push(`-${removed} tools`);
   }
 
   // Tools add
@@ -261,14 +271,14 @@ export async function executeUpdateAgent(
     subResults.push(`+${toolsAdd.length} tools`);
   }
 
-  // Tools remove
-  if (toolsRemove?.length) {
+  // Extensions remove FIRST (before add)
+  if (extensionsRemove?.length) {
     let removed = 0;
-    for (const name of toolsRemove) {
-      const snap = await adminDb.collection(`${basePath}/tools`).where("name", "==", name).limit(1).get();
-      if (!snap.empty) { await snap.docs[0].ref.delete(); removed++; }
+    for (const name of extensionsRemove) {
+      const snap = await adminDb.collection(`${basePath}/extensions`).where("name", "==", name).get();
+      for (const doc of snap.docs) { await doc.ref.delete(); removed++; }
     }
-    subResults.push(`-${removed} tools`);
+    subResults.push(`-${removed} extensions`);
   }
 
   // Extensions add
@@ -280,16 +290,6 @@ export async function executeUpdateAgent(
     }
     await batch.commit();
     subResults.push(`+${extensionsAdd.length} extensions`);
-  }
-
-  // Extensions remove
-  if (extensionsRemove?.length) {
-    let removed = 0;
-    for (const name of extensionsRemove) {
-      const snap = await adminDb.collection(`${basePath}/extensions`).where("name", "==", name).limit(1).get();
-      if (!snap.empty) { await snap.docs[0].ref.delete(); removed++; }
-    }
-    subResults.push(`-${removed} extensions`);
   }
 
   const updatedFields = Object.keys(updates).filter(k => k !== "updatedAt" && k !== "version");

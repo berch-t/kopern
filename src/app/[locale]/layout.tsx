@@ -7,7 +7,7 @@ import { getDictionary } from "@/i18n/getDictionary";
 import { locales, type Locale } from "@/i18n/config";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { OrganizationJsonLd, SoftwareApplicationJsonLd, FAQJsonLd } from "@/components/seo/JsonLd";
+import { OrganizationJsonLd, SoftwareApplicationJsonLd, FAQJsonLd, WebSiteJsonLd } from "@/components/seo/JsonLd";
 import { CookieConsent } from "@/components/shared/CookieConsent";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopern.ai";
@@ -71,6 +71,7 @@ export default async function LocaleLayout({
     <html lang={locale} suppressHydrationWarning>
       <head>
         <OrganizationJsonLd />
+        <WebSiteJsonLd />
         <SoftwareApplicationJsonLd />
         <FAQJsonLd />
       </head>

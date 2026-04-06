@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { getAllPosts, getAllSlugs } from "@/lib/blog";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopern.ai";
 
@@ -18,6 +19,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/privacy", priority: 0.3, changeFrequency: "yearly" as const },
     { path: "/terms", priority: 0.3, changeFrequency: "yearly" as const },
     { path: "/login", priority: 0.3, changeFrequency: "monthly" as const },
+    { path: "/blog", priority: 0.8, changeFrequency: "weekly" as const },
   ];
 
   const entries: MetadataRoute.Sitemap = [];
@@ -32,6 +34,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
         alternates: {
           languages: Object.fromEntries(
             locales.map((l) => [l, `${SITE_URL}/${l}${route.path}`])
+          ),
+        },
+      });
+    }
+  }
+
+  // Blog post URLs
+  const slugs = getAllSlugs();
+  for (const slug of slugs) {
+    for (const locale of locales) {
+      entries.push({
+        url: `${SITE_URL}/${locale}/blog/${slug}`,
+        lastModified: now,
+        changeFrequency: "monthly" as const,
+        priority: 0.7,
+        alternates: {
+          languages: Object.fromEntries(
+            locales.map((l) => [l, `${SITE_URL}/${l}/blog/${slug}`])
           ),
         },
       });

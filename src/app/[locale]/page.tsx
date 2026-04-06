@@ -63,6 +63,7 @@ import {
   Blocks,
   Copy,
   Server,
+  Newspaper,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
@@ -455,6 +456,12 @@ export default function LandingPage() {
                   {t.nav.pricing}
                 </Button>
               </LocalizedLink>
+              <LocalizedLink href="/blog">
+                <Button variant="ghost" className="justify-start gap-3 h-11 w-full">
+                  <Newspaper className="h-4 w-4" />
+                  Blog
+                </Button>
+              </LocalizedLink>
               <Separator className="my-2" />
               <a href="https://github.com/berch-t/kopern" target="_blank" rel="noopener noreferrer">
                 <Button variant="ghost" className="justify-start gap-3 h-11 w-full">
@@ -514,6 +521,12 @@ export default function LandingPage() {
             <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground hover:!bg-transparent dark:hover:!bg-transparent border border-transparent hover:border-primary/50">
               <DollarSignIcon className="h-4 w-4" />
               {t.nav.pricing}
+            </Button>
+          </LocalizedLink>
+          <LocalizedLink href="/blog">
+            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground hover:!bg-transparent dark:hover:!bg-transparent border border-transparent hover:border-primary/50">
+              <Newspaper className="h-4 w-4" />
+              Blog
             </Button>
           </LocalizedLink>
         </div>

@@ -203,12 +203,14 @@ You MUST maintain a task list for this session. Before executing any action:
             return registerApprovalGate(request.toolCallId);
           },
           onDone: (metrics) => {
-            const cost = calculateTokenCost(
+            const IMAGE_GEN_COST = 0.13;
+            const tokenCost = calculateTokenCost(
               agentConfig.modelProvider,
               metrics.inputTokens,
               metrics.outputTokens,
               agentConfig.modelId
             );
+            const cost = tokenCost + ((metrics.imageGenCount ?? 0) * IMAGE_GEN_COST);
 
             // Persist session events + metrics (fire-and-forget)
             if (userId && sessionId) {

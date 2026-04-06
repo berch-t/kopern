@@ -6,6 +6,7 @@
  */
 
 import { adminDb, adminStorage } from "@/lib/firebase/admin";
+import { FieldValue } from "firebase-admin/firestore";
 
 // ---------------------------------------------------------------------------
 // Tool definitions (Anthropic format)
@@ -26,9 +27,20 @@ export const IMAGE_GEN_TOOLS = [
         },
         aspect_ratio: {
           type: "string",
-          enum: ["1:1", "3:4", "4:3", "9:16", "16:9"],
+          enum: ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
           description:
-            "Aspect ratio of the generated image (default: 1:1). Use 16:9 for LinkedIn/Twitter banners, 1:1 for Instagram/carousel, 9:16 for stories.",
+            "Aspect ratio of the generated image (default: 1:1). Use 16:9 for blog/banner, 1:1 for social, 9:16 for stories, 3:2 for landscape.",
+        },
+        image_size: {
+          type: "string",
+          enum: ["512", "1K", "2K", "4K"],
+          description:
+            "Resolution tier for the generated image (default: 1K). The size applies to the longer dimension. Use 2K or 4K for high-quality blog/print images.",
+        },
+        reference_image_url: {
+          type: "string",
+          description:
+            "URL of a reference image to include in the generation context (e.g. a character to integrate into the scene). The model will use this image as visual reference. Supports Firebase Storage URLs and public HTTPS URLs.",
         },
       },
       required: ["prompt"],
@@ -104,10 +116,38 @@ export async function executeImageGenTool(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
+    const aspectRatio = String(args.aspect_ratio ?? "1:1").trim();
+    const imageSize = String(args.image_size ?? "1K").trim();
+    const referenceImageUrl = String(args.reference_image_url ?? "").trim();
+
+    // Build content parts: text prompt + optional reference image
+    const contentParts: Record<string, unknown>[] = [{ text: prompt }];
+
+    if (referenceImageUrl) {
+      try {
+        const imgRes = await fetch(referenceImageUrl, { signal: controller.signal });
+        if (imgRes.ok) {
+          const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+          const imgMime = imgRes.headers.get("content-type") || "image/png";
+          contentParts.unshift({
+            inlineData: {
+              mimeType: imgMime,
+              data: imgBuffer.toString("base64"),
+            },
+          });
+          console.log("[IMAGE_GEN] Reference image loaded:", referenceImageUrl, "size:", imgBuffer.length, "bytes");
+        } else {
+          console.warn("[IMAGE_GEN] Failed to fetch reference image:", imgRes.status, referenceImageUrl);
+        }
+      } catch (err) {
+        console.warn("[IMAGE_GEN] Reference image fetch error:", err instanceof Error ? err.message : err);
+      }
+    }
+
     const requestBody = {
       contents: [
         {
-          parts: [{ text: prompt }],
+          parts: contentParts,
         },
       ],
       generationConfig: {
@@ -183,13 +223,20 @@ export async function executeImageGenTool(
       }
       const bucket = adminStorage.bucket(bucketName);
       console.log("[IMAGE_GEN] Uploading to bucket:", bucket.name, "file:", fileName, "size:", imageData.length, "chars base64");
+      const downloadToken = crypto.randomUUID();
       const file = bucket.file(fileName);
       const buffer = Buffer.from(imageData, "base64");
       await file.save(buffer, {
         contentType: imageMimeType,
         public: true,
+        metadata: {
+          metadata: {
+            firebaseStorageDownloadTokens: downloadToken,
+          },
+        },
       });
-      publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+      const encodedPath = encodeURIComponent(fileName);
+      publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${downloadToken}`;
       console.log("[IMAGE_GEN] Upload success:", publicUrl);
     } catch (err) {
       const errMsg = err instanceof Error ? `${err.message}\n${err.stack}` : String(err);
@@ -202,6 +249,15 @@ export async function executeImageGenTool(
         isError: true,
       };
     }
+
+    // Track image generation cost in usage (fire-and-forget)
+    // Gemini image gen: ~$0.04/image input + ~$0.08/image output ≈ $0.13/image (2K)
+    const IMAGE_GEN_COST = 0.13;
+    const yearMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+    adminDb.doc(`users/${userId}/usage/${yearMonth}`).set({
+      imageGenerations: FieldValue.increment(1),
+      totalCost: FieldValue.increment(IMAGE_GEN_COST),
+    }, { merge: true }).catch(() => {});
 
     // Return URL only — no base64 in tool result (avoids 175k tokens to LLM + SSE overflow)
     const summary = [
