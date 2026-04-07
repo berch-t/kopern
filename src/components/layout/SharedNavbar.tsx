@@ -25,6 +25,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
+  Activity,
   BookOpen,
   ChevronDown,
   ClipboardCheck,
@@ -125,6 +126,13 @@ export function SharedNavbar({ variant = "public", isLanding = false }: SharedNa
           </Button>
         </LocalizedLink>
 
+        <LocalizedLink href="/monitor">
+          <Button variant="ghost" size="sm" className={`${NAV_BTN} !text-accent`}>
+            <Activity className="h-4 w-4" />
+            {t.nav.monitor}
+          </Button>
+        </LocalizedLink>
+
         <LocalizedLink href="/examples">
           <Button variant="ghost" size="sm" className={NAV_BTN}>
             <Sparkles className="h-4 w-4" />
@@ -200,6 +208,11 @@ export function SharedNavbar({ variant = "public", isLanding = false }: SharedNa
             <LocalizedLink href="/grader">
               <Button variant="ghost" className="justify-start gap-3 h-11 w-full font-semibold text-accent">
                 <ClipboardCheck className="h-4 w-4" /> {t.nav.grader}
+              </Button>
+            </LocalizedLink>
+            <LocalizedLink href="/monitor">
+              <Button variant="ghost" className="justify-start gap-3 h-11 w-full font-semibold text-accent">
+                <Activity className="h-4 w-4" /> {t.nav.monitor}
               </Button>
             </LocalizedLink>
             <LocalizedLink href="/examples">

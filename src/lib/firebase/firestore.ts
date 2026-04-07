@@ -172,7 +172,7 @@ export interface GradingSuiteDoc {
 
 export interface CriterionConfig {
   id: string;
-  type: "output_match" | "schema_validation" | "tool_usage" | "safety_check" | "custom_script" | "llm_judge";
+  type: "output_match" | "schema_validation" | "tool_usage" | "safety_check" | "custom_script" | "llm_judge" | "consistency" | "latency_benchmark";
   name: string;
   config: Record<string, unknown>;
   weight: number;
@@ -1033,7 +1033,7 @@ export interface ConsentDoc {
 
 // --- Error Log types ---
 
-export type ErrorSeverity = "warning" | "error" | "critical";
+export type ErrorSeverity = "info" | "warning" | "error" | "critical";
 export type ErrorSource =
   | "slack_events"
   | "slack"

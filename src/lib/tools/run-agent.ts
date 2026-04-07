@@ -378,7 +378,7 @@ export async function runAgentWithTools(
       // Micro-compact old tool results (replace with short marker, keep last 3 intact)
       const { messages: microCompacted, tokensFreed } = microCompactMessages(messages);
       if (tokensFreed > 0) {
-        logAppError({ code: "MICRO_COMPACTION", message: `Freed ~${tokensFreed} tokens from old tool results`, source: "compaction", userId: config.userId, agentId: config.agentId });
+        logAppError({ code: "MICRO_COMPACTION", message: `Freed ~${tokensFreed} tokens from old tool results`, source: "compaction", severity: "info", userId: config.userId, agentId: config.agentId });
       }
 
       // Truncate remaining large tool results (content budget — configurable per agent)

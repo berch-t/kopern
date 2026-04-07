@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { signInWithGoogle, signInWithGithub, signInWithEmail, signUpWithEmail } from "@/lib/firebase/auth";
+import { getAuth } from "firebase/auth";
 import { setDoc, serverTimestamp } from "firebase/firestore";
 import { userDoc } from "@/lib/firebase/firestore";
 import { useDictionary } from "@/providers/LocaleProvider";
@@ -17,11 +19,31 @@ import { LocalizedLink } from "@/components/LocalizedLink";
 
 export default function LoginPage() {
   const router = useLocalizedRouter();
+  const searchParams = useSearchParams();
+  const from = searchParams.get("from");
   const t = useDictionary();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  async function postLoginActions() {
+    if (from === "monitor") {
+      try {
+        const user = getAuth().currentUser;
+        if (user) {
+          const token = await user.getIdToken();
+          await fetch("/api/monitor/setup-team", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        }
+      } catch {
+        // Non-blocking — team creation failure shouldn't block login
+      }
+    }
+    router.push("/dashboard");
+  }
 
   async function handleOAuth(provider: "google" | "github") {
     try {
@@ -36,7 +58,7 @@ export default function LoginPage() {
           }, { merge: true });
         }
       }
-      router.push("/dashboard");
+      await postLoginActions();
     } catch (err) {
       const authErr = err as { code?: string; message?: string };
       console.error("OAuth error:", err);
@@ -67,7 +89,7 @@ export default function LoginPage() {
       } else {
         await signInWithEmail(email, password);
       }
-      router.push("/dashboard");
+      await postLoginActions();
     } catch (err) {
       toast.error(isSignUp ? t.auth.failedSignUp : t.auth.failedSignIn);
     } finally {

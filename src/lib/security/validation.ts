@@ -127,6 +127,13 @@ export const teamExecuteSchema = z.object({
   }),
 });
 
+// --- Monitor (public) ---
+export const monitorRunRequestSchema = z.object({
+  provider: z.enum(["anthropic", "openai", "google", "mistral"]),
+  model: z.string().min(1).max(100),
+  apiKey: z.string().min(1).max(500),
+});
+
 // --- Grader (public) ---
 export const graderRequestSchema = z.object({
   system_prompt: z.string().min(10).max(10_000),

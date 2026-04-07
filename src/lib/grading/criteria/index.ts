@@ -7,6 +7,8 @@ import { toolUsageEvaluator } from "./tool-usage";
 import { safetyCheckEvaluator } from "./safety-check";
 import { customScriptEvaluator } from "./custom-script";
 import { llmJudgeEvaluator } from "./llm-judge";
+import { consistencyEvaluator } from "./consistency";
+import { latencyBenchmarkEvaluator } from "./latency-benchmark";
 
 const evaluators: Record<string, CriterionEvaluator> = {
   output_match: outputMatchEvaluator,
@@ -15,6 +17,8 @@ const evaluators: Record<string, CriterionEvaluator> = {
   safety_check: safetyCheckEvaluator,
   custom_script: customScriptEvaluator,
   llm_judge: llmJudgeEvaluator,
+  consistency: consistencyEvaluator,
+  latency_benchmark: latencyBenchmarkEvaluator,
 };
 
 export async function evaluateCriterion(

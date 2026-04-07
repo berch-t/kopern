@@ -16,6 +16,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/api-reference", priority: 0.75, changeFrequency: "monthly" as const },
     { path: "/mcp", priority: 0.75, changeFrequency: "monthly" as const },
     { path: "/grader", priority: 0.85, changeFrequency: "weekly" as const },
+    { path: "/monitor", priority: 0.85, changeFrequency: "weekly" as const },
     { path: "/privacy", priority: 0.3, changeFrequency: "yearly" as const },
     { path: "/terms", priority: 0.3, changeFrequency: "yearly" as const },
     { path: "/login", priority: 0.3, changeFrequency: "monthly" as const },

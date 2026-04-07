@@ -81,6 +81,8 @@ Most AI agent tools are **frameworks** — they give you building blocks and wis
 - **Email** (Gmail + Outlook) — `read_emails`, `send_email`, `reply_email` via OAuth
 - **Calendar** (Google + Microsoft) — `list_events`, `check_availability`, `create_event`, `update_event`, `cancel_event`
 - **GitHub** — `read_file`, `search_files`, `create_branch`, `commit_files`, `create_pull_request`
+- **Image Generation** — Google Gemini `gemini-3.1-flash-image-preview`, auto-upload to Firebase Storage
+- **Social Media** — `social_create_post`, `social_create_thread`, `social_read_feed`, `social_get_metrics`, `social_search_mentions`, `social_reply` (Bluesky AT Protocol)
 - **Bug Management** — `list_bugs`, `get_bug`, `update_bug_status`, `send_thank_you_email` (admin-only)
 
 ### Grading and Optimization Lab
@@ -125,6 +127,29 @@ Most AI agent tools are **frameworks** — they give you building blocks and wis
 - **Memory Panel** — View, add, delete agent memories with usage indicator
 - **Connector Status** — See which channels are active with dedicated config pages
 - **Service Connector Panel** — Connect/disconnect Google and Microsoft OAuth
+
+### Workflow Quality Monitor
+- **Public Diagnostic** — Free `/monitor` page: 18 standardized prompts across 6 criteria (reasoning, instruction following, consistency, latency, edge cases, output quality)
+- **29 Model Baselines** — Hardcoded reference scores for Anthropic, OpenAI, Google, and Mistral models
+- **Animated Score Card** — Count-up animation with SVG ring, radar chart (cyan user / amber baseline overlay)
+- **Insight Cards** — `[CRITICAL]` and `[SUGGESTION]` parsed into expandable severity-coded cards
+- **Shareable Reports** — Dedicated `/monitor/{runId}` page, JSON download, Twitter sharing, OG images
+- **Monitor Team** — Auto-creates 4 specialized agents (Prompter, Scorer, Comparator, Reporter) on signup
+- **Phase 2 planned** — Connected monitoring for your agents with drift detection, alerts, and 5 MCP tools
+
+### Agent Grader (Public)
+- **Free Prompt Grading** — `/grader` page: paste a system prompt + test cases, get a radar chart scorecard
+- **Endpoint Mode** — Grade external HTTP agent endpoints (OpenAI/Anthropic/Google format auto-detect)
+- **Shareable Scorecards** — OG image generation for social sharing
+
+### Social Media Tools
+- **Bluesky Integration** — AT Protocol V1: create posts/threads, read feed, search mentions, reply, get metrics
+- **Encrypted Credentials** — AES-256-GCM stored in Firestore
+- **Daily Limits** — Per-platform rate limiting for safety
+
+### Blog
+- **Integrated Blog** — `/blog` with Markdown files (gray-matter), reading time, i18n locale fallback
+- **SEO** — Article JSON-LD, breadcrumbs, speakable, dynamic sitemap
 
 ### Billing and Security
 - **Stripe Billing** — Subscriptions + usage-based meters, customer portal
@@ -299,6 +324,7 @@ users/{userId}
   /goals/{goalId}
   /usage/{yearMonth}               # Token + cost tracking with agent breakdown
   /bugs/{bugId}
+monitorRuns/{runId}                  # Workflow quality diagnostic results
 apiKeys/{sha256Hash}                # MCP API keys (O(1) lookup)
 slackTeams/{teamId}                 # Slack workspace index
 telegramBots/{hash}                 # Telegram bot routing
@@ -321,11 +347,14 @@ whatsappPhones/{phoneId}            # WhatsApp phone routing
 | `POST /api/whatsapp/webhook` | WhatsApp Cloud API |
 | `POST /api/teams/[id]/execute` | Team execution SSE |
 | `GET /api/oauth/google\|microsoft` | Service connector OAuth |
+| `POST /api/monitor/run` | Workflow quality diagnostic (SSE, 18 prompts) |
+| `GET /api/monitor/[runId]` | Fetch shared diagnostic report |
+| `POST /api/grader/run` | Public prompt grading (no auth) |
 | `GET /api/cron/grading` | Scheduled grading + alerts (Vercel Cron) |
 | `GET /api/cron/routines` | Scheduled team routines (Vercel Cron) |
 
 <details>
-<summary>Full route list (25+ routes)</summary>
+<summary>Full route list (30+ routes)</summary>
 
 - `POST /api/agents/[id]/pipelines/[pid]/execute` — Pipeline execution
 - `POST /api/agents/[id]/approve` — Tool approval decision
@@ -346,6 +375,12 @@ whatsappPhones/{phoneId}            # WhatsApp phone routing
 - `POST /api/whatsapp/setup` — WhatsApp phone setup
 - `POST /api/oauth/disconnect` — Revoke service connector
 - `GET /api/agents/[id]/compliance-report` — EU AI Act report
+- `POST /api/monitor/setup-team` — Create monitor agent team for user
+- `GET /api/monitor/[runId]/og` — OG image for monitor report
+- `POST /api/grader/run` — Public prompt grading (rate-limited 5/day/IP)
+- `GET /api/grader/[runId]/og` — OG image for grader scorecard
+- `POST /api/grader/generate-cases` — AI-generate test cases for a prompt
+- `POST /api/grader/probe` — Probe external endpoint format
 - `GET /api/health` — Liveness check
 
 </details>
@@ -556,6 +591,14 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 - [x] Scheduled Grading + Alerts (Vercel Cron)
 - [x] Self-Hosted Docker deployment (docker-compose + Ollama)
 - [x] Agent Export/Import (portable JSON)
+- [x] Agent Grader — public prompt grading + endpoint mode
+- [x] Social Media Tools (Bluesky AT Protocol)
+- [x] Prompt Cache Preservation (~90% cost reduction on repeated calls)
+- [x] Extended Thinking / Effort Levels (6 levels, 3 providers)
+- [x] Image Generation (Gemini, Firebase Storage)
+- [x] Blog Infrastructure (Markdown, JSON-LD, sitemap)
+- [x] Workflow Quality Monitor (18 prompts, 6 criteria, 29 model baselines)
+- [ ] Connected Monitoring (drift detection, alerts, 5 MCP tools)
 - [ ] Template Marketplace
 - [ ] Connector Plugin SDK
 - [ ] TypeScript SDK
