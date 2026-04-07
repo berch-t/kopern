@@ -147,7 +147,8 @@
     "apiReference": "Référence API",
     "mcpDocs": "Docs MCP",
     "pricing": "Tarifs",
-    "blog": "Blog"
+    "blog": "Blog",
+    "grader": "Grader"
   },
   "auth": {
     "title": "Kopern",
@@ -899,6 +900,18 @@
       "description": "Atteignez vos clients sur WhatsApp — l'application de messagerie n°1. API Meta Cloud, accusés de lecture, 1000 conversations gratuites/mois."
     },
     "integratesWith": "Intégrations native"
+  },
+  "graderSection": {
+    "title": "Notez vos agents",
+    "titleAccent": "gratuitement",
+    "subtitle": "Testez la qualité et la sécurité de votre agent IA en quelques secondes. Collez un system prompt ou pointez vers un endpoint HTTP — obtenez un score multi-critères avec des recommandations actionnables.",
+    "feature1Title": "Notation d'endpoint",
+    "feature1Description": "Envoyez des attaques adversariales à l'endpoint HTTP de votre agent et évaluez ses réponses sur 4 critères de sécurité.",
+    "feature2Title": "Notation de prompt",
+    "feature2Description": "Collez votre system prompt, générez des cas de test avec l'IA, et obtenez un score de qualité détaillé.",
+    "feature3Title": "Scorecard partageable",
+    "feature3Description": "Partagez le score de votre agent sur LinkedIn ou X avec une belle image OG. Montrez au monde que votre agent est prêt pour la production.",
+    "cta": "Essayer le Grader"
   },
   "mcpSection": {
     "title": "Construit pour les",

@@ -7,6 +7,7 @@ import { onAuthChanged, signOut } from "@/lib/firebase/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { useDictionary } from "@/providers/LocaleProvider";
 import { LocalizedLink } from "@/components/LocalizedLink";
+import { useLocalizedRouter } from "@/hooks/useLocalizedRouter";
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
 import { BugReportDialog } from "@/components/feedback/BugReportDialog";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ import {
 import {
   BookOpen,
   ChevronDown,
+  ClipboardCheck,
   Code2,
   CreditCard,
   DollarSign,
@@ -60,6 +62,7 @@ const NAV_BTN =
 export function SharedNavbar({ variant = "public", isLanding = false }: SharedNavbarProps) {
   const t = useDictionary();
   const pathname = usePathname();
+  const router = useLocalizedRouter();
 
   // Auth state — dashboard variant uses useAuth() (AuthProvider guaranteed), public uses raw listener
   const authCtx = variant === "dashboard" ? useAuth() : null;
@@ -90,8 +93,10 @@ export function SharedNavbar({ variant = "public", isLanding = false }: SharedNa
   // ─── Documentation dropdown handler ──────────────────────────────────────
 
   function handleDocsClick() {
-    if (isLanding && !user) {
+    if (isLanding) {
       document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      router.push("/#how-it-works");
     }
   }
 
@@ -100,9 +105,9 @@ export function SharedNavbar({ variant = "public", isLanding = false }: SharedNa
   const docsItems = [
     {
       label: t.nav.docs,
-      href: user ? "/docs" : isLanding ? null : "/docs",
+      href: user ? "/docs" : null,
       icon: BookOpen,
-      onClick: isLanding && !user ? handleDocsClick : undefined,
+      onClick: !user ? handleDocsClick : undefined,
     },
     { label: t.nav.apiReference, href: "/api-reference", icon: Code2 },
     { label: t.nav.mcpDocs, href: "/mcp", icon: Server },
@@ -113,6 +118,13 @@ export function SharedNavbar({ variant = "public", isLanding = false }: SharedNa
   function DesktopNav() {
     return (
       <div className="flex-1 hidden md:flex items-center justify-center gap-1">
+        <LocalizedLink href="/grader">
+          <Button variant="ghost" size="sm" className={`${NAV_BTN} !text-accent`}>
+            <ClipboardCheck className="h-4 w-4" />
+            {t.nav.grader}
+          </Button>
+        </LocalizedLink>
+
         <LocalizedLink href="/examples">
           <Button variant="ghost" size="sm" className={NAV_BTN}>
             <Sparkles className="h-4 w-4" />
@@ -123,7 +135,7 @@ export function SharedNavbar({ variant = "public", isLanding = false }: SharedNa
         {/* Docs dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className={NAV_BTN}>
+            <Button variant="ghost" size="sm" className={`${NAV_BTN} !text-accent`}>
               <BookOpen className="h-4 w-4" />
               {t.nav.docs}
               <ChevronDown className="h-3 w-3 ml-0.5 opacity-60" />
@@ -185,6 +197,11 @@ export function SharedNavbar({ variant = "public", isLanding = false }: SharedNa
             <span className="font-semibold">Kopern</span>
           </div>
           <nav className="flex flex-col gap-1 p-4 overflow-y-auto">
+            <LocalizedLink href="/grader">
+              <Button variant="ghost" className="justify-start gap-3 h-11 w-full font-semibold text-accent">
+                <ClipboardCheck className="h-4 w-4" /> {t.nav.grader}
+              </Button>
+            </LocalizedLink>
             <LocalizedLink href="/examples">
               <Button variant="ghost" className="justify-start gap-3 h-11 w-full font-semibold">
                 <Sparkles className="h-4 w-4" /> Templates
@@ -336,9 +353,9 @@ export function SharedNavbar({ variant = "public", isLanding = false }: SharedNa
 
         {/* Logo (public only — dashboard has logo in sidebar) */}
         {isPublic && (
-          <>
-            <div className="w-7 shrink-0 hidden md:block" />
-          </>
+          <LocalizedLink href="/" className="hidden md:flex items-center shrink-0">
+            <img src="/logo_small.png" alt="Kopern" className="h-7" />
+          </LocalizedLink>
         )}
 
         {/* Center nav links (public only) */}

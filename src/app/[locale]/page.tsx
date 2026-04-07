@@ -163,6 +163,22 @@ export default function LandingPage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Handle hash scroll after client-side navigation (e.g. /#how-it-works)
+  useEffect(() => {
+    const hash = window.location.hash.replace("#", "");
+    if (!hash) return;
+    const tryScroll = () => {
+      const el = document.getElementById(hash);
+      if (el) { el.scrollIntoView({ behavior: "smooth" }); return true; }
+      return false;
+    };
+    if (tryScroll()) return;
+    // Element may not be rendered yet (lazy-loaded) — retry briefly
+    const timer = setInterval(() => { if (tryScroll()) clearInterval(timer); }, 200);
+    const timeout = setTimeout(() => clearInterval(timer), 3000);
+    return () => { clearInterval(timer); clearTimeout(timeout); };
+  }, []);
+
   useEffect(() => {
     const unsubscribe = onAuthChanged((u) => {
       setUser(u);
@@ -981,8 +997,75 @@ export default function LandingPage() {
         </div>
       </div>
 
-        {/* MCP for Developers */}
+        {/* Agent Grader — Free Tool */}
         <div className="pt-10 pb-20 px-4 md:px-6" style={{ background: "var(--landing-section-alt)" }}>
+          <div className="max-w-6xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-center mb-12"
+            >
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                {t.graderSection.title}{" "}
+                <span className="text-primary">{t.graderSection.titleAccent}</span>
+              </h2>
+              <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+                {t.graderSection.subtitle}
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+              className="grid gap-6 sm:grid-cols-3 mb-10"
+            >
+              {[
+                {
+                  icon: Cable,
+                  title: t.graderSection.feature1Title,
+                  description: t.graderSection.feature1Description,
+                },
+                {
+                  icon: ClipboardCheck,
+                  title: t.graderSection.feature2Title,
+                  description: t.graderSection.feature2Description,
+                },
+                {
+                  icon: Sparkles,
+                  title: t.graderSection.feature3Title,
+                  description: t.graderSection.feature3Description,
+                },
+              ].map((feature) => (
+                <BorderGlow key={feature.title} className="bg-card" glowRadius={28}>
+                  <div className="p-6 space-y-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                      <feature.icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="font-semibold">{feature.title}</h3>
+                    <p className="text-sm text-muted-foreground">{feature.description}</p>
+                  </div>
+                </BorderGlow>
+              ))}
+            </motion.div>
+
+            <div className="flex justify-center">
+              <LocalizedLink href="/grader">
+                <Button size="lg" className="gap-2 font-semibold">
+                  <ClipboardCheck className="h-4 w-4" />
+                  {t.graderSection.cta}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </LocalizedLink>
+            </div>
+          </div>
+        </div>
+
+        {/* MCP for Developers */}
+        <div className="pt-10 pb-20 px-4 md:px-6">
           <div className="max-w-6xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
