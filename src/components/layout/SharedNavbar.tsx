@@ -101,6 +101,13 @@ export function SharedNavbar({ variant = "public", isLanding = false }: SharedNa
     }
   }
 
+  // ─── Quality dropdown (Grader + Monitor) ─────────────────────────────────
+
+  const qualityItems = [
+    { label: t.nav.grader, href: "/grader", icon: ClipboardCheck },
+    { label: t.nav.monitor, href: "/monitor", icon: Activity },
+  ];
+
   // ─── Docs dropdown (shared between desktop + mobile) ─────────────────────
 
   const docsItems = [
@@ -119,19 +126,26 @@ export function SharedNavbar({ variant = "public", isLanding = false }: SharedNa
   function DesktopNav() {
     return (
       <div className="flex-1 hidden md:flex items-center justify-center gap-1">
-        <LocalizedLink href="/grader">
-          <Button variant="ghost" size="sm" className={`${NAV_BTN} !text-accent`}>
-            <ClipboardCheck className="h-4 w-4" />
-            {t.nav.grader}
-          </Button>
-        </LocalizedLink>
-
-        <LocalizedLink href="/monitor">
-          <Button variant="ghost" size="sm" className={`${NAV_BTN} !text-accent`}>
-            <Activity className="h-4 w-4" />
-            {t.nav.monitor}
-          </Button>
-        </LocalizedLink>
+        {/* Quality dropdown (Grader + Monitor) */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className={`${NAV_BTN} !text-accent`}>
+              <ClipboardCheck className="h-4 w-4" />
+              {t.nav.quality}
+              <ChevronDown className="h-3 w-3 ml-0.5 opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" className="w-48 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
+            {qualityItems.map((item) => (
+              <DropdownMenuItem key={item.label} asChild className="text-zinc-900 dark:text-zinc-100 focus:text-zinc-900 dark:focus:text-zinc-100">
+                <LocalizedLink href={item.href} className="flex items-center gap-2 w-full">
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </LocalizedLink>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <LocalizedLink href="/examples">
           <Button variant="ghost" size="sm" className={NAV_BTN}>
@@ -149,10 +163,10 @@ export function SharedNavbar({ variant = "public", isLanding = false }: SharedNa
               <ChevronDown className="h-3 w-3 ml-0.5 opacity-60" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="center" className="w-48">
+          <DropdownMenuContent align="center" className="w-48 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
             {docsItems.map((item) =>
               item.href ? (
-                <DropdownMenuItem key={item.label} asChild>
+                <DropdownMenuItem key={item.label} asChild className="text-zinc-900 dark:text-zinc-100 focus:text-zinc-900 dark:focus:text-zinc-100">
                   <LocalizedLink href={item.href} className="flex items-center gap-2 w-full">
                     <item.icon className="h-4 w-4" />
                     {item.label}
@@ -162,7 +176,7 @@ export function SharedNavbar({ variant = "public", isLanding = false }: SharedNa
                 <DropdownMenuItem
                   key={item.label}
                   onClick={item.onClick}
-                  className="flex items-center gap-2 cursor-pointer"
+                  className="flex items-center gap-2 cursor-pointer text-zinc-900 dark:text-zinc-100 focus:text-zinc-900 dark:focus:text-zinc-100"
                 >
                   <item.icon className="h-4 w-4" />
                   {item.label}
@@ -205,16 +219,16 @@ export function SharedNavbar({ variant = "public", isLanding = false }: SharedNa
             <span className="font-semibold">Kopern</span>
           </div>
           <nav className="flex flex-col gap-1 p-4 overflow-y-auto">
-            <LocalizedLink href="/grader">
-              <Button variant="ghost" className="justify-start gap-3 h-11 w-full font-semibold text-accent">
-                <ClipboardCheck className="h-4 w-4" /> {t.nav.grader}
-              </Button>
-            </LocalizedLink>
-            <LocalizedLink href="/monitor">
-              <Button variant="ghost" className="justify-start gap-3 h-11 w-full font-semibold text-accent">
-                <Activity className="h-4 w-4" /> {t.nav.monitor}
-              </Button>
-            </LocalizedLink>
+            {/* Quality section */}
+            <p className="text-xs font-semibold text-accent px-3 pt-3 pb-1">{t.nav.quality}</p>
+            {qualityItems.map((item) => (
+              <LocalizedLink key={item.label} href={item.href}>
+                <Button variant="ghost" className="justify-start gap-3 h-11 w-full font-semibold text-accent pl-6">
+                  <item.icon className="h-4 w-4" /> {item.label}
+                </Button>
+              </LocalizedLink>
+            ))}
+
             <LocalizedLink href="/examples">
               <Button variant="ghost" className="justify-start gap-3 h-11 w-full font-semibold">
                 <Sparkles className="h-4 w-4" /> Templates
@@ -300,7 +314,7 @@ export function SharedNavbar({ variant = "public", isLanding = false }: SharedNa
             </Button>
           )}
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-52">
+        <DropdownMenuContent align="end" className="w-52 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
           <DropdownMenuItem disabled className="flex flex-col items-start gap-0.5">
             <span className="text-xs font-medium truncate max-w-full">{user.displayName || user.email}</span>
             {user.displayName && (
@@ -364,8 +378,8 @@ export function SharedNavbar({ variant = "public", isLanding = false }: SharedNa
           <div>{/* MobileSidebar is rendered by Sidebar.tsx */}</div>
         )}
 
-        {/* Logo (public only — dashboard has logo in sidebar) */}
-        {isPublic && (
+        {/* Logo (public non-landing only — dashboard has logo in sidebar, landing has hero) */}
+        {isPublic && !isLanding && (
           <LocalizedLink href="/" className="hidden md:flex items-center shrink-0">
             <img src="/logo_small.png" alt="Kopern" className="h-7" />
           </LocalizedLink>

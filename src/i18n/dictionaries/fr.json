@@ -27,7 +27,7 @@
     "titleAccent": "des Agents IA",
     "subtitle": "Créez des agents IA métier personnalisés, validez-les via des pipelines de notation déterministes et exposez-les comme endpoints API — le tout depuis une seule plateforme.",
     "cta": "Commencer",
-    "ctaDashboard": "Aller au Tableau de bord",
+    "ctaDashboard": "Tableau de bord",
     "examples": "Exemples de Workflows",
     "customAgentCard": {
       "title": "Votre Agent Sur Mesure",
@@ -149,7 +149,8 @@
     "pricing": "Tarifs",
     "blog": "Blog",
     "grader": "Grader",
-    "monitor": "Monitor"
+    "monitor": "Monitor",
+    "quality": "Qualite"
   },
   "auth": {
     "title": "Kopern",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { signInWithGoogle, signInWithGithub, signInWithEmail, signUpWithEmail } from "@/lib/firebase/auth";
 import { getAuth } from "firebase/auth";
@@ -18,6 +18,14 @@ import { FadeIn } from "@/components/motion/FadeIn";
 import { LocalizedLink } from "@/components/LocalizedLink";
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+function LoginContent() {
   const router = useLocalizedRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from");

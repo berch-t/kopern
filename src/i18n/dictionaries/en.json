@@ -27,7 +27,7 @@
     "titleAccent": "AI Agents",
     "subtitle": "Create custom business AI agents, validate them through deterministic grading pipelines, and expose them as API endpoints — all from one platform.",
     "cta": "Get Started",
-    "ctaDashboard": "Go to Dashboard",
+    "ctaDashboard": "Dashboard",
     "examples": "Workflow Examples",
     "customAgentCard": {
       "title": "Your Tailored Agent",
@@ -149,7 +149,8 @@
     "pricing": "Pricing",
     "blog": "Blog",
     "grader": "Grader",
-    "monitor": "Monitor"
+    "monitor": "Monitor",
+    "quality": "Quality"
   },
   "auth": {
     "title": "Kopern",
