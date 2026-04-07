@@ -13,8 +13,9 @@ export function OrganizationJsonLd() {
       "https://github.com/berch-t/kopern",
       "https://www.npmjs.com/package/@kopern/mcp-server",
       "https://www.linkedin.com/company/kopern",
+      "https://www.wikidata.org/wiki/Q138958921",
     ],
-    foundingDate: "2024",
+    foundingDate: "2026",
     contactPoint: {
       "@type": "ContactPoint",
       contactType: "customer support",
