@@ -2,13 +2,17 @@
 
 import { useState, useRef, useCallback } from "react";
 import { ApiKeyInput } from "@/components/monitor/ApiKeyInput";
+import { EndpointConfig, type EndpointConfigData } from "@/components/grader/EndpointConfig";
 import { MonitorScoreCard } from "@/components/monitor/MonitorScoreCard";
 import { DiagnosticDetail } from "@/components/monitor/DiagnosticDetail";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { FadeIn } from "@/components/motion/FadeIn";
-import { Loader2, Activity, Brain, Gauge, Shield, Zap, Target } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Activity, Brain, Gauge, Shield, Zap, Target, Globe, Cpu } from "lucide-react";
 import { toast } from "sonner";
 import { useDictionary } from "@/providers/LocaleProvider";
+
+type MonitorMode = "endpoint" | "model";
 
 interface CriterionDetail {
   type: string;
@@ -28,8 +32,10 @@ interface CaseResult {
 
 interface MonitorResult {
   runId: string;
+  mode: string;
   provider: string;
   model: string;
+  endpointUrl?: string;
   score: number;
   testCount: number;
   avgLatencyMs: number;
@@ -62,10 +68,22 @@ const CRITERIA_ICONS = [
   { name: "Quality", icon: Gauge },
 ];
 
+const DEFAULT_ENDPOINT: EndpointConfigData = {
+  url: "",
+  method: "POST",
+  authType: "none",
+  authValue: "",
+  authHeaderName: "",
+  bodyTemplate: '{"message": "{{input}}"}',
+  responsePath: "",
+};
+
 export default function MonitorPage() {
   const t = useDictionary();
   const m = t.monitor;
 
+  const [mode, setMode] = useState<MonitorMode>("endpoint");
+  const [endpointConfig, setEndpointConfig] = useState<EndpointConfigData>(DEFAULT_ENDPOINT);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<MonitorResult | null>(null);
   const [progress, setProgress] = useState<ProgressEvent | null>(null);
@@ -128,7 +146,13 @@ export default function MonitorPage() {
     }
   };
 
-  const runDiagnostic = useCallback(async (provider: string, model: string, apiKey: string) => {
+  // ─── Endpoint mode: run diagnostic against user's endpoint ──────────────
+  const runEndpointDiagnostic = useCallback(async () => {
+    if (!endpointConfig.url) {
+      toast.error(m.enterEndpointUrl);
+      return;
+    }
+
     setLoading(true);
     setResult(null);
     setProgress(null);
@@ -138,7 +162,18 @@ export default function MonitorPage() {
       const res = await fetch("/api/monitor/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, model, apiKey }),
+        body: JSON.stringify({
+          mode: "endpoint",
+          endpoint: {
+            url: endpointConfig.url,
+            method: endpointConfig.method,
+            authType: endpointConfig.authType,
+            authValue: endpointConfig.authValue || undefined,
+            authHeaderName: endpointConfig.authHeaderName || undefined,
+            bodyTemplate: endpointConfig.bodyTemplate,
+            responsePath: endpointConfig.responsePath || undefined,
+          },
+        }),
       });
 
       if (res.status === 429) {
@@ -152,15 +187,49 @@ export default function MonitorPage() {
       }
 
       await consumeSSE(res, {
-        progress: (data) => {
-          setProgress(data as unknown as ProgressEvent);
-        },
-        result: (data) => {
-          setResult(data as unknown as MonitorResult);
-        },
-        error: (data) => {
-          toast.error((data as { message: string }).message || m.diagnosticFailed);
-        },
+        progress: (data) => setProgress(data as unknown as ProgressEvent),
+        result: (data) => setResult(data as unknown as MonitorResult),
+        error: (data) => toast.error((data as { message: string }).message || m.diagnosticFailed),
+      });
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") {
+        toast.error(m.networkError);
+      }
+    } finally {
+      setLoading(false);
+      stopThinkingPhrases();
+      setProgress(null);
+    }
+  }, [endpointConfig, m]);
+
+  // ─── Model mode: run diagnostic against raw LLM ────────────────────────
+  const runModelDiagnostic = useCallback(async (provider: string, model: string, apiKey: string) => {
+    setLoading(true);
+    setResult(null);
+    setProgress(null);
+    startThinkingPhrases();
+
+    try {
+      const res = await fetch("/api/monitor/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "model", provider, model, apiKey }),
+      });
+
+      if (res.status === 429) {
+        toast.error(m.rateLimitError);
+        return;
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error((err as { error?: string }).error || m.diagnosticFailed);
+        return;
+      }
+
+      await consumeSSE(res, {
+        progress: (data) => setProgress(data as unknown as ProgressEvent),
+        result: (data) => setResult(data as unknown as MonitorResult),
+        error: (data) => toast.error((data as { message: string }).message || m.diagnosticFailed),
       });
     } catch (err) {
       if ((err as Error).name !== "AbortError") {
@@ -184,10 +253,10 @@ export default function MonitorPage() {
               {m.badge}
             </div>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-              {m.title}
+              {mode === "endpoint" ? m.titleEndpoint : m.titleModel}
             </h1>
             <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-              {m.subtitle}
+              {mode === "endpoint" ? m.subtitleEndpoint : m.subtitleModel}
             </p>
           </SlideUp>
         </div>
@@ -195,18 +264,73 @@ export default function MonitorPage() {
 
       {/* Content */}
       <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Mode tabs */}
+        <div className="flex justify-center mb-8">
+          <div className="inline-flex rounded-lg border border-border bg-muted/30 p-1">
+            <button
+              onClick={() => { setMode("endpoint"); setResult(null); }}
+              className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                mode === "endpoint"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Globe className="h-4 w-4" />
+              {m.tabEndpoint}
+            </button>
+            <button
+              onClick={() => { setMode("model"); setResult(null); }}
+              className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                mode === "model"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Cpu className="h-4 w-4" />
+              {m.tabModel}
+            </button>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left: Input */}
           <div className="space-y-6">
-            <FadeIn>
-              <h2 className="text-lg font-semibold mb-4">{m.configTitle}</h2>
-              <ApiKeyInput onSubmit={runDiagnostic} disabled={loading} />
-            </FadeIn>
-
-            <FadeIn delay={0.1}>
-              <p className="text-xs text-muted-foreground text-center">
-                {m.freeDiagnostics}
-              </p>
+            <FadeIn key={mode}>
+              {mode === "endpoint" ? (
+                <>
+                  <h2 className="text-lg font-semibold mb-4">{m.endpointTitle}</h2>
+                  <EndpointConfig config={endpointConfig} onChange={setEndpointConfig} />
+                  <Button
+                    onClick={runEndpointDiagnostic}
+                    disabled={loading || !endpointConfig.url}
+                    className="w-full mt-4"
+                    size="lg"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        {m.running}
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="h-4 w-4 mr-2" />
+                        {m.runDiagnosticEndpoint}
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    {m.freeDiagnosticsEndpoint}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-lg font-semibold mb-4">{m.configTitle}</h2>
+                  <ApiKeyInput onSubmit={runModelDiagnostic} disabled={loading} />
+                  <p className="text-xs text-muted-foreground text-center mt-4">
+                    {m.freeDiagnostics}
+                  </p>
+                </>
+              )}
             </FadeIn>
 
             <FadeIn delay={0.2}>
@@ -281,8 +405,8 @@ export default function MonitorPage() {
                 <MonitorScoreCard
                   runId={result.runId}
                   score={result.score}
-                  model={result.model}
-                  provider={result.provider}
+                  model={result.mode === "endpoint" ? (result.endpointUrl || "Custom Endpoint") : result.model}
+                  provider={result.mode === "endpoint" ? "endpoint" : result.provider}
                   testCount={result.testCount}
                   avgLatencyMs={result.avgLatencyMs}
                   criteriaBreakdown={result.criteriaBreakdown}
@@ -305,7 +429,7 @@ export default function MonitorPage() {
                     {m.resultsWillAppear}
                   </h3>
                   <p className="text-sm text-muted-foreground/70 mt-2 max-w-sm mx-auto">
-                    {m.emptyState}
+                    {mode === "endpoint" ? m.emptyStateEndpoint : m.emptyState}
                   </p>
                 </div>
               </FadeIn>

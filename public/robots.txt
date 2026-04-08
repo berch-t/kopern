@@ -19,6 +19,11 @@ Disallow: /*/bugs
 Allow: /*/examples
 Allow: /*/pricing
 Allow: /*/docs
+Allow: /*/grader
+Allow: /*/monitor
+Allow: /*/blog
+Allow: /*/mcp
+Allow: /*/api-reference
 
 # Allow locale roots
 Allow: /en
@@ -26,6 +31,10 @@ Allow: /fr
 
 # Sitemap
 Sitemap: https://kopern.ai/sitemap.xml
+
+# AI context files (llmstxt.org standard)
+# LLMs-Full.txt: https://kopern.ai/llms-full.txt
+# LLMs.txt: https://kopern.ai/llms.txt
 
 # AI / LLM context files
 # See https://llmstxt.org

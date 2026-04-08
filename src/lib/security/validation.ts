@@ -127,11 +127,26 @@ export const teamExecuteSchema = z.object({
   }),
 });
 
+// --- Endpoint config (shared by monitor + grader) ---
+const endpointConfigSchema = z.object({
+  url: z.string().url().max(2000),
+  method: z.enum(["POST", "GET"]).default("POST"),
+  authType: z.enum(["none", "bearer", "api_key_header", "api_key_query"]).default("none"),
+  authValue: z.string().max(2000).optional(),
+  authHeaderName: z.string().max(200).optional(),
+  bodyTemplate: z.string().max(10_000).default('{"message":"{{input}}"}'),
+  responsePath: z.string().max(500).optional(),
+});
+
 // --- Monitor (public) ---
 export const monitorRunRequestSchema = z.object({
-  provider: z.enum(["anthropic", "openai", "google", "mistral"]),
-  model: z.string().min(1).max(100),
-  apiKey: z.string().min(1).max(500),
+  mode: z.enum(["model", "endpoint"]),
+  // Mode model fields
+  provider: z.enum(["anthropic", "openai", "google", "mistral"]).optional(),
+  model: z.string().min(1).max(100).optional(),
+  apiKey: z.string().min(1).max(500).optional(),
+  // Mode endpoint fields
+  endpoint: endpointConfigSchema.optional(),
 });
 
 // --- Grader (public) ---
@@ -149,17 +164,6 @@ export const graderRequestSchema = z.object({
     .max(5),
   provider: z.enum(["anthropic", "openai", "google"]).optional().default("anthropic"),
   model: z.string().max(100).optional(),
-});
-
-// --- Grader endpoint mode (public) ---
-const endpointConfigSchema = z.object({
-  url: z.string().url().max(2000),
-  method: z.enum(["POST", "GET"]).default("POST"),
-  authType: z.enum(["none", "bearer", "api_key_header", "api_key_query"]).default("none"),
-  authValue: z.string().max(2000).optional(),
-  authHeaderName: z.string().max(200).optional(),
-  bodyTemplate: z.string().max(10_000).default('{"message":"{{input}}"}'),
-  responsePath: z.string().max(500).optional(),
 });
 
 export const graderEndpointRequestSchema = z.object({

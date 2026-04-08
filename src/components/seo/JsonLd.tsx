@@ -16,6 +16,10 @@ export function OrganizationJsonLd() {
       "https://www.wikidata.org/wiki/Q138958921",
     ],
     foundingDate: "2026",
+    address: {
+      "@type": "PostalAddress",
+      addressCountry: "FR",
+    },
     contactPoint: {
       "@type": "ContactPoint",
       contactType: "customer support",
@@ -34,6 +38,9 @@ export function OrganizationJsonLd() {
       "AI Agent Grading",
       "Webhook Integration",
       "Slack Bot Development",
+      "AI Workflow Monitoring",
+      "AI Quality Assurance",
+      "Social Media Automation",
     ],
   };
 
@@ -116,6 +123,11 @@ export function SoftwareApplicationJsonLd() {
       "Purpose Gate for session-scoped agent focus",
       "TillDone mode for multi-step task enforcement",
       "Built-in bug tracking with autonomous bug fixer agent",
+      "Workflow Quality Monitor — 18 standardized tests across 6 criteria for continuous LLM quality monitoring",
+      "Public Agent Grader — test any AI endpoint or system prompt with deterministic evaluation",
+      "Social Media Integration — Bluesky AT Protocol with 9 tools for social media management",
+      "Telegram bot and WhatsApp (Meta Cloud API) connectors",
+      "Agent memory with persistent key-value storage and context compaction",
     ],
     screenshot: `${SITE_URL}/opengraph-image`,
     browserRequirements: "Requires JavaScript. Works in all modern browsers.",
@@ -199,6 +211,21 @@ export function FAQJsonLd() {
       answer:
         "The Kopern interface is available in English and French. Agents themselves can be configured to respond in any language supported by the underlying LLM model.",
     },
+    {
+      question: "What is the Workflow Quality Monitor?",
+      answer:
+        "Kopern Monitor runs 18 standardized test prompts across 6 quality criteria (reasoning depth, instruction following, consistency, latency, edge cases, output quality) against any LLM model or API endpoint. It compares scores against baselines for 29 models and generates actionable improvement recommendations.",
+    },
+    {
+      question: "Can I test my own AI endpoint?",
+      answer:
+        "Yes. Both the Grader and Monitor support endpoint mode — connect any HTTP endpoint that accepts messages and Kopern will send test prompts, evaluate responses, and score quality. Supports OpenAI, Anthropic, n8n, and custom API formats with authentication (Bearer, API key header/query).",
+    },
+    {
+      question: "Does Kopern support social media?",
+      answer:
+        "Kopern includes a Bluesky AT Protocol connector with 9 tools for social media management: create posts, threads, read feeds, track metrics, search mentions, reply, delete posts, get profiles, and list connected accounts.",
+    },
   ];
 
   const data = {
@@ -212,6 +239,82 @@ export function FAQJsonLd() {
         text: faq.answer,
       },
     })),
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+
+export function ArticleJsonLd({
+  title,
+  description,
+  image,
+  author,
+  authorGithub,
+  datePublished,
+  dateModified,
+  url,
+  wordCount,
+  locale,
+}: {
+  title: string;
+  description: string;
+  image: string;
+  author: string;
+  authorGithub?: string;
+  datePublished: string;
+  dateModified?: string;
+  url: string;
+  wordCount?: number;
+  locale: string;
+}) {
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    headline: title,
+    description,
+    image: {
+      "@type": "ImageObject",
+      url: image.startsWith("http") ? image : `${SITE_URL}${image}`,
+      width: 1200,
+      height: 630,
+    },
+    author: {
+      "@type": "Person",
+      name: author,
+      ...(authorGithub && {
+        sameAs: [`https://github.com/${authorGithub}`],
+      }),
+      worksFor: {
+        "@type": "Organization",
+        name: "Kopern",
+        url: SITE_URL,
+      },
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Kopern",
+      url: SITE_URL,
+      logo: {
+        "@type": "ImageObject",
+        url: `${SITE_URL}/logo_small.png`,
+        width: 512,
+        height: 512,
+      },
+    },
+    datePublished,
+    ...(dateModified && { dateModified }),
+    inLanguage: locale,
+    ...(wordCount && { wordCount }),
+    speakable: {
+      "@type": "SpeakableSpecification",
+      cssSelector: ["h1", ".article-summary", "[data-speakable]"],
+    },
   };
 
   return (

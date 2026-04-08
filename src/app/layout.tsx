@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     template: "%s | Kopern",
   },
   description:
-    "Build, test, deploy, and connect production-grade AI agents with tool calling, deterministic grading, multi-agent teams, MCP endpoints, and external connectors. Embed on websites, trigger via webhooks, or install as Slack bots. Supports Claude, GPT, Gemini, Mistral, and Ollama.",
+    "Build, test, monitor, and deploy production-grade AI agents with tool calling, deterministic grading, workflow quality monitoring, multi-agent teams, MCP endpoints, and external connectors. Grade any AI endpoint, monitor LLM quality drift, embed on websites, trigger via webhooks, or install as Slack bots. Supports Claude, GPT, Gemini, Mistral, and Ollama.",
 
   applicationName: SITE_NAME,
   generator: "Next.js",
@@ -65,6 +65,16 @@ export const metadata: Metadata = {
     "évaluation agent IA",
     "chatbot IA personnalisé",
     "déploiement agent IA",
+    "AI workflow monitoring",
+    "LLM quality testing",
+    "AI endpoint grading",
+    "AI agent monitoring",
+    "LLM drift detection",
+    "AI quality assurance",
+    "Bluesky AI bot",
+    "social media AI agent",
+    "AI workflow quality",
+    "LLM benchmark",
   ],
 
   authors: [{ name: "Kopern", url: SITE_URL }],

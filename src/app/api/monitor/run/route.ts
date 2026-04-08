@@ -8,6 +8,7 @@ import { createSSEStream, sseResponse } from "@/lib/utils/sse";
 import { adminDb } from "@/lib/firebase/admin";
 import { createEventCollector } from "@/lib/pi-mono/event-collector";
 import { streamLLM } from "@/lib/llm/client";
+import { executeExternalEndpoint, type EndpointConfig } from "@/lib/grading/external-executor";
 import { generateImprovementNotes } from "@/lib/grading/improvement-notes";
 import { buildMonitorGradingCases, MONITOR_CRITERIA_DEFS } from "@/lib/monitor/battery";
 import { getBaseline, BASELINE_VERSION } from "@/lib/monitor/baselines";
@@ -26,27 +27,50 @@ export async function POST(request: NextRequest) {
   const parsed = validateBody(monitorRunRequestSchema, raw);
   if ("error" in parsed) return parsed.error;
 
-  const { provider, model, apiKey } = parsed.data;
+  const { mode } = parsed.data;
 
-  // 3. Validate the API key works with a quick check
-  // (Skipped — we let the first prompt fail and report error via SSE)
+  // Validate mode-specific fields
+  if (mode === "model") {
+    if (!parsed.data.provider || !parsed.data.model || !parsed.data.apiKey) {
+      return NextResponse.json({ error: "Provider, model, and apiKey are required for model mode" }, { status: 400 });
+    }
+  } else {
+    if (!parsed.data.endpoint?.url) {
+      return NextResponse.json({ error: "Endpoint URL is required for endpoint mode" }, { status: 400 });
+    }
+  }
 
-  // 4. Build grading cases from the monitor battery
-  const gradingCases = buildMonitorGradingCases(provider, model, apiKey);
+  const provider = parsed.data.provider || "external";
+  const model = parsed.data.model || "custom-endpoint";
+  const apiKey = parsed.data.apiKey || "";
 
-  // 5. SSE streaming
+  // 3. Build grading cases from the monitor battery
+  // For endpoint mode, we still build the same 18 cases but with a dummy provider/model
+  const gradingCases = buildMonitorGradingCases(
+    mode === "model" ? provider : "external",
+    mode === "model" ? model : "custom-endpoint",
+    mode === "model" ? apiKey : "",
+  );
+
+  // 4. SSE streaming
   const { stream, send, close } = createSSEStream();
 
   (async () => {
     try {
+      const label = mode === "endpoint"
+        ? `endpoint ${parsed.data.endpoint!.url}`
+        : model;
+
       send("status", {
         phase: "starting",
-        message: `Initializing diagnostic for ${model}...`,
+        message: `Initializing diagnostic for ${label}...`,
         totalCases: gradingCases.length,
       });
 
-      // Build executor — uses the USER's API key
-      const executeCase = buildMonitorExecutor(provider, model, apiKey);
+      // Build executor based on mode
+      const executeCase = mode === "model"
+        ? buildModelExecutor(provider, model, apiKey)
+        : buildEndpointExecutor(parsed.data.endpoint as EndpointConfig);
 
       // Track latencies per case
       const latencies: Map<number, number> = new Map();
@@ -83,7 +107,7 @@ export async function POST(request: NextRequest) {
         });
       });
 
-      // 6. Aggregate criteria scores by POSITION (same pattern as grader)
+      // 5. Aggregate criteria scores by POSITION (same pattern as grader)
       const criteriaMap = new Map<number, { scores: number[]; label: string; key: string }>();
       for (const caseResult of result.results) {
         caseResult.criteriaResults.forEach((cr, idx) => {
@@ -102,14 +126,14 @@ export async function POST(request: NextRequest) {
         passed: scores.every((s) => s >= 0.7),
       }));
 
-      // 7. Compute composite score using weights from the plan
+      // 6. Compute composite score using weights from the plan
       const composite = criteriaBreakdown.reduce((sum, cb) => {
         const def = MONITOR_CRITERIA_DEFS.find(d => d.key === cb.criterion);
         return sum + cb.score * (def?.weight || 0);
       }, 0);
 
-      // 8. Compare vs baseline
-      const baseline = getBaseline(model);
+      // 7. Compare vs baseline (for endpoint mode, use default baseline)
+      const baseline = mode === "model" ? getBaseline(model) : getBaseline("unknown");
       const baselineComparison = {
         baselineScore: baseline.composite,
         delta: composite - baseline.composite,
@@ -122,10 +146,14 @@ export async function POST(request: NextRequest) {
         })),
       };
 
-      // 9. Generate improvement insights
+      // 8. Generate improvement insights
       send("status", { phase: "analyzing", message: "Generating diagnostic insights..." });
 
       const kopernApiKey = process.env.ANTHROPIC_API_KEY;
+      const targetLabel = mode === "endpoint"
+        ? `External endpoint: ${parsed.data.endpoint!.url}`
+        : `LLM Model: ${model} (Provider: ${provider})`;
+
       const caseResultsForAnalysis = result.results.map(r => ({
         caseName: r.caseName,
         passed: r.passed,
@@ -143,7 +171,7 @@ export async function POST(request: NextRequest) {
       let insights: string[] = [];
       try {
         const analysis = await generateImprovementNotes(
-          `LLM Model: ${model} (Provider: ${provider})`,
+          targetLabel,
           composite,
           caseResultsForAnalysis,
           "en",
@@ -157,13 +185,13 @@ export async function POST(request: NextRequest) {
         insights = ["Improvement analysis could not be generated."];
       }
 
-      // 10. Compute average latency
+      // 9. Compute average latency
       const allLatencies = Array.from(latencies.values());
       const avgLatencyMs = allLatencies.length > 0
         ? Math.round(allLatencies.reduce((a, b) => a + b, 0) / allLatencies.length)
         : 0;
 
-      // 11. Persist to Firestore
+      // 10. Persist to Firestore
       const runId = `mn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       try {
         const persistedResults = result.results.map((r) => ({
@@ -182,8 +210,10 @@ export async function POST(request: NextRequest) {
 
         await adminDb.collection("monitorRuns").doc(runId).set({
           runId,
+          mode,
           provider,
           model,
+          endpointUrl: mode === "endpoint" ? parsed.data.endpoint!.url : null,
           score: composite,
           criteriaBreakdown,
           baselineComparison,
@@ -198,11 +228,13 @@ export async function POST(request: NextRequest) {
         // Non-blocking
       }
 
-      // 12. Send result
+      // 11. Send result
       send("result", {
         runId,
+        mode,
         provider,
         model,
+        endpointUrl: mode === "endpoint" ? parsed.data.endpoint!.url : null,
         score: composite,
         criteriaBreakdown,
         baselineComparison,
@@ -228,7 +260,7 @@ export async function POST(request: NextRequest) {
     } catch (err) {
       console.error("[Monitor] Error:", err);
       send("error", {
-        message: err instanceof Error ? err.message : "Diagnostic failed. Please check your API key and try again.",
+        message: err instanceof Error ? err.message : "Diagnostic failed. Please check your configuration and try again.",
       });
     } finally {
       close();
@@ -238,9 +270,9 @@ export async function POST(request: NextRequest) {
   return sseResponse(stream);
 }
 
-// ─── Monitor executor ───────────────────────────────────────────────────────
+// ─── Model executor (uses streamLLM with user's API key) ───────────────────
 
-function buildMonitorExecutor(provider: string, model: string, apiKey: string) {
+function buildModelExecutor(provider: string, model: string, apiKey: string) {
   return async (inputPrompt: string) => {
     const collector = createEventCollector();
     const messages: { role: "user" | "assistant"; content: string }[] = [
@@ -269,10 +301,28 @@ function buildMonitorExecutor(provider: string, model: string, apiKey: string) {
   };
 }
 
+// ─── Endpoint executor (uses HTTP fetch to user's endpoint) ────────────────
+
+function buildEndpointExecutor(endpointConfig: EndpointConfig) {
+  return async (inputPrompt: string) => {
+    const result = await executeExternalEndpoint(endpointConfig, inputPrompt);
+
+    // Wrap into a CollectedEvents-compatible structure
+    return {
+      getOutput: () => result.assistantOutput,
+      get assistantOutput() { return result.assistantOutput; },
+      toolCalls: [],
+      tokens: [],
+      latencyMs: result.latencyMs,
+      addToken: () => {},
+      finalize: () => {},
+    };
+  };
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function hashIp(ip: string): string {
-  // Simple hash for privacy — not cryptographic, just for grouping
   let hash = 0;
   for (let i = 0; i < ip.length; i++) {
     const char = ip.charCodeAt(i);

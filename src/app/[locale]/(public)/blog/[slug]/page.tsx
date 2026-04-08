@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { LocalizedLink } from "@/components/LocalizedLink";
 import { Calendar, Clock, ArrowLeft, Github, Linkedin } from "lucide-react";
 import { MarkdownRenderer } from "@/components/shared/MarkdownRenderer";
-import { BreadcrumbJsonLd } from "@/components/seo/JsonLd";
+import { ArticleJsonLd, BreadcrumbJsonLd } from "@/components/seo/JsonLd";
 import type { Metadata } from "next";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopern.ai";
@@ -57,43 +57,18 @@ export default async function BlogPostPage({
 
   if (!post) notFound();
 
-  const articleJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Article",
-    headline: post.title,
-    description: post.description,
-    datePublished: post.date,
-    dateModified: post.date,
-    author: {
-      "@type": "Person",
-      name: post.author,
-      ...(post.authorGithub && {
-        sameAs: [
-          `https://github.com/${post.authorGithub}`,
-          ...(post.authorLinkedin ? [post.authorLinkedin] : []),
-        ],
-      }),
-    },
-    publisher: {
-      "@type": "Organization",
-      name: "Kopern",
-      url: SITE_URL,
-      logo: { "@type": "ImageObject", url: `${SITE_URL}/logo_small.png` },
-    },
-    mainEntityOfPage: `${SITE_URL}/${locale}/blog/${slug}`,
-    inLanguage: locale,
-    wordCount: post.content.split(/\s+/).length,
-    speakable: {
-      "@type": "SpeakableSpecification",
-      cssSelector: ["h1", ".article-description"],
-    },
-  };
-
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      <ArticleJsonLd
+        title={post.title}
+        description={post.description}
+        image={post.image || "/opengraph-image"}
+        author={post.author}
+        authorGithub={post.authorGithub}
+        datePublished={post.date}
+        url={`${SITE_URL}/${locale}/blog/${slug}`}
+        wordCount={post.content.split(/\s+/).length}
+        locale={locale}
       />
       <BreadcrumbJsonLd
         items={[

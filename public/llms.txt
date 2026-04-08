@@ -4,7 +4,7 @@
 
 ## What Kopern Does
 
-Kopern is a web platform for creating production-grade AI agents. Describe what you want in plain text — Kopern generates the agent, tests it against 6 quality criteria, optimizes it automatically, and deploys it in one click across 5 channels.
+Kopern is a web platform for creating production-grade AI agents. Describe what you want in plain text — Kopern generates the agent, tests it against 6 quality criteria, optimizes it automatically, and deploys it in one click across 5 channels. 130+ features shipped.
 
 ## Core Capabilities
 
@@ -16,6 +16,10 @@ Kopern is a web platform for creating production-grade AI agents. Describe what 
 - **Built-in Agent Tools**: web_fetch (HTTP), code_interpreter (Python/Node/Bash via GCP Cloud Run), agent memory (persistent KV), email (Gmail+Outlook), calendar (Google+Microsoft), GitHub integration.
 - **Agent Memory**: Persistent key-value memory across sessions with LRU eviction, cross-session search, context compaction via Haiku summarization.
 - **Service Connectors**: OAuth Google (Gmail + Calendar) and Microsoft (Outlook + Graph). 8 agent tools with daily limits and tool approval.
+- **Workflow Quality Monitor**: 18 standardized prompts across 6 criteria test any LLM model or API endpoint for reasoning depth, instruction following, consistency, latency, edge cases, and output quality. Compare against baselines for 29 models across 4 providers.
+- **Public Agent Grader**: Free public grader at kopern.ai/grader — grade any AI endpoint or system prompt against custom test cases with 6 evaluation criteria.
+- **Social Media Integration**: Bluesky AT Protocol connector with 9 tools for social media management (create posts, threads, read feeds, track metrics, search mentions, reply, delete, profiles, list connected).
+- **Blog**: Technical blog at kopern.ai/blog covering AI agent development, grading systems, and monitoring.
 - **EU AI Act Compliance**: Automated compliance reports (Art. 6, 12, 14, 52), tool approval for destructive actions, conversational approval on messaging channels.
 - **Stripe Billing**: 4 tiers (Starter free, Pro $79/mo, Usage PAYG, Enterprise $499/mo) with usage-based meters.
 
@@ -87,6 +91,9 @@ Docker deployment for enterprises with data sovereignty requirements:
 - `POST /api/telegram/webhook` — Telegram Bot API
 - `POST /api/whatsapp/webhook` — WhatsApp Cloud API
 - `POST /api/teams/{id}/execute` — Team execution SSE
+- `POST /api/monitor/run` — Workflow quality diagnostic (18 prompts, SSE)
+- `POST /api/grader/run` — Public agent grader (rate-limited, no auth)
+- `POST /api/grader/probe` — Endpoint probe for grader
 
 ## Links
 

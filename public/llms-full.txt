@@ -1,6 +1,6 @@
 # Kopern — AI Agent Builder, Orchestrator & Grader (Full Reference)
 
-> The open-source platform to build, grade, optimize, and deploy AI agents — no code required. 111 features shipped. Self-hosted via Docker.
+> The open-source platform to build, grade, optimize, and deploy AI agents — no code required. 130+ features shipped. Self-hosted via Docker.
 
 ## Platform Overview
 
@@ -93,6 +93,24 @@ Top 20 memories auto-injected into system prompt via `<agent-memory>` XML block.
 - `cancel_event(eventId)` — Cancel event (destructive)
 
 Daily limits: 20 emails/day, 10 events/day per agent. Tokens encrypted AES-256-GCM.
+
+### Social Media Tools (9 tools, Bluesky AT Protocol)
+- `social_create_post(text, images?)` — Publish a post to Bluesky
+- `social_create_thread(posts[])` — Publish a multi-post thread
+- `social_read_feed(limit?)` — Read the home feed
+- `social_get_metrics(postUri)` — Get engagement metrics (likes, reposts, replies)
+- `social_search_mentions(query, limit?)` — Search for mentions and keywords
+- `social_reply(postUri, text)` — Reply to a post
+- `social_delete_post(postUri)` — Delete a post (destructive)
+- `social_get_profile(handle?)` — Get user profile info
+- `social_list_connected()` — List connected social accounts
+
+Credentials encrypted AES-256-GCM. Daily limits per platform. Destructive tools require approval.
+
+### Image Generation
+- `image_generation(prompt, aspect_ratio?)` — Generate images via Google Gemini (gemini-3.1-flash-image-preview)
+- 10 aspect ratios: 1:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 21:9
+- Images uploaded to Firebase Storage, URL returned in tool result
 
 ### GitHub Tools
 - `read_file(repo, path)` — Read file from connected repo
@@ -373,6 +391,12 @@ Usage-based billing via Stripe Billing Meters. 17% platform commission on token 
 | GET | /api/agents/{id}/compliance-report | Session | JSON |
 | GET | /api/cron/grading | Cron secret | JSON |
 | GET | /api/cron/routines | Cron secret | JSON |
+| POST | /api/monitor/run | IP rate limit | SSE stream |
+| GET | /api/monitor/{runId} | None | JSON |
+| POST | /api/monitor/setup-team | Session | JSON |
+| POST | /api/grader/run | IP rate limit | SSE stream |
+| POST | /api/grader/probe | IP rate limit | JSON |
+| GET | /api/grader/{runId}/og | None | Image |
 | GET | /api/health | None | JSON |
 
 ## Firestore Schema
@@ -402,8 +426,49 @@ telegramBots/{hash}                 # Telegram bot routing
 whatsappPhones/{phoneId}            # WhatsApp phone routing
 ```
 
+## Workflow Quality Monitor
+
+Public diagnostic tool at kopern.ai/monitor — tests any LLM model or API endpoint for production readiness.
+
+### 6 Quality Criteria
+| Criterion | Weight | Description |
+|-----------|--------|-------------|
+| Reasoning Depth | 20% | Logical deduction, multi-step problem solving, inference quality |
+| Instruction Following | 20% | Adherence to constraints, format compliance, role consistency |
+| Consistency | 15% | Stable output across similar prompts, no contradictions |
+| Latency Benchmark | 15% | Response time measurement against provider baselines |
+| Edge Case Handling | 15% | Graceful behavior on ambiguous inputs, missing data, adversarial prompts |
+| Output Quality | 15% | Clarity, accuracy, completeness, appropriate tone |
+
+### How It Works
+1. 18 standardized prompts (3 per criterion) are sent to the target model/endpoint
+2. Each response is evaluated by a Claude Sonnet judge with criterion-specific rubrics
+3. Scores (0.0-1.0) are compared against hardcoded baselines for 29 models across 4 providers
+4. Actionable insights are generated (CRITICAL/SUGGESTION badges)
+5. Results stored in Firestore `monitorRuns` collection for sharing via `/monitor/{runId}`
+
+Rate limit: 3 diagnostics/day/IP. No authentication required.
+
+## Public Agent Grader
+
+Free grading tool at kopern.ai/grader — test any AI endpoint or system prompt without creating an account.
+
+### Two Modes
+- **Prompt Mode**: Paste a system prompt and test cases — Kopern runs the agent and evaluates responses
+- **Endpoint Mode**: Connect any HTTP endpoint (OpenAI, Anthropic, n8n, custom API) — Kopern sends test prompts and grades the responses
+
+### Evaluation
+Uses the same 6 criterion types as the full grading system (output_match, schema_validation, tool_usage, safety_check, custom_script, llm_judge). Results include a radar chart, per-case scores, and shareable OG image at `/api/grader/{runId}/og`.
+
+Rate limit: 5 gradings/day/IP.
+
+## Blog
+
+Technical blog at kopern.ai/blog covering AI agent development, grading systems, MCP protocol, and monitoring. Markdown-based with gray-matter frontmatter, reading time estimation, i18n locale fallback (EN/FR). SEO: ArticleJsonLd + BreadcrumbJsonLd per post.
+
 ## Links
 
 - Website: https://kopern.ai
 - GitHub: https://github.com/berch-t/kopern
+- npm: https://www.npmjs.com/package/@kopern/mcp-server
 - License: MIT
