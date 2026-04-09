@@ -1178,28 +1178,144 @@ async function dispatchPlatformTool(
   }
 }
 
+// ─── Discovery handler (no auth required) ───────────────────────────
+
+const MCP_PROMPTS = [
+  {
+    name: "create-agent",
+    description: "Step-by-step guide to create, configure and deploy a new AI agent on Kopern",
+    arguments: [
+      { name: "use_case", description: "What the agent should do (e.g. 'customer support chatbot for a restaurant')", required: true },
+    ],
+  },
+  {
+    name: "grade-and-improve",
+    description: "Create a grading suite, run evaluation, and optimize an existing agent with AutoResearch",
+    arguments: [
+      { name: "agent_id", description: "The agent to evaluate and improve", required: true },
+    ],
+  },
+  {
+    name: "deploy-everywhere",
+    description: "Deploy an agent to all available channels: widget, Slack, Telegram, WhatsApp, webhooks",
+    arguments: [
+      { name: "agent_id", description: "The agent to deploy", required: true },
+    ],
+  },
+];
+
+const PROMPT_MESSAGES: Record<string, (args: Record<string, string>) => unknown[]> = {
+  "create-agent": (args) => [
+    {
+      role: "user",
+      content: {
+        type: "text",
+        text: `I want to create a new AI agent on Kopern for this use case: "${args.use_case || "general assistant"}".
+
+Please follow these steps:
+1. First, list available templates with kopern_list_templates to see if one matches
+2. If a template matches, deploy it with kopern_deploy_template
+3. If no template matches, create a custom agent with kopern_create_agent — write a detailed system prompt
+4. Then create a grading suite with kopern_create_grading_suite (3-5 test cases)
+5. Run grading with kopern_run_grading to get a baseline score
+6. If score < 80%, run kopern_run_autoresearch to optimize
+7. Finally, deploy with kopern_connect_widget`,
+      },
+    },
+  ],
+  "grade-and-improve": (args) => [
+    {
+      role: "user",
+      content: {
+        type: "text",
+        text: `I want to evaluate and improve agent "${args.agent_id}".
+
+Please follow these steps:
+1. Get the agent details with kopern_get_agent
+2. Create a grading suite with kopern_create_grading_suite (5+ realistic test cases covering edge cases)
+3. Run grading with kopern_run_grading
+4. Review results with kopern_get_grading_results
+5. If score < 90%, run kopern_run_autoresearch to auto-optimize the prompt
+6. Run grading again to confirm improvement`,
+      },
+    },
+  ],
+  "deploy-everywhere": (args) => [
+    {
+      role: "user",
+      content: {
+        type: "text",
+        text: `I want to deploy agent "${args.agent_id}" to all channels.
+
+Please help me set up each channel:
+1. kopern_connect_widget — embeddable chat widget for websites
+2. kopern_connect_slack — Slack workspace bot
+3. kopern_connect_telegram — Telegram bot (needs bot token from @BotFather)
+4. kopern_connect_whatsapp — WhatsApp Business (needs Meta phone_number_id + access_token)
+5. kopern_connect_webhook — inbound/outbound webhooks for n8n, Zapier, Make
+
+Ask me which channels I want to enable and what credentials I have ready.`,
+      },
+    },
+  ],
+};
+
+async function handleDiscovery(body: JsonRpcRequest & { id: string | number }, request: NextRequest) {
+  switch (body.method) {
+    case "initialize": {
+      return jsonOk(body.id, {
+        protocolVersion: "2024-11-05",
+        capabilities: { tools: {}, prompts: {} },
+        serverInfo: {
+          name: "kopern",
+          version: "2.0.0",
+          description: "Kopern — AI Agent Builder, Orchestrator & Grader. Build, test, optimize and deploy AI agents with 30+ platform tools.",
+        },
+      });
+    }
+
+    case "tools/list": {
+      // Try optional auth — if key is provided, return agent-bound tools
+      const auth = await authenticate(request);
+      if (auth?.key?.enabled && auth.type === "agent" && auth.key.agentId) {
+        const agent = await loadAgent(auth.key.userId, auth.key.agentId);
+        if (agent) {
+          return jsonOk(body.id, { tools: buildToolList(agent) });
+        }
+      }
+      // Default: platform tools (30 tools, no agent context)
+      return jsonOk(body.id, { tools: buildPlatformToolList() });
+    }
+
+    case "prompts/list": {
+      return jsonOk(body.id, { prompts: MCP_PROMPTS });
+    }
+
+    case "prompts/get": {
+      const promptName = body.params?.name as string;
+      const promptArgs = ((body.params as Record<string, unknown>)?.arguments ?? {}) as Record<string, string>;
+      const builder = PROMPT_MESSAGES[promptName];
+      if (!builder) {
+        return jsonOk(body.id, { isError: true, messages: [{ role: "user", content: { type: "text", text: `Unknown prompt: ${promptName}` } }] });
+      }
+      return jsonOk(body.id, { messages: builder(promptArgs) });
+    }
+
+    case "ping": {
+      return jsonOk(body.id, {});
+    }
+
+    default:
+      return jsonErr(body.id, -32601, `Method not found: ${body.method}`);
+  }
+}
+
 // ─── POST handler (MCP Streamable HTTP) ──────────────────────────────
 
 export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
-  // 1. Authenticate (supports both agent-bound and user-level keys)
-  const auth = await authenticate(request);
-  if (!auth) {
-    return jsonErr(null, -32000, "Missing or invalid API key", 401);
-  }
-  if (!auth.key.enabled) {
-    return jsonErr(null, -32000, "API key is disabled", 403);
-  }
-
-  const userId = auth.key.userId;
-  const agentId = auth.type === "agent" ? auth.key.agentId : null;
-
-  // Rate limiting
-  const rl = await checkRateLimit(mcpRateLimit, agentId || userId);
-  if (rl) return rl;
-
-  // 2. Parse body
+  // 1. Parse body first (needed for discovery methods that don't require auth)
   let body: JsonRpcRequest;
   try {
     body = await request.json();
@@ -1216,149 +1332,34 @@ export async function POST(request: NextRequest) {
     return jsonErr(body.id, -32600, "Invalid JSON-RPC request", 400);
   }
 
-  // 3. Route by method
+  // 2. Discovery methods — no auth required (MCP spec: registries must inspect tools)
+  const discoveryMethods = ["initialize", "tools/list", "prompts/list", "prompts/get", "ping"];
+  if (discoveryMethods.includes(body.method)) {
+    return handleDiscovery(body as JsonRpcRequest & { id: string | number }, request);
+  }
+
+  // 3. Authenticate (required for tools/call and other operations)
+  const auth = await authenticate(request);
+  if (!auth) {
+    return jsonErr(body.id, -32000, "Missing or invalid API key", 401);
+  }
+  if (!auth.key.enabled) {
+    return jsonErr(body.id, -32000, "API key is disabled", 403);
+  }
+
+  const userId = auth.key.userId;
+  const agentId = auth.type === "agent" ? auth.key.agentId : null;
+
+  // Rate limiting
+  const rl = await checkRateLimit(mcpRateLimit, agentId || userId);
+  if (rl) return rl;
+
+  // 4. Route by method (only authenticated operations remain here)
   switch (body.method) {
-    // ── Initialize handshake ──
-    case "initialize": {
-      return jsonOk(body.id, {
-        protocolVersion: "2024-11-05",
-        capabilities: {
-          tools: {},
-          prompts: {},
-          resources: {},
-        },
-        serverInfo: {
-          name: "Kopern",
-          version: "2.0.0",
-          description: "Full AI agent lifecycle: create, grade, optimize, deploy, orchestrate, monitor — 32 tools via MCP.",
-          homepage: "https://kopern.ai",
-          icon: "https://kopern.ai/logo_small.png",
-        },
-      });
-    }
 
-    // ── Prompts ──
-    case "prompts/list": {
-      return jsonOk(body.id, {
-        prompts: [
-          {
-            name: "create-agent",
-            description: "Step-by-step guide to create, configure and deploy a new AI agent on Kopern",
-            arguments: [
-              { name: "use_case", description: "What the agent should do (e.g. 'customer support chatbot for a restaurant')", required: true },
-            ],
-          },
-          {
-            name: "grade-and-improve",
-            description: "Create a grading suite, run evaluation, and optimize an existing agent with AutoResearch",
-            arguments: [
-              { name: "agent_id", description: "The agent to evaluate and improve", required: true },
-            ],
-          },
-          {
-            name: "deploy-everywhere",
-            description: "Deploy an agent to all available channels: widget, Slack, Telegram, WhatsApp, webhooks",
-            arguments: [
-              { name: "agent_id", description: "The agent to deploy", required: true },
-            ],
-          },
-        ],
-      });
-    }
-
-    case "prompts/get": {
-      const promptName = body.params?.name as string;
-      const promptArgs = ((body.params as Record<string, unknown>)?.arguments ?? {}) as Record<string, string>;
-
-      if (promptName === "create-agent") {
-        return jsonOk(body.id, {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "text",
-                text: `I want to create a new AI agent on Kopern for this use case: "${promptArgs.use_case || "general assistant"}".
-
-Please follow these steps:
-1. First, list available templates with kopern_list_templates to see if one matches
-2. If a template matches, deploy it with kopern_deploy_template
-3. If no template matches, create a custom agent with kopern_create_agent — write a detailed system prompt
-4. Then create a grading suite with kopern_create_grading_suite (3-5 test cases)
-5. Run grading with kopern_run_grading to get a baseline score
-6. If score < 80%, run kopern_run_autoresearch to optimize
-7. Finally, deploy with kopern_connect_widget`,
-              },
-            },
-          ],
-        });
-      }
-
-      if (promptName === "grade-and-improve") {
-        return jsonOk(body.id, {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "text",
-                text: `I want to evaluate and improve agent "${promptArgs.agent_id}".
-
-Please follow these steps:
-1. Get the agent details with kopern_get_agent
-2. Create a grading suite with kopern_create_grading_suite (5+ realistic test cases covering edge cases)
-3. Run grading with kopern_run_grading
-4. Review results with kopern_get_grading_results
-5. If score < 90%, run kopern_run_autoresearch to auto-optimize the prompt
-6. Run grading again to confirm improvement`,
-              },
-            },
-          ],
-        });
-      }
-
-      if (promptName === "deploy-everywhere") {
-        return jsonOk(body.id, {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "text",
-                text: `I want to deploy agent "${promptArgs.agent_id}" to all channels.
-
-Please help me set up each channel:
-1. kopern_connect_widget — embeddable chat widget for websites
-2. kopern_connect_slack — Slack workspace bot
-3. kopern_connect_telegram — Telegram bot (needs bot token from @BotFather)
-4. kopern_connect_whatsapp — WhatsApp Business (needs Meta phone_number_id + access_token)
-5. kopern_connect_webhook — inbound/outbound webhooks for n8n, Zapier, Make
-
-Ask me which channels I want to enable and what credentials I have ready.`,
-              },
-            },
-          ],
-        });
-      }
-
-      return jsonOk(body.id, { isError: true, messages: [{ role: "user", content: { type: "text", text: `Unknown prompt: ${promptName}` } }] });
-    }
-
-    // ── Resources (empty) ──
+    // ── Resources (empty, requires auth for future protected resources) ──
     case "resources/list": {
       return jsonOk(body.id, { resources: [] });
-    }
-
-    // ── Ping ──
-    case "ping": {
-      return jsonOk(body.id, {});
-    }
-
-    // ── List tools ──
-    case "tools/list": {
-      if (agentId) {
-        const agent = await loadAgent(userId, agentId);
-        if (!agent) return jsonErr(body.id, -32000, "Agent not found");
-        return jsonOk(body.id, { tools: buildToolList(agent) });
-      }
-      return jsonOk(body.id, { tools: buildPlatformToolList() });
     }
 
     // ── Call a tool ──
