@@ -16,6 +16,7 @@ import AutoFixButton from "@/components/operator/AutoFixButton";
 import OperatorEditForm from "@/components/operator/OperatorEditForm";
 import MemoryPanel from "@/components/operator/MemoryPanel";
 import { ServiceConnectorPanel } from "@/components/operator/ServiceConnectorPanel";
+import { SocialConnectorPanel } from "@/components/operator/SocialConnectorPanel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SlideUp } from "@/components/motion/SlideUp";
@@ -269,6 +270,14 @@ export default function OperatorPage({
           agentId={agentId}
           hasEmailTool={agent.builtinTools?.includes("service_email") ?? false}
           hasCalendarTool={agent.builtinTools?.includes("service_calendar") ?? false}
+        />
+      )}
+
+      {/* Social Media Connectors (Bluesky, Twitter, LinkedIn, Facebook) */}
+      {agent && (
+        <SocialConnectorPanel
+          agentId={agentId}
+          hasSocialMedia={agent.builtinTools?.includes("service_social_media") ?? false}
         />
       )}
 

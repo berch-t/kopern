@@ -25,8 +25,15 @@
  *   }
  */
 
+const { readFileSync } = require("fs");
+const { join } = require("path");
+
 const API_KEY = process.env.KOPERN_API_KEY;
 const BASE_URL = process.env.KOPERN_URL || "https://kopern.ai/api/mcp/server";
+
+// Static tool definitions for registry crawlers (Glama, Smithery, etc.)
+// Runtime tools/list is still served by the remote endpoint.
+const TOOLS = JSON.parse(readFileSync(join(__dirname, "tools.json"), "utf8"));
 
 if (!API_KEY) {
   process.stderr.write(
@@ -36,7 +43,7 @@ if (!API_KEY) {
   process.exit(1);
 }
 
-process.stderr.write(`[kopern-mcp] Kopern MCP Server v2.0.4 — 32 tools\n`);
+process.stderr.write(`[kopern-mcp] Kopern MCP Server v2.0.5 — 32 tools\n`);
 process.stderr.write(`[kopern-mcp] Endpoint: ${BASE_URL}\n`);
 
 // ---------- stdio JSON-RPC transport ----------
