@@ -109,9 +109,9 @@ Two key types:
 |------|-------------|
 | `kopern_grade_prompt` | Grade a system prompt against inline test cases |
 | `kopern_create_grading_suite` | Create a reusable test suite with cases |
-| `kopern_run_grading` | Execute a grading suite and get scores |
-| `kopern_run_autoresearch` | AutoTune — iterative prompt optimization |
-| `kopern_get_grading_results` | Get detailed results for a grading run |
+| `kopern_run_grading` | Execute a grading suite, get scores + improvement notes |
+| `kopern_run_autoresearch` | AutoTune — iterative prompt optimization (uses improvement notes) |
+| `kopern_get_grading_results` | Get detailed results + improvement notes for a grading run |
 | `kopern_list_grading_runs` | List score history for a suite |
 
 ### Teams & Pipelines (4 tools)
@@ -173,6 +173,13 @@ Two key types:
 
 ```
 > Use kopern_list_templates to show me business templates, then deploy the "restaurant" one
+```
+
+### Grade and improve
+
+```
+> Run kopern_run_grading on my agent — it will return scores AND improvement notes.
+  Then run kopern_run_autoresearch to optimize using those suggestions automatically.
 ```
 
 ### Full workflow

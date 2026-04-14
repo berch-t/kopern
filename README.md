@@ -87,9 +87,10 @@ Most AI agent tools are **frameworks** — they give you building blocks and wis
 
 ### Grading and Optimization Lab
 - **Deterministic Grading** — 6 criteria: output match, schema validation, tool usage, safety check, custom script, LLM judge
+- **Improvement Notes** — Post-grading LLM analysis generates actionable suggestions (system prompt, skill, tool, general) with quick-apply buttons and optimization pipeline integration
 - **Scheduled Grading** — Vercel Cron with configurable schedule, score drop and threshold alerts via email/Slack/webhook
-- **AutoTune** — Iterative prompt refinement via hill-climbing
-- **AutoFix** — One-click diagnosis and patch for failed test cases (self-sufficient: generates its own test suite if needed)
+- **AutoTune** — Iterative prompt refinement via hill-climbing, guided by improvement notes from previous grading
+- **AutoFix** — One-click diagnosis and patch for failed test cases (self-sufficient: generates its own test suite if needed), uses improvement notes as high-priority context
 - **Stress Lab** — Automated red team: prompt injection, jailbreaks, hallucination traps, with auto-hardening
 - **Tournament** — A/B model arena to find the best config
 - **Distillation** — Same quality, fraction of the cost
@@ -598,6 +599,7 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 - [x] Image Generation (Gemini, Firebase Storage)
 - [x] Blog Infrastructure (Markdown, JSON-LD, sitemap)
 - [x] Workflow Quality Monitor (18 prompts, 6 criteria, 29 model baselines)
+- [x] Improvement Notes Pipeline (LLM judge suggestions → AutoFix/AutoTune, quick-apply, MCP parity)
 - [ ] Connected Monitoring (drift detection, alerts, 5 MCP tools)
 - [ ] Template Marketplace
 - [ ] Connector Plugin SDK
