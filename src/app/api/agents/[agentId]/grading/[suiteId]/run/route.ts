@@ -10,7 +10,7 @@ import { logAppError } from "@/lib/errors/logger";
 import { buildCriterionConfig } from "@/lib/grading/build-criterion-config";
 import { generateImprovementNotes } from "@/lib/grading/improvement-notes";
 import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
-import { createSessionServer, appendSessionEvents, endSessionServer } from "@/lib/billing/track-usage-server";
+import { createSessionServer, appendSessionEvents, endSessionServer, updateSessionMetrics } from "@/lib/billing/track-usage-server";
 
 export async function POST(
   request: NextRequest,
@@ -100,6 +100,7 @@ export async function POST(
             score: null,
             totalCases: cases.length,
             passedCases: 0,
+            source: "manual",
             startedAt: FieldValue.serverTimestamp(),
             completedAt: null,
             createdAt: FieldValue.serverTimestamp(),
@@ -118,6 +119,7 @@ export async function POST(
       let passedCases = 0;
       const pendingToolArgs: Record<string, Record<string, unknown>> = {};
       const caseResultsForAnalysis: { caseName: string; passed: boolean; score: number; expectedBehavior: string; agentOutput: string; criteriaResults: { criterionType: string; passed: boolean; score: number; message: string }[] }[] = [];
+      const resultWritePromises: Promise<unknown>[] = [];
 
       for (let i = 0; i < cases.length; i++) {
         const testCase = cases[i];
@@ -189,15 +191,28 @@ export async function POST(
           }
         );
 
-        // Log grading session events
+        // Log grading session events + metrics
         if (caseSessionId && userId) {
           try {
             collector.finalize();
-            await appendSessionEvents(userId, agentId, caseSessionId, [
-              { type: "user_message", data: { content: testCase.inputPrompt } },
-              { type: "assistant_message", data: { content: collector.assistantOutput } },
-            ]);
-            await endSessionServer(userId, agentId, caseSessionId);
+            const writes: Promise<void>[] = [
+              appendSessionEvents(userId, agentId, caseSessionId, [
+                { type: "user_message", data: { content: testCase.inputPrompt } },
+                { type: "assistant_message", data: { content: collector.assistantOutput } },
+              ]),
+              endSessionServer(userId, agentId, caseSessionId),
+            ];
+            if (caseMetrics !== null && caseMetrics !== undefined) {
+              const cm = caseMetrics as { inputTokens: number; outputTokens: number; toolCallCount: number };
+              writes.push(updateSessionMetrics(userId, agentId, caseSessionId, {
+                inputTokens: cm.inputTokens,
+                outputTokens: cm.outputTokens,
+                cost: 0,
+                toolCallCount: cm.toolCallCount,
+                messageCount: 2,
+              }));
+            }
+            await Promise.all(writes);
           } catch { /* best-effort logging */ }
         }
 
@@ -236,21 +251,23 @@ export async function POST(
 
         const durationMs = Date.now() - caseStartTime;
 
-        // Persist result to Firestore
+        // Persist result to Firestore (collected, awaited before "done")
         if (userId && runId) {
-          adminDb
-            .collection(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs/${runId}/results`)
-            .add({
-              caseId: testCase.id || `case-${i}`,
-              passed,
-              score,
-              agentOutput: collector.assistantOutput.slice(0, 50000),
-              toolCalls: collector.toolCalls,
-              criteriaResults,
-              durationMs,
-              createdAt: FieldValue.serverTimestamp(),
-            })
-            .catch((err) => logAppError({ code: "GRADING_WRITE_FAILED", message: (err as Error).message, source: "grading", userId, agentId }));
+          resultWritePromises.push(
+            adminDb
+              .collection(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs/${runId}/results`)
+              .add({
+                caseId: testCase.id || `case-${i}`,
+                passed,
+                score,
+                agentOutput: collector.assistantOutput.slice(0, 50000),
+                toolCalls: collector.toolCalls,
+                criteriaResults,
+                durationMs,
+                createdAt: FieldValue.serverTimestamp(),
+              })
+              .catch((err) => logAppError({ code: "GRADING_WRITE_FAILED", message: (err as Error).message, source: "grading", userId, agentId }))
+          );
         }
 
         send("case_end", {
@@ -267,26 +284,29 @@ export async function POST(
 
       const finalScore = cases.length > 0 ? totalScore / cases.length : 0;
 
-      // Update grading run with final results + update agent's latestGradingScore
+      // Await all result writes + update run doc before sending "done"
       if (userId && runId) {
-        adminDb
-          .doc(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs/${runId}`)
-          .update({
-            status: "completed",
-            score: finalScore,
-            passedCases,
-            completedAt: FieldValue.serverTimestamp(),
-          })
-          .catch((err) => logAppError({ code: "GRADING_WRITE_FAILED", message: (err as Error).message, source: "grading", userId, agentId }));
-
-        // Update agent's latestGradingScore
-        adminDb
-          .doc(`users/${userId}/agents/${agentId}`)
-          .update({ latestGradingScore: finalScore })
-          .catch((err) => logAppError({ code: "GRADING_WRITE_FAILED", message: (err as Error).message, source: "grading", userId, agentId }));
+        try {
+          await Promise.all([
+            ...resultWritePromises,
+            adminDb
+              .doc(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs/${runId}`)
+              .update({
+                status: "completed",
+                score: finalScore,
+                passedCases,
+                completedAt: FieldValue.serverTimestamp(),
+              }),
+            adminDb
+              .doc(`users/${userId}/agents/${agentId}`)
+              .update({ latestGradingScore: finalScore }),
+          ]);
+        } catch (err) {
+          logAppError({ code: "GRADING_WRITE_FAILED", message: (err as Error).message, source: "grading", userId, agentId });
+        }
       }
 
-      // Track grading run count in usage doc (fire-and-forget)
+      // Track grading run count in usage doc (fire-and-forget OK — not read by autofix)
       if (userId) {
         const yearMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
         adminDb.doc(`users/${userId}/usage/${yearMonth}`).set(

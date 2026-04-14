@@ -9,7 +9,7 @@ export async function POST(
   { params }: { params: Promise<{ agentId: string }> }
 ) {
   const { agentId } = await params;
-  const { userId, suiteId, runId } = await request.json();
+  const { userId, suiteId, runId, improvementNotes } = await request.json();
 
   if (!userId || !suiteId || !runId) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -36,7 +36,7 @@ export async function POST(
   (async () => {
     try {
       await runAutoFix(
-        { userId, agentId, suiteId, runId },
+        { userId, agentId, suiteId, runId, improvementNotes },
         {
           onStatus: (status) => send("status", { status }),
           onDiagnostic: (diagnostic) => send("diagnostic", diagnostic),

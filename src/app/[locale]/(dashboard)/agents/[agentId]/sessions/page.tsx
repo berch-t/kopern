@@ -304,11 +304,29 @@ export default function SessionsPage({
                             </Badge>
                           </div>
 
-                          {/* Source */}
+                          {/* Source + sub-source */}
                           <div className="hidden md:block text-right">
                             <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${SOURCE_COLORS[session.source || "playground"]}`}>
                               {SOURCE_LABELS[session.source || "playground"]}
                             </span>
+                            {session.source === "autoresearch" && session.purpose && (() => {
+                              const match = session.purpose.match(/^\[(\w+)\]/);
+                              if (!match) return null;
+                              const sub = match[1].toLowerCase();
+                              const subColors: Record<string, string> = {
+                                autotune: "bg-blue-500/10 text-blue-600",
+                                autofix: "bg-amber-500/10 text-amber-600",
+                                stress_lab: "bg-red-500/10 text-red-600",
+                                tournament: "bg-violet-500/10 text-violet-600",
+                                distillation: "bg-emerald-500/10 text-emerald-600",
+                                evolution: "bg-pink-500/10 text-pink-600",
+                              };
+                              return (
+                                <span className={`ml-1 inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-medium ${subColors[sub] || ""}`}>
+                                  {sub}
+                                </span>
+                              );
+                            })()}
                           </div>
 
                           {/* Messages */}

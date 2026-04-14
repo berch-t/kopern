@@ -276,6 +276,26 @@
   border-radius: 11px;
 }
 
+/* Glowing CTA button — spinning gradient bg + pulsing purple shadow */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px 2px oklch(0.77 0.16 310 / 0.4), 0 0 20px 4px oklch(0.77 0.16 310 / 0.15); }
+  50% { box-shadow: 0 0 12px 4px oklch(0.77 0.16 310 / 0.6), 0 0 30px 8px oklch(0.77 0.16 310 / 0.25); }
+}
+
+.btn-glow-cta {
+  background: conic-gradient(
+    from var(--gradient-angle, 0deg),
+    rgb(255 255 255 / 0.9),
+    oklch(0.77 0.16 310),
+    rgb(255 255 255 / 0.9),
+    oklch(0.77 0.16 310),
+    rgb(255 255 255 / 0.9)
+  ) !important;
+  animation: gradient-border-spin 3s linear infinite, glow-pulse 2s ease-in-out infinite;
+  border: none !important;
+  color: black !important;
+}
+
 /* React Flow — reset default styles on custom node types */
 .react-flow__node-agent,
 .react-flow__node-trigger,

@@ -378,6 +378,38 @@
       "passed": "Réussi",
       "failed": "Échoué",
       "score": "Score"
+    },
+    "improvementNotes": {
+      "title": "Suggestions d'Amélioration",
+      "analyzing": "Analyse des résultats et génération de suggestions...",
+      "categories": {
+        "system_prompt": "Prompt Système",
+        "skill": "Skill",
+        "tool": "Tool",
+        "general": "Général"
+      },
+      "addSkill": "Ajouter le skill",
+      "sendToLab": "Envoyer au labo",
+      "sendAllToLab": "Tout envoyer au labo",
+      "applied": "Appliqué",
+      "sent": "Envoyé",
+      "skillAdded": "Skill ajouté",
+      "sentToOptimize": "Envoyé au labo d'optimisation",
+      "suggestionsSent": "{count} suggestions envoyées au labo",
+      "error": "Erreur"
+    },
+    "nextSteps": {
+      "title": "Prochaines étapes",
+      "perfectScore": "Tous les tests ont réussi ! Votre agent performe bien.",
+      "perfectScoreOptimize": "Vous pouvez encore optimiser le coût ou la latence avec Tournament ou Distillation.",
+      "failuresDetected": "{count} test(s) échoué(s) — AutoFix peut diagnostiquer les causes et corriger votre prompt automatiquement.",
+      "lowScore": "Score en dessous de l'objectif — AutoTune peut améliorer itérativement votre agent via des boucles d'optimisation.",
+      "autofixCta": "Corriger avec AutoFix",
+      "autotuneCta": "Optimiser avec AutoTune",
+      "stressLabCta": "Lancer le Stress Lab",
+      "tournamentCta": "Comparer les modèles",
+      "viewOptimizeLab": "Ouvrir le Labo d'Optimisation",
+      "runAgain": "Relancer"
     }
   },
   "mcp": {
@@ -570,7 +602,15 @@
     "tools": "Appels de Tools",
     "messages": "Messages",
     "timeline": "Chronologie des Événements",
-    "exportTrace": "Exporter la Trace"
+    "exportTrace": "Exporter la Trace",
+    "subSources": {
+      "autotune": "AutoTune",
+      "autofix": "AutoFix",
+      "stress_lab": "Stress Lab",
+      "tournament": "Tournoi",
+      "distillation": "Distillation",
+      "evolution": "Évolution"
+    }
   },
   "billing": {
     "title": "Facturation & Utilisation",
@@ -999,7 +1039,8 @@
     "pipelines": "Pipelines",
     "sessions": "Sessions",
     "bugs": "Bug Tracker",
-    "billing": "Facturation"
+    "billing": "Facturation",
+    "optimize": "Labo d'Optimisation"
   },
   "optimize": {
     "title": "Laboratoire d'Optimisation",
@@ -1106,6 +1147,12 @@
       "diagnostic": "Diagnostic : {detail}",
       "vulnerability": "Vulnérabilité : {detail}",
       "student": "{model} — {quality}% de qualité retenue"
+    },
+    "pendingNotes": {
+      "title": "{count} suggestion(s) du juge de notation",
+      "description": "Ces suggestions seront automatiquement intégrées dans la prochaine optimisation.",
+      "clear": "Effacer",
+      "cleared": "Suggestions supprimées"
     }
   },
   "compliance": {

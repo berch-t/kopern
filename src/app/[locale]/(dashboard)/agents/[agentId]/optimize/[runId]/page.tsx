@@ -79,12 +79,16 @@ export default function OptimizeRunDetailPage({
   const handleApplyPrompt = useCallback(async (prompt: string) => {
     if (!user || !prompt) return;
     try {
-      await updateAgent(user.uid, agentId, { systemPrompt: prompt });
+      const updates: Parameters<typeof updateAgent>[2] = { systemPrompt: prompt };
+      if (run?.bestScore !== undefined && run.bestScore !== null) {
+        updates.latestGradingScore = run.bestScore;
+      }
+      await updateAgent(user.uid, agentId, updates);
       toast.success(tOpt.promptApplied);
     } catch {
       toast.error("Failed to apply prompt");
     }
-  }, [user, agentId, tOpt]);
+  }, [user, agentId, tOpt, run]);
 
   if (loading) {
     return <div className="animate-pulse text-muted-foreground">Loading run...</div>;
@@ -191,30 +195,7 @@ export default function OptimizeRunDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-end gap-1 h-32">
-                {iterations.map((iter, i) => {
-                  const height = Math.max(iter.gradingScore * 100, 5);
-                  const isKeep = iter.status === "keep" || iter.status === "baseline";
-                  return (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                      <span className="text-[10px] tabular-nums text-muted-foreground">
-                        {(iter.gradingScore * 10).toFixed(1)}
-                      </span>
-                      <motion.div
-                        initial={{ height: 0 }}
-                        animate={{ height: `${height}%` }}
-                        transition={{ duration: 0.3, delay: i * 0.05 }}
-                        className={cn(
-                          "w-full rounded-t",
-                          isKeep ? "bg-emerald-500" :
-                          iter.status === "crash" ? "bg-red-500" : "bg-muted-foreground/30"
-                        )}
-                      />
-                      <span className="text-[10px] text-muted-foreground">{iter.index}</span>
-                    </div>
-                  );
-                })}
-              </div>
+              <IterationLineChart iterations={iterations} />
               <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded bg-emerald-500" /> {tOpt.kept}
@@ -348,7 +329,7 @@ function AutoTuneResultView({
                 <Eye className="h-3.5 w-3.5" />
                 {showPrompt ? "Hide" : "Preview"}
               </Button>
-              <Button size="sm" onClick={() => onApply(result.bestPrompt)} className="gap-1.5">
+              <Button size="sm" onClick={() => onApply(result.bestPrompt)} className="gap-1.5 btn-glow-cta">
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 {tOpt.applyPrompt}
               </Button>
@@ -432,7 +413,7 @@ function AutoFixResultView({
                   <Eye className="h-3.5 w-3.5" />
                   Preview
                 </Button>
-                <Button size="sm" onClick={() => onApply(result.patchedPrompt)} className="gap-1.5">
+                <Button size="sm" onClick={() => onApply(result.patchedPrompt)} className="gap-1.5 btn-glow-cta">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   {tOpt.applyPrompt}
                 </Button>
@@ -906,7 +887,7 @@ function EvolutionResultView({
                     <Eye className="h-3.5 w-3.5" />
                     {showChampion ? "Hide" : "Preview"}
                   </Button>
-                  <Button size="sm" onClick={() => onApply(championPrompt)} className="gap-1.5">
+                  <Button size="sm" onClick={() => onApply(championPrompt)} className="gap-1.5 btn-glow-cta">
                     <CheckCircle2 className="h-3.5 w-3.5" />
                     {tOpt.applyPrompt}
                   </Button>
@@ -922,5 +903,72 @@ function EvolutionResultView({
         )}
       </div>
     </FadeIn>
+  );
+}
+
+function IterationLineChart({ iterations }: { iterations: { index: number; gradingScore: number; status: string }[] }) {
+  const scores = iterations.map((it) => it.gradingScore * 10);
+  const minScore = Math.floor(Math.min(...scores));
+  const maxScore = Math.ceil(Math.max(...scores));
+  const yMin = Math.max(0, minScore - 1);
+  const yMax = Math.min(10, maxScore + 1);
+  const yRange = yMax - yMin || 1;
+  const padL = 32, padR = 12, padT = 20, padB = 24;
+  const W = 600, H = 160;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+  const pts = scores.map((s, i) => ({
+    x: padL + (iterations.length === 1 ? chartW / 2 : (i / (iterations.length - 1)) * chartW),
+    y: padT + chartH - ((s - yMin) / yRange) * chartH,
+    score: s,
+    status: iterations[i].status,
+    index: iterations[i].index,
+  }));
+  const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+  const gridLines = 3;
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-40">
+      {Array.from({ length: gridLines + 1 }).map((_, i) => {
+        const val = yMin + (yRange / gridLines) * (gridLines - i);
+        const y = padT + (i / gridLines) * chartH;
+        return (
+          <g key={i}>
+            <line x1={padL} y1={y} x2={W - padR} y2={y} stroke="currentColor" strokeOpacity={0.15} strokeDasharray={i === gridLines ? "0" : "4 4"} />
+            <text x={padL - 6} y={y + 3} textAnchor="end" fill="currentColor" fillOpacity={0.5} fontSize={10}>{val.toFixed(0)}</text>
+          </g>
+        );
+      })}
+      {pts.length > 1 && (
+        <path
+          d={`${linePath} L${pts[pts.length - 1].x},${padT + chartH} L${pts[0].x},${padT + chartH} Z`}
+          fill="#10b981"
+          fillOpacity={0.08}
+        />
+      )}
+      <path
+        d={linePath}
+        fill="none"
+        stroke="#10b981"
+        strokeWidth={2.5}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      {pts.map((p, i) => {
+        const isKeep = p.status === "keep" || p.status === "baseline";
+        const color = isKeep ? "#10b981" : p.status === "crash" ? "#ef4444" : "#a1a1aa";
+        return (
+          <g key={i}>
+            <circle cx={p.x} cy={p.y} r={6} fill={color} stroke="#0a0a0a" strokeWidth={2} />
+            <text x={p.x} y={p.y - 12} textAnchor="middle" fill={color} fontSize={11} fontWeight={700}>
+              {p.score.toFixed(1)}
+            </text>
+            <text x={p.x} y={H - 4} textAnchor="middle" fill="currentColor" fillOpacity={0.5} fontSize={10}>
+              #{p.index}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
   );
 }

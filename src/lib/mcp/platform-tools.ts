@@ -4,10 +4,11 @@
 
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
-import { resolveProviderKeys } from "@/lib/llm/resolve-key";
+import { resolveProviderKeys, resolveProviderKey } from "@/lib/llm/resolve-key";
 import { runAgentWithTools, type AgentRunMetrics } from "@/lib/tools/run-agent";
 import { createEventCollector } from "@/lib/pi-mono/event-collector";
 import { runGradingSuite } from "@/lib/grading/runner";
+import { generateImprovementNotes } from "@/lib/grading/improvement-notes";
 import { buildCriterionConfig } from "@/lib/grading/build-criterion-config";
 import { runAutoTune } from "@/lib/autoresearch/runner";
 import type { AutoResearchConfig, AutoResearchRun, AutoResearchCallbacks } from "@/lib/autoresearch/types";
@@ -699,10 +700,11 @@ export async function executeRunGrading(
 
   try {
     const result = await runGradingSuite(gradingCases, executeCase);
+    const finalScore = Math.round(result.score * 100) / 100;
 
     // Update agent's latest grading score
     await adminDb.doc(`users/${userId}/agents/${agentId}`).update({
-      latestGradingScore: Math.round(result.score * 100) / 100,
+      latestGradingScore: finalScore,
       updatedAt: FieldValue.serverTimestamp(),
     });
 
@@ -713,16 +715,62 @@ export async function executeRunGrading(
       score: result.score,
       totalCases: result.totalCases,
       passedCases: result.passedCases,
+      source: "manual" as const,
       startedAt: FieldValue.serverTimestamp(),
       completedAt: FieldValue.serverTimestamp(),
       createdAt: FieldValue.serverTimestamp(),
     });
 
+    // Generate improvement notes (same as SSE grading route)
+    let improvementSummary: string | null = null;
+    let improvementNotes: { category: string; severity: string; title: string; detail: string }[] = [];
+    if (finalScore < 0.99 && result.results.length > 0) {
+      try {
+        const improvementApiKey = provider !== "anthropic"
+          ? await resolveProviderKey(userId, "anthropic")
+          : apiKey;
+        const caseResultsForAnalysis = result.results.map(r => ({
+          caseName: r.caseName,
+          passed: r.passed,
+          score: r.score,
+          expectedBehavior: gradingCases.find(c => c.name === r.caseName)?.expectedBehavior || "",
+          agentOutput: r.agentOutput,
+          criteriaResults: r.criteriaResults.map(cr => ({
+            criterionType: cr.criterionType,
+            passed: cr.passed,
+            score: cr.score,
+            message: cr.message,
+          })),
+        }));
+        const analysis = await generateImprovementNotes(
+          systemPrompt,
+          finalScore,
+          caseResultsForAnalysis,
+          "en",
+          improvementApiKey || undefined,
+          userId,
+          agentId,
+        );
+        improvementSummary = analysis.summary;
+        improvementNotes = analysis.notes;
+
+        // Persist notes to run doc
+        await runRef.update({
+          improvementSummary: analysis.summary,
+          improvementNotes: analysis.notes,
+        });
+      } catch (e) {
+        console.error("[MCP] Improvement notes generation failed:", (e as Error).message);
+      }
+    }
+
     return ok({
       runId: runRef.id,
-      overallScore: Math.round(result.score * 100) / 100,
+      overallScore: finalScore,
       passed: result.passedCases,
       total: result.totalCases,
+      improvementSummary,
+      improvementNotes,
       cases: result.results.map(r => ({
         name: r.caseName,
         passed: r.passed,

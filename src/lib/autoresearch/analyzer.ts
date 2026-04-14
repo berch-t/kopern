@@ -3,6 +3,7 @@
 import { streamLLM, type LLMMessage } from "@/lib/llm/client";
 import { estimateTokens } from "@/lib/billing/pricing";
 import type { AutoFixDiagnostic, AutoResearchIteration } from "./types";
+import type { ImprovementNote } from "@/lib/firebase/firestore";
 
 // ---------------------------------------------------------------------------
 // Analyze grading failures → diagnostics
@@ -28,7 +29,8 @@ export async function analyzeFailures(
   provider: string,
   model: string,
   history: AutoResearchIteration[],
-  apiKey?: string
+  apiKey?: string,
+  improvementNotes?: ImprovementNote[]
 ): Promise<{ diagnostics: AutoFixDiagnostic[]; patchedPrompt: string; tokensUsed: { input: number; output: number } }> {
   const failureSummary = failures
     .map((f) => {
@@ -54,6 +56,10 @@ ${failedCriteria.map((c) => `    <criterion type="${c.criterionType}" score="${c
           .join("\n")}\n</history>`
       : "";
 
+  const improvementContext = improvementNotes && improvementNotes.length > 0
+    ? `\n\nIMPORTANT: A previous grading judge has already analyzed these failures and produced specific improvement suggestions. Prioritize implementing these suggestions:\n<improvement_notes>\n${improvementNotes.map(n => `<note category="${n.category}" severity="${n.severity}" title="${n.title}">\n${n.detail}\n</note>`).join("\n")}\n</improvement_notes>`
+    : "";
+
   const systemPrompt = `You are an expert AI agent optimizer. Your job is to analyze grading failures and produce a patched system prompt that fixes the identified issues.
 
 Rules:
@@ -63,7 +69,8 @@ Rules:
 - Never remove safety constraints
 - If a tool wasn't called, add explicit instructions to use it
 - If output format was wrong, add format specifications
-- If safety was violated, add explicit safety guardrails`;
+- If safety was violated, add explicit safety guardrails
+- If improvement notes from a previous grading judge are provided, incorporate them as HIGH-PRIORITY guidance for your patches`;
 
   const userMessage = `<current_system_prompt>
 ${currentPrompt}
@@ -73,6 +80,7 @@ ${currentPrompt}
 ${failureSummary}
 </failed_cases>
 ${historyContext}
+${improvementContext}
 
 Analyze each failure. For each:
 1. Identify the root cause
@@ -136,7 +144,8 @@ export async function proposeMutation(
   history: AutoResearchIteration[],
   provider: string,
   model: string,
-  apiKey?: string
+  apiKey?: string,
+  improvementNotes?: ImprovementNote[]
 ): Promise<{ newPrompt: string; description: string; tokensUsed: { input: number; output: number } }> {
   const resultsXml = gradingResults
     .map(
@@ -160,6 +169,10 @@ ${r.criteriaResults.map((c) => `  <criterion type="${c.criterionType}" score="${
 
   const consecutiveDiscards = countConsecutiveDiscards(history);
 
+  const improvementContext = improvementNotes && improvementNotes.length > 0
+    ? `\n- If improvement notes from a grading judge are provided, prioritize implementing their specific suggestions`
+    : "";
+
   const systemPrompt = `You are an expert prompt engineer optimizing an AI agent's system prompt to maximize its grading score.
 
 Rules:
@@ -167,8 +180,12 @@ Rules:
 - Focus on the weakest criteria/cases first
 - Preserve all passing behaviors (no regressions)
 - If 3+ consecutive discards: try a fundamentally different approach
-- Simpler prompts are preferred when scores are equal (Occam's razor)
+- Simpler prompts are preferred when scores are equal (Occam's razor)${improvementContext}
 ${consecutiveDiscards >= 3 ? "\nIMPORTANT: Multiple recent attempts were discarded. Try a RADICALLY different approach." : ""}`;
+
+  const improvementNotesXml = improvementNotes && improvementNotes.length > 0
+    ? `\n  <improvement_notes>\n${improvementNotes.map(n => `    <note category="${n.category}" severity="${n.severity}" title="${n.title}">\n${n.detail}\n    </note>`).join("\n")}\n  </improvement_notes>`
+    : "";
 
   const userMessage = `<autotune_context>
   <current_prompt>${currentPrompt}</current_prompt>
@@ -177,7 +194,7 @@ ${resultsXml}
   </grading_results>
   <history>
 ${historyXml}
-  </history>
+  </history>${improvementNotesXml}
 </autotune_context>
 
 <task>

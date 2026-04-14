@@ -78,7 +78,7 @@ export interface AgentRunCallbacks {
   /** Conversational approval for headless connectors (Telegram, WhatsApp, Slack).
    *  When set, destructive tools trigger a message to the user instead of auto-deny. */
   onConversationalApproval?: (request: ApprovalRequest) => Promise<ApprovalDecision>;
-  onDone: (metrics: AgentRunMetrics) => void;
+  onDone: (metrics: AgentRunMetrics) => void | Promise<void>;
   onError: (error: Error) => void;
 }
 
@@ -564,7 +564,7 @@ export async function runAgentWithTools(
                   toolIterations: iteration,
                   imageGenCount: totalImageGens,
                 };
-                callbacks.onDone(metrics);
+                await callbacks.onDone(metrics);
                 resolve();
               }
             } catch (err) {

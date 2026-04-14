@@ -85,6 +85,8 @@ export interface AgentDoc {
   maxToolIterations?: number;
   /** Max chars per tool result sent to LLM (1K-500K, default 100K). Full result stays in session. */
   maxToolResultChars?: number;
+  /** Pending improvement notes to feed into the next optimization run */
+  pendingOptimizationRequest?: PendingOptimizationRequest | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -192,7 +194,20 @@ export interface ImprovementNote {
   severity: "critical" | "suggestion";
   title: string;
   detail: string;
+  /** Set when the user clicks "quick apply" or "send to optimize" */
+  appliedAt?: Timestamp | null;
+  /** "skill_added" | "tool_added" | "sent_to_optimize" */
+  appliedAction?: string | null;
 }
+
+export interface PendingOptimizationRequest {
+  sourceRunId: string;
+  sourceSuiteId: string;
+  notes: ImprovementNote[];
+  createdAt: Timestamp;
+}
+
+export type GradingRunSource = "manual" | "autotune" | "autofix" | "stress_lab" | "tournament" | "distillation" | "evolution";
 
 export interface GradingRunDoc {
   agentVersion: number;
@@ -205,6 +220,7 @@ export interface GradingRunDoc {
   createdAt: Timestamp;
   improvementSummary?: string;
   improvementNotes?: ImprovementNote[];
+  source?: GradingRunSource;
 }
 
 export interface ToolCallRecord {

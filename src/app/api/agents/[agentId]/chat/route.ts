@@ -202,7 +202,7 @@ You MUST maintain a task list for this session. Before executing any action:
             send("approval_request", request);
             return registerApprovalGate(request.toolCallId);
           },
-          onDone: (metrics) => {
+          onDone: async (metrics) => {
             const IMAGE_GEN_COST = 0.13;
             const tokenCost = calculateTokenCost(
               agentConfig.modelProvider,
@@ -212,21 +212,28 @@ You MUST maintain a task list for this session. Before executing any action:
             );
             const cost = tokenCost + ((metrics.imageGenCount ?? 0) * IMAGE_GEN_COST);
 
-            // Persist session events + metrics (fire-and-forget)
+            // Persist session events + metrics — await before closing stream
+            // (fire-and-forget loses data on Vercel when the stream closes)
             if (userId && sessionId) {
               const events = [
                 ...toolEvents,
                 { type: "message", data: { role: "assistant", content: assistantOutput.slice(0, 10000) } },
               ];
-              appendSessionEvents(userId, agentId, sessionId, events).catch((err) => logAppError({ code: "SESSION_EVENT_WRITE_FAILED", message: (err as Error).message, source: "session", userId, agentId }));
-              updateSessionMetrics(userId, agentId, sessionId, {
-                inputTokens: metrics.inputTokens,
-                outputTokens: metrics.outputTokens,
-                cost,
-                toolCallCount: metrics.toolCallCount,
-                messageCount: 2,
-              }).catch((err) => logAppError({ code: "SESSION_METRICS_WRITE_FAILED", message: (err as Error).message, source: "session", userId, agentId }));
-              endSessionServer(userId, agentId, sessionId).catch((err) => logAppError({ code: "SESSION_END_FAILED", message: (err as Error).message, source: "session", userId, agentId }));
+              try {
+                await Promise.all([
+                  appendSessionEvents(userId, agentId, sessionId, events),
+                  updateSessionMetrics(userId, agentId, sessionId, {
+                    inputTokens: metrics.inputTokens,
+                    outputTokens: metrics.outputTokens,
+                    cost,
+                    toolCallCount: metrics.toolCallCount,
+                    messageCount: 2,
+                  }),
+                  endSessionServer(userId, agentId, sessionId),
+                ]);
+              } catch (err) {
+                logAppError({ code: "SESSION_WRITE_FAILED", message: (err as Error).message, source: "session", userId, agentId });
+              }
             }
 
             send("done", {

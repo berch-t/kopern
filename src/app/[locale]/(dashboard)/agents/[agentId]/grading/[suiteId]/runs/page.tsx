@@ -8,11 +8,12 @@ import {
   gradingCasesCollection,
   type GradingRunDoc,
   type GradingCaseDoc,
+  type GradingRunSource,
 } from "@/lib/firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Play, AlertTriangle, Lightbulb, Loader2 } from "lucide-react";
+import { Play, AlertTriangle, Lightbulb, Loader2, Wrench, Zap, ArrowRight } from "lucide-react";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { RunProgress } from "@/components/grading/RunProgress";
 import { ResultsTable } from "@/components/grading/ResultsTable";
@@ -25,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { useDictionary } from "@/providers/LocaleProvider";
 import { useLocale } from "@/providers/LocaleProvider";
 import { MarkdownRenderer } from "@/components/shared/MarkdownRenderer";
+import { ImprovementNoteCard, SendAllToOptimizeButton } from "@/components/grading/ImprovementNoteCard";
 
 interface CaseProgress {
   caseName: string;
@@ -73,6 +75,7 @@ export default function RunsPage({
   const [planError, setPlanError] = useState<string | null>(null);
   const [improvementAnalyzing, setImprovementAnalyzing] = useState(false);
   const [improvementNotes, setImprovementNotes] = useState<{ summary: string; notes: { category: string; severity: string; title: string; detail: string }[] } | null>(null);
+  const [latestRunId, setLatestRunId] = useState<string | null>(null);
 
   const { start } = useSSE({
     onMessage: (msg) => {
@@ -117,9 +120,13 @@ export default function RunsPage({
           ]);
           break;
         }
-        case "done":
+        case "done": {
+          const doneData = msg.data as { score?: number; passedCases?: number; runId?: string };
+          if (doneData.score !== undefined) setOverallScore(doneData.score);
+          if (doneData.runId) setLatestRunId(doneData.runId);
           setIsRunning(false);
           break;
+        }
         case "improvement_status":
           setImprovementAnalyzing(true);
           break;
@@ -254,17 +261,26 @@ export default function RunsPage({
         <Card className="border-blue-500/30 bg-blue-500/5">
           <CardContent className="flex items-center gap-3 p-4">
             <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-            <span className="text-sm text-muted-foreground">Analyzing results and generating improvement suggestions...</span>
+            <span className="text-sm text-muted-foreground">{t.grading.improvementNotes.analyzing}</span>
           </CardContent>
         </Card>
       )}
-      {improvementNotes && (
+      {improvementNotes && user && (
         <Card className="border-amber-500/30 bg-amber-500/5">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Lightbulb className="h-4 w-4 text-amber-500" />
-              Improvement Notes
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Lightbulb className="h-4 w-4 text-amber-500" />
+                {t.grading.improvementNotes.title}
+              </CardTitle>
+              <SendAllToOptimizeButton
+                notes={improvementNotes.notes as Parameters<typeof SendAllToOptimizeButton>[0]["notes"]}
+                userId={user.uid}
+                agentId={agentId}
+                suiteId={suiteId}
+                runId={latestRunId}
+              />
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-sm text-muted-foreground prose prose-sm dark:prose-invert max-w-none">
@@ -273,29 +289,15 @@ export default function RunsPage({
             {improvementNotes.notes.length > 0 && (
               <div className="space-y-3">
                 {improvementNotes.notes.map((note, i) => (
-                  <div
+                  <ImprovementNoteCard
                     key={i}
-                    className={cn(
-                      "rounded-lg border p-3",
-                      note.severity === "critical" ? "border-destructive/30 bg-destructive/5" : "border-border"
-                    )}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge
-                        variant={note.severity === "critical" ? "destructive" : "outline"}
-                        className="text-xs"
-                      >
-                        {note.severity}
-                      </Badge>
-                      <Badge variant="secondary" className="text-xs">
-                        {note.category === "system_prompt" ? "System Prompt" : note.category === "skill" ? "Skill" : note.category === "tool" ? "Tool" : "General"}
-                      </Badge>
-                      <span className="text-sm font-medium">{note.title}</span>
-                    </div>
-                    <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
-                      <MarkdownRenderer content={note.detail} />
-                    </div>
-                  </div>
+                    note={note as Parameters<typeof ImprovementNoteCard>[0]["note"]}
+                    noteIndex={i}
+                    userId={user.uid}
+                    agentId={agentId}
+                    suiteId={suiteId}
+                    runId={latestRunId}
+                  />
                 ))}
               </div>
             )}
@@ -303,37 +305,156 @@ export default function RunsPage({
         </Card>
       )}
 
-      {/* Past runs */}
-      {runs.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold">Past Runs</h2>
-          {runs.map((run) => (
-            <LocalizedLink key={run.id} href={`/agents/${agentId}/grading/${suiteId}/runs/${run.id}`}>
-              <Card className="cursor-pointer transition-shadow hover:shadow-md">
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-3">
-                    <Badge
-                      variant={
-                        run.status === "completed"
-                          ? "default"
-                          : run.status === "failed"
-                            ? "destructive"
-                            : "secondary"
-                      }
-                    >
-                      {run.status}
-                    </Badge>
-                    <span className="text-sm">
-                      v{run.agentVersion} — {run.passedCases}/{run.totalCases} passed
-                    </span>
-                  </div>
-                  {run.score !== null && <ScoreBadge score={run.score} size="sm" />}
-                </CardContent>
-              </Card>
-            </LocalizedLink>
-          ))}
-        </div>
-      )}
+      {/* Next Steps CTA — after run completes */}
+      {!isRunning && results.length > 0 && (() => {
+        const ns = t.grading.nextSteps;
+        const failedCount = results.filter(r => !r.passed).length;
+        const score = computedScore ?? overallScore;
+        const isPerfect = failedCount === 0 && score !== null && score >= 0.95;
+        const hasFailures = failedCount > 0;
+        const isLowScore = score !== null && score < 0.8;
+
+        return (
+          <Card className={cn(
+            "border-2",
+            isPerfect ? "border-emerald-500/30 bg-emerald-500/5" : "border-primary/30 bg-primary/5"
+          )}>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ArrowRight className="h-4 w-4" />
+                {ns.title}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {isPerfect && (
+                <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                  {ns.perfectScore}
+                </p>
+              )}
+              {hasFailures && (
+                <p className="text-sm">
+                  {ns.failuresDetected.replace("{count}", String(failedCount))}
+                </p>
+              )}
+              {!hasFailures && isLowScore && (
+                <p className="text-sm">{ns.lowScore}</p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {hasFailures && (
+                  <LocalizedLink href={`/agents/${agentId}/optimize?suite=${suiteId}&mode=autofix${latestRunId ? `&run=${latestRunId}` : ""}`}>
+                    <Button size="sm" variant="default">
+                      <Wrench className="mr-1.5 h-3.5 w-3.5" />
+                      {ns.autofixCta}
+                    </Button>
+                  </LocalizedLink>
+                )}
+                {(isLowScore || !isPerfect) && (
+                  <LocalizedLink href={`/agents/${agentId}/optimize?suite=${suiteId}&mode=autotune`}>
+                    <Button size="sm" variant={hasFailures ? "outline" : "default"}>
+                      <Zap className="mr-1.5 h-3.5 w-3.5" />
+                      {ns.autotuneCta}
+                    </Button>
+                  </LocalizedLink>
+                )}
+                <LocalizedLink href={`/agents/${agentId}/optimize`}>
+                  <Button size="sm" variant="ghost">
+                    {ns.viewOptimizeLab}
+                    <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                  </Button>
+                </LocalizedLink>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
+      {/* Past runs — separated by source */}
+      {runs.length > 0 && (() => {
+        const manualRuns = runs.filter((r) => !r.source || r.source === "manual");
+        const optimizationRuns = runs.filter((r) => r.source && r.source !== "manual");
+        return (
+          <>
+            {manualRuns.length > 0 && (
+              <div className="space-y-3">
+                <h2 className="text-lg font-semibold">Grading Runs</h2>
+                {manualRuns.map((run) => (
+                  <RunCard key={run.id} run={run} agentId={agentId} suiteId={suiteId} />
+                ))}
+              </div>
+            )}
+            {optimizationRuns.length > 0 && (
+              <div className="space-y-3">
+                <h2 className="text-lg font-semibold">Optimization Runs</h2>
+                {optimizationRuns.map((run) => (
+                  <RunCard key={run.id} run={run} agentId={agentId} suiteId={suiteId} />
+                ))}
+              </div>
+            )}
+          </>
+        );
+      })()}
     </div>
+  );
+}
+
+const SOURCE_COLORS: Record<string, string> = {
+  autotune: "border-l-4 border-l-blue-500/50 bg-blue-500/5",
+  autofix: "border-l-4 border-l-amber-500/50 bg-amber-500/5",
+  stress_lab: "border-l-4 border-l-red-500/50 bg-red-500/5",
+  tournament: "border-l-4 border-l-violet-500/50 bg-violet-500/5",
+  distillation: "border-l-4 border-l-emerald-500/50 bg-emerald-500/5",
+  evolution: "border-l-4 border-l-pink-500/50 bg-pink-500/5",
+};
+
+const SOURCE_LABELS: Record<string, string> = {
+  autotune: "AutoTune",
+  autofix: "AutoFix",
+  stress_lab: "Stress Lab",
+  tournament: "Tournament",
+  distillation: "Distillation",
+  evolution: "Evolution",
+};
+
+function RunCard({
+  run,
+  agentId,
+  suiteId,
+}: {
+  run: GradingRunDoc & { id: string };
+  agentId: string;
+  suiteId: string;
+}) {
+  const source = run.source || "manual";
+  const colorClass = SOURCE_COLORS[source] || "";
+
+  return (
+    <LocalizedLink href={`/agents/${agentId}/grading/${suiteId}/runs/${run.id}`}>
+      <Card className={cn("cursor-pointer transition-shadow hover:shadow-md", colorClass)}>
+        <CardContent className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-3">
+            <Badge
+              variant={
+                run.status === "completed"
+                  ? "default"
+                  : run.status === "failed"
+                    ? "destructive"
+                    : "secondary"
+              }
+            >
+              {run.status}
+            </Badge>
+            {source !== "manual" && (
+              <Badge variant="outline" className="text-xs">
+                {SOURCE_LABELS[source] || source}
+              </Badge>
+            )}
+            <span className="text-sm">
+              v{run.agentVersion} — {run.passedCases}/{run.totalCases} passed
+            </span>
+          </div>
+          {run.score !== null && <ScoreBadge score={run.score} size="sm" />}
+        </CardContent>
+      </Card>
+    </LocalizedLink>
   );
 }

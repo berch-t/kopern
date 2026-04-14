@@ -1,6 +1,6 @@
 // AutoResearch Strategies — Different approaches to mutating agent config
 
-import type { AgentDoc } from "@/lib/firebase/firestore";
+import type { AgentDoc, ImprovementNote } from "@/lib/firebase/firestore";
 import type { MutationDimension, MutationStrategy, AutoResearchIteration } from "./types";
 import { proposeMutation } from "./analyzer";
 import { thinkingLevels } from "@/lib/pi-mono/providers";
@@ -26,17 +26,18 @@ export async function applyMutation(
   model: string,
   availableModels: AvailableModel[],
   userScript?: string,
-  apiKey?: string
+  apiKey?: string,
+  improvementNotes?: ImprovementNote[]
 ): Promise<MutationResult> {
   switch (strategy) {
     case "llm_guided":
-      return llmGuidedMutation(currentConfig, gradingResults, history, dimensions, provider, model, availableModels, apiKey);
+      return llmGuidedMutation(currentConfig, gradingResults, history, dimensions, provider, model, availableModels, apiKey, improvementNotes);
     case "rule_based":
       return ruleBased(currentConfig, gradingResults, history, dimensions, availableModels);
     case "user_script":
       return userScriptMutation(currentConfig, gradingResults, userScript);
     default:
-      return llmGuidedMutation(currentConfig, gradingResults, history, dimensions, provider, model, availableModels, apiKey);
+      return llmGuidedMutation(currentConfig, gradingResults, history, dimensions, provider, model, availableModels, apiKey, improvementNotes);
   }
 }
 
@@ -52,7 +53,8 @@ async function llmGuidedMutation(
   provider: string,
   model: string,
   availableModels: AvailableModel[],
-  apiKey?: string
+  apiKey?: string,
+  improvementNotes?: ImprovementNote[]
 ): Promise<MutationResult> {
   const newConfig = { ...currentConfig };
 
@@ -64,7 +66,8 @@ async function llmGuidedMutation(
       history,
       provider,
       model,
-      apiKey
+      apiKey,
+      improvementNotes
     );
     newConfig.systemPrompt = newPrompt;
     return { newConfig, description, tokensUsed };

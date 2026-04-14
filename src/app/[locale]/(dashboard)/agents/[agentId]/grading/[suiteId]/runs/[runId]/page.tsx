@@ -10,14 +10,17 @@ import {
   type RunResultDoc,
 } from "@/lib/firebase/firestore";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { ScoreBadge } from "@/components/grading/ScoreBadge";
-import { CheckCircle2, XCircle, ChevronDown, Lightbulb } from "lucide-react";
+import { CheckCircle2, XCircle, ChevronDown, Lightbulb, Wrench, Zap, Shield, Trophy, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { ImprovementNote } from "@/lib/firebase/firestore";
 import { MarkdownRenderer } from "@/components/shared/MarkdownRenderer";
+import { LocalizedLink } from "@/components/LocalizedLink";
+import { useDictionary } from "@/providers/LocaleProvider";
 
 export default function RunDetailPage({
   params,
@@ -26,6 +29,7 @@ export default function RunDetailPage({
 }) {
   const { agentId, suiteId, runId } = use(params);
   const { user } = useAuth();
+  const t = useDictionary();
   const { data: run, loading } = useDocument<GradingRunDoc>(
     user ? gradingRunDoc(user.uid, agentId, suiteId, runId) : null
   );
@@ -157,6 +161,18 @@ export default function RunDetailPage({
         </Card>
       )}
 
+      {/* Next Steps CTA */}
+      {run.status === "completed" && (
+        <NextStepsCTA
+          score={run.score}
+          failedCount={run.totalCases - run.passedCases}
+          agentId={agentId}
+          suiteId={suiteId}
+          runId={runId}
+          t={t}
+        />
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Run Information</CardTitle>
@@ -180,11 +196,108 @@ export default function RunDetailPage({
   );
 }
 
+function NextStepsCTA({
+  score,
+  failedCount,
+  agentId,
+  suiteId,
+  runId,
+  t,
+}: {
+  score: number | null;
+  failedCount: number;
+  agentId: string;
+  suiteId: string;
+  runId: string;
+  t: ReturnType<typeof useDictionary>;
+}) {
+  const ns = t.grading.nextSteps;
+  const isPerfect = failedCount === 0 && score !== null && score >= 0.95;
+  const hasFailures = failedCount > 0;
+  const isLowScore = score !== null && score < 0.8;
+
+  return (
+    <Card className={cn(
+      "border-2",
+      isPerfect ? "border-emerald-500/30 bg-emerald-500/5" : "border-primary/30 bg-primary/5"
+    )}>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <ArrowRight className="h-4 w-4" />
+          {ns.title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isPerfect && (
+          <div className="space-y-2">
+            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+              {ns.perfectScore}
+            </p>
+            <p className="text-xs text-muted-foreground">{ns.perfectScoreOptimize}</p>
+          </div>
+        )}
+        {hasFailures && (
+          <p className="text-sm">
+            {ns.failuresDetected.replace("{count}", String(failedCount))}
+          </p>
+        )}
+        {!hasFailures && isLowScore && (
+          <p className="text-sm">{ns.lowScore}</p>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          {hasFailures && (
+            <LocalizedLink href={`/agents/${agentId}/optimize?suite=${suiteId}&mode=autofix&run=${runId}`}>
+              <Button size="sm" variant="default">
+                <Wrench className="mr-1.5 h-3.5 w-3.5" />
+                {ns.autofixCta}
+              </Button>
+            </LocalizedLink>
+          )}
+          {(isLowScore || !isPerfect) && (
+            <LocalizedLink href={`/agents/${agentId}/optimize?suite=${suiteId}&mode=autotune`}>
+              <Button size="sm" variant={hasFailures ? "outline" : "default"}>
+                <Zap className="mr-1.5 h-3.5 w-3.5" />
+                {ns.autotuneCta}
+              </Button>
+            </LocalizedLink>
+          )}
+          {isPerfect && (
+            <>
+              <LocalizedLink href={`/agents/${agentId}/optimize?suite=${suiteId}&mode=stress_lab`}>
+                <Button size="sm" variant="outline">
+                  <Shield className="mr-1.5 h-3.5 w-3.5" />
+                  {ns.stressLabCta}
+                </Button>
+              </LocalizedLink>
+              <LocalizedLink href={`/agents/${agentId}/optimize?suite=${suiteId}&mode=tournament`}>
+                <Button size="sm" variant="outline">
+                  <Trophy className="mr-1.5 h-3.5 w-3.5" />
+                  {ns.tournamentCta}
+                </Button>
+              </LocalizedLink>
+            </>
+          )}
+          <LocalizedLink href={`/agents/${agentId}/optimize`}>
+            <Button size="sm" variant="ghost">
+              {ns.viewOptimizeLab}
+              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+            </Button>
+          </LocalizedLink>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function ResultRow({ result }: { result: RunResultDoc & { id: string } }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="rounded-lg border">
+    <div className={cn(
+      "rounded-lg border",
+      !result.passed && "border-destructive/20"
+    )}>
       <button
         onClick={() => setOpen(!open)}
         className="flex w-full items-center justify-between p-3 text-left hover:bg-muted/50 transition-colors"
@@ -219,20 +332,30 @@ function ResultRow({ result }: { result: RunResultDoc & { id: string } }) {
             </pre>
           </div>
 
-          {/* Criteria results */}
+          {/* Criteria results — expanded with full judge feedback */}
           {result.criteriaResults?.length > 0 && (
             <div>
-              <p className="text-xs font-medium text-muted-foreground mb-1">Criteria</p>
-              <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Criteria</p>
+              <div className="space-y-2">
                 {result.criteriaResults.map((cr, i) => (
-                  <div key={i} className="flex items-center gap-2 text-xs">
-                    {cr.passed ? (
-                      <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
-                    ) : (
-                      <XCircle className="h-3 w-3 text-destructive shrink-0" />
+                  <div key={i} className={cn(
+                    "rounded-md border p-2",
+                    cr.passed ? "border-emerald-500/20 bg-emerald-500/5" : "border-destructive/20 bg-destructive/5"
+                  )}>
+                    <div className="flex items-center gap-2 text-xs">
+                      {cr.passed ? (
+                        <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
+                      ) : (
+                        <XCircle className="h-3 w-3 text-destructive shrink-0" />
+                      )}
+                      <Badge variant="outline" className="text-[10px]">{cr.criterionType}</Badge>
+                      <span className="text-muted-foreground">{Math.round(cr.score * 100)}%</span>
+                    </div>
+                    {cr.message && (
+                      <div className="mt-1.5 text-xs text-muted-foreground prose prose-sm dark:prose-invert max-w-none">
+                        <MarkdownRenderer content={cr.message} />
+                      </div>
                     )}
-                    <span className="text-muted-foreground">{cr.criterionType}</span>
-                    <span className="truncate">{cr.message}</span>
                   </div>
                 ))}
               </div>

@@ -378,6 +378,38 @@
       "passed": "Passed",
       "failed": "Failed",
       "score": "Score"
+    },
+    "improvementNotes": {
+      "title": "Improvement Suggestions",
+      "analyzing": "Analyzing results and generating improvement suggestions...",
+      "categories": {
+        "system_prompt": "System Prompt",
+        "skill": "Skill",
+        "tool": "Tool",
+        "general": "General"
+      },
+      "addSkill": "Add skill",
+      "sendToLab": "Send to lab",
+      "sendAllToLab": "Send all to lab",
+      "applied": "Applied",
+      "sent": "Sent",
+      "skillAdded": "Skill added",
+      "sentToOptimize": "Sent to optimization lab",
+      "suggestionsSent": "{count} suggestions sent to lab",
+      "error": "Error"
+    },
+    "nextSteps": {
+      "title": "Next Steps",
+      "perfectScore": "All tests passed! Your agent is performing well.",
+      "perfectScoreOptimize": "You can still optimize cost or latency with Tournament or Distillation.",
+      "failuresDetected": "{count} test(s) failed — AutoFix can diagnose root causes and patch your prompt automatically.",
+      "lowScore": "Score below target — AutoTune can iteratively improve your agent through optimization loops.",
+      "autofixCta": "Fix with AutoFix",
+      "autotuneCta": "Optimize with AutoTune",
+      "stressLabCta": "Run Stress Lab",
+      "tournamentCta": "Compare Models",
+      "viewOptimizeLab": "Open Optimization Lab",
+      "runAgain": "Run Again"
     }
   },
   "mcp": {
@@ -570,7 +602,15 @@
     "tools": "Tool Calls",
     "messages": "Messages",
     "timeline": "Event Timeline",
-    "exportTrace": "Export Trace"
+    "exportTrace": "Export Trace",
+    "subSources": {
+      "autotune": "AutoTune",
+      "autofix": "AutoFix",
+      "stress_lab": "Stress Lab",
+      "tournament": "Tournament",
+      "distillation": "Distillation",
+      "evolution": "Evolution"
+    }
   },
   "billing": {
     "title": "Billing & Usage",
@@ -999,7 +1039,8 @@
     "pipelines": "Pipelines",
     "sessions": "Sessions",
     "bugs": "Bug Tracker",
-    "billing": "Billing"
+    "billing": "Billing",
+    "optimize": "Optimization Lab"
   },
   "optimize": {
     "title": "Agent Optimization Lab",
@@ -1106,6 +1147,12 @@
       "diagnostic": "Diagnosis: {detail}",
       "vulnerability": "Vulnerability: {detail}",
       "student": "{model} — {quality}% quality retention"
+    },
+    "pendingNotes": {
+      "title": "{count} grading judge suggestion(s)",
+      "description": "These suggestions will be automatically integrated into the next optimization.",
+      "clear": "Clear",
+      "cleared": "Suggestions cleared"
     }
   },
   "compliance": {

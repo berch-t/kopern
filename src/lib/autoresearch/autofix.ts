@@ -14,7 +14,9 @@ import { analyzeFailures, type GradingFailure } from "./analyzer";
 import { createRun, logIteration, completeRun, trackAutoresearchUsage, failRun } from "./history";
 import { resolveProviderKeys } from "@/lib/llm/resolve-key";
 import { streamLLM } from "@/lib/llm/client";
+import { createSessionServer, updateSessionMetrics, endSessionServer } from "@/lib/billing/track-usage-server";
 import type { AutoFixResult, AutoResearchRun, AutoResearchIteration } from "./types";
+import type { ImprovementNote } from "@/lib/firebase/firestore";
 
 const AUTOFIX_SUITE_NAME = "AutoFix Quality Suite";
 
@@ -23,6 +25,8 @@ export interface AutoFixConfig {
   agentId: string;
   suiteId: string;
   runId: string;
+  /** Pre-loaded improvement notes from grading UI "Send to optimization" */
+  improvementNotes?: ImprovementNote[];
 }
 
 export interface AutoFixCallbacks {
@@ -358,14 +362,22 @@ export async function runAutoFix(
       ? config.suiteId
       : await ensureGradingSuite(userId, agentId, agentData, provider, model, apiKey, apiKeys.length > 1 ? apiKeys : undefined, callbacks.onStatus);
 
-    // 3. Ensure a grading run exists (run if needed)
-    const resolvedRunId = await ensureGradingRun(
-      userId, agentId, suiteId, provider, model, apiKey,
-      apiKeys.length > 1 ? apiKeys : undefined, callbacks.onStatus,
-    );
+    // 3. Resolve the grading run to analyze
+    let resolvedRunId: string;
+    if (config.runId && config.runId !== "latest") {
+      // Use the specific run passed from the CTA
+      resolvedRunId = config.runId;
+    } else {
+      // Fall back to latest completed run
+      resolvedRunId = await ensureGradingRun(
+        userId, agentId, suiteId, provider, model, apiKey,
+        apiKeys.length > 1 ? apiKeys : undefined, callbacks.onStatus,
+      );
+    }
 
     // 4. Load grading run results (failed cases)
     callbacks.onStatus("loading_results");
+
     const resultsSnap = await adminDb
       .collection(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs/${resolvedRunId}/results`)
       .get();
@@ -374,8 +386,8 @@ export async function runAutoFix(
     let originalScore = 0;
     let totalCases = 0;
 
-    for (const doc of resultsSnap.docs) {
-      const data = doc.data();
+    for (const resultDoc of resultsSnap.docs) {
+      const data = resultDoc.data();
       totalCases++;
       originalScore += data.score || 0;
 
@@ -397,6 +409,18 @@ export async function runAutoFix(
 
     originalScore = totalCases > 0 ? originalScore / totalCases : 0;
 
+    // If result docs show 0 failures but run doc disagrees, use run doc score as baseline
+    if (failures.length === 0 && totalCases > 0) {
+      const runDocSnap = await adminDb
+        .doc(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs/${resolvedRunId}`)
+        .get();
+      const runDocData = runDocSnap.data();
+      if (runDocData && runDocData.totalCases > runDocData.passedCases) {
+        // Run doc says there are failures — use its score
+        originalScore = runDocData.score ?? originalScore;
+      }
+    }
+
     if (failures.length === 0) {
       const result: AutoFixResult = {
         diagnostics: [],
@@ -413,6 +437,20 @@ export async function runAutoFix(
 
     callbacks.onStatus("analyzing");
 
+    // 4b. Resolve improvement notes (prefer config > pending on agent > run doc)
+    let improvementNotes: ImprovementNote[] = config.improvementNotes || [];
+    if (improvementNotes.length === 0 && agentData.pendingOptimizationRequest?.notes?.length) {
+      improvementNotes = agentData.pendingOptimizationRequest.notes;
+    }
+    if (improvementNotes.length === 0) {
+      try {
+        const runDocSnap = await adminDb
+          .doc(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs/${resolvedRunId}`)
+          .get();
+        improvementNotes = runDocSnap.data()?.improvementNotes || [];
+      } catch { /* continue */ }
+    }
+
     // 5. Create autoresearch run record
     arRunId = await createRun({
       agentId,
@@ -424,14 +462,26 @@ export async function runAutoFix(
       strategy: "llm_guided",
     });
 
-    // 6. Analyze failures and propose patches
+    // (A) Create session for autofix
+    let sessionId = "";
+    try {
+      sessionId = await createSessionServer(userId, agentId, {
+        purpose: `[autofix] Diagnose & patch prompt`,
+        modelUsed: model,
+        providerUsed: provider,
+        source: "autoresearch",
+      });
+    } catch { /* continue without session */ }
+
+    // 6. Analyze failures and propose patches (with improvement notes from grading judge)
     const { diagnostics, patchedPrompt, tokensUsed: analyzeTokens } = await analyzeFailures(
       failures,
       originalPrompt,
       provider,
       model,
       [],
-      apiKey
+      apiKey,
+      improvementNotes
     );
 
     for (const diag of diagnostics) {
@@ -479,7 +529,29 @@ export async function runAutoFix(
     const criteriaBreakdown: Record<string, number> = {};
     let rerunInputTokens = 0;
     let rerunOutputTokens = 0;
+    let rerunToolCalls = 0;
     const startTime = Date.now();
+
+    // (B) Create grading run for autofix re-validation
+    let autofixGradingRunId = "";
+    try {
+      const agentVersion = agentData.version || 1;
+      const runRef = await adminDb
+        .collection(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs`)
+        .add({
+          agentVersion,
+          status: "running",
+          score: null,
+          totalCases: casesSnap.size,
+          passedCases: 0,
+          source: "autofix" as const,
+          startedAt: FieldValue.serverTimestamp(),
+          completedAt: null,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+      autofixGradingRunId = runRef.id;
+    } catch { /* continue */ }
+    const resultWritePromises: Promise<unknown>[] = [];
 
     for (const caseDoc of casesSnap.docs) {
       const testCase = caseDoc.data();
@@ -501,6 +573,7 @@ export async function runAutoFix(
           onToken: (text) => collector.addToken(text),
           onToolStart: () => {},
           onToolEnd: (result) => {
+            rerunToolCalls++;
             collector.addToolCall({
               name: result.name,
               args: {},
@@ -531,10 +604,62 @@ export async function runAutoFix(
       for (const cr of criteriaResults) {
         criteriaBreakdown[cr.criterionType] = (criteriaBreakdown[cr.criterionType] || 0) + cr.score;
       }
+
+      // (B) Persist result to autofix grading run
+      if (autofixGradingRunId) {
+        resultWritePromises.push(
+          adminDb
+            .collection(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs/${autofixGradingRunId}/results`)
+            .add({
+              caseId: testCase.id || caseDoc.id,
+              passed,
+              score,
+              agentOutput: collector.assistantOutput.slice(0, 50000),
+              toolCalls: collector.toolCalls,
+              criteriaResults,
+              durationMs: Date.now() - startTime,
+              createdAt: FieldValue.serverTimestamp(),
+            })
+            .catch(() => {})
+        );
+      }
     }
 
     const newScore = casesSnap.size > 0 ? newTotalScore / casesSnap.size : 0;
     const durationMs = Date.now() - startTime;
+
+    // (B) Finalize autofix grading run
+    if (autofixGradingRunId) {
+      try {
+        await Promise.all([
+          ...resultWritePromises,
+          adminDb
+            .doc(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs/${autofixGradingRunId}`)
+            .update({
+              status: "completed",
+              score: newScore,
+              passedCases: newPassed,
+              completedAt: FieldValue.serverTimestamp(),
+            }),
+        ]);
+      } catch { /* best-effort */ }
+    }
+
+    // (A) Finalize session with all tokens (analyze + rerun)
+    if (sessionId) {
+      try {
+        await Promise.all([
+          updateSessionMetrics(userId, agentId, sessionId, {
+            inputTokens: analyzeTokens.input + rerunInputTokens,
+            outputTokens: analyzeTokens.output + rerunOutputTokens,
+            cost: 0,
+            toolCallCount: rerunToolCalls,
+            messageCount: casesSnap.size * 2 + 1,
+          }),
+          endSessionServer(userId, agentId, sessionId),
+        ]);
+      } catch { /* best-effort */ }
+    }
 
     const fixIteration: AutoResearchIteration = {
       index: 1,
@@ -554,6 +679,7 @@ export async function runAutoFix(
     if (newScore >= originalScore && patchedPrompt !== originalPrompt) {
       await adminDb.doc(`users/${userId}/agents/${agentId}`).update({
         systemPrompt: patchedPrompt,
+        latestGradingScore: newScore,
         updatedAt: FieldValue.serverTimestamp(),
         version: FieldValue.increment(1),
       });
@@ -604,6 +730,13 @@ export async function runAutoFix(
     });
 
     await trackAutoresearchUsage(userId, agentId, provider, totalTokens.input, totalTokens.output, 2);
+
+    // Clear pending optimization request if consumed
+    if (agentData.pendingOptimizationRequest?.notes?.length || config.improvementNotes?.length) {
+      adminDb.doc(`users/${userId}/agents/${agentId}`).update({
+        pendingOptimizationRequest: null,
+      }).catch(() => {});
+    }
 
     callbacks.onResult(result);
     return result;

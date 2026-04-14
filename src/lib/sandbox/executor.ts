@@ -47,8 +47,9 @@ export async function executeSandboxed(
   try {
     script.runInContext(context, { timeout: TIMEOUT_MS });
     // Wait for async code to complete (if any awaits in user code)
-    await (sandbox as Record<string, unknown>).__promise;
-    const output = sandbox.result;
+    const returnValue = await (sandbox as Record<string, unknown>).__promise;
+    // Support both patterns: `result = ...` (explicit assignment) and `return ...` (IIFE return value)
+    const output = sandbox.result !== undefined ? sandbox.result : returnValue;
     if (output === undefined || output === null) return "null";
     return typeof output === "string" ? output : JSON.stringify(output);
   } catch (err) {

@@ -8,9 +8,13 @@ import {
   agentDoc,
   mcpServerDoc,
   agentTeamDoc,
+  gradingSuiteDoc,
+  gradingRunDoc,
   type AgentDoc,
   type McpServerDoc,
   type AgentTeamDoc,
+  type GradingSuiteDoc,
+  type GradingRunDoc,
 } from "@/lib/firebase/firestore";
 import { ChevronRight } from "lucide-react";
 import { useDictionary, useLocale } from "@/providers/LocaleProvider";
@@ -37,6 +41,18 @@ function useEntityName(segments: string[], staticLabels: Record<string, string>)
       ? segments[teamIdx + 1]
       : null;
 
+  const gradingIdx = segments.indexOf("grading");
+  const suiteId =
+    gradingIdx !== -1 && gradingIdx + 1 < segments.length && !staticLabels[segments[gradingIdx + 1]]
+      ? segments[gradingIdx + 1]
+      : null;
+
+  const runsIdx = segments.indexOf("runs");
+  const runId =
+    runsIdx !== -1 && runsIdx + 1 < segments.length && !staticLabels[segments[runsIdx + 1]]
+      ? segments[runsIdx + 1]
+      : null;
+
   const { data: agent } = useDocument<AgentDoc>(
     user && agentId && !staticLabels[agentId]
       ? agentDoc(user.uid, agentId)
@@ -55,10 +71,24 @@ function useEntityName(segments: string[], staticLabels: Record<string, string>)
       : null
   );
 
+  const { data: suite } = useDocument<GradingSuiteDoc>(
+    user && agentId && suiteId
+      ? gradingSuiteDoc(user.uid, agentId, suiteId)
+      : null
+  );
+
+  const { data: run } = useDocument<GradingRunDoc>(
+    user && agentId && suiteId && runId
+      ? gradingRunDoc(user.uid, agentId, suiteId, runId)
+      : null
+  );
+
   const names: Record<string, string> = {};
   if (agentId && agent) names[agentId] = agent.name;
   if (serverId && mcpServer) names[serverId] = mcpServer.name;
   if (teamId && team) names[teamId] = team.name;
+  if (suiteId && suite) names[suiteId] = suite.name;
+  if (runId && run) names[runId] = `v${run.agentVersion}${run.score !== null ? ` — ${Math.round(run.score * 100)}%` : ""}`;
 
   return names;
 }
@@ -90,6 +120,7 @@ export function Breadcrumbs() {
     sessions: t.breadcrumbs.sessions,
     bugs: t.breadcrumbs.bugs,
     billing: t.breadcrumbs.billing,
+    optimize: t.breadcrumbs.optimize,
   };
 
   // Remove locale prefix from segments

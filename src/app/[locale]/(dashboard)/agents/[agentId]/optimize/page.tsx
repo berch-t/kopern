@@ -1,6 +1,7 @@
 "use client";
 
-import { use, useState, useCallback, useRef } from "react";
+import { use, useState, useCallback, useRef, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useDocument, useCollection } from "@/hooks/useFirestore";
 import {
@@ -73,6 +74,18 @@ export default function OptimizePage({
 }: {
   params: Promise<{ agentId: string }>;
 }) {
+  return (
+    <Suspense>
+      <OptimizePageInner params={params} />
+    </Suspense>
+  );
+}
+
+function OptimizePageInner({
+  params,
+}: {
+  params: Promise<{ agentId: string }>;
+}) {
   const { agentId } = use(params);
   const { user } = useAuth();
   const t = useDictionary();
@@ -92,6 +105,7 @@ export default function OptimizePage({
 
   const [activeTab, setActiveTab] = useState<TabMode>("autotune");
   const [selectedSuite, setSelectedSuite] = useState<string>("");
+  const [initializedFromParams, setInitializedFromParams] = useState(false);
   const [maxIterations, setMaxIterations] = useState(10);
   const [targetScore, setTargetScore] = useState<string>("");
   const [running, setRunning] = useState(false);
@@ -104,7 +118,26 @@ export default function OptimizePage({
   const [distillationStudents, setDistillationStudents] = useState<DistillationStudent[]>([]);
   const [distillationTeacher, setDistillationTeacher] = useState<{ score: number; costPerRequest: number; modelId: string } | null>(null);
   const [evolutionGenerations, setEvolutionGenerations] = useState<Record<string, unknown>[]>([]);
+  const [gradingRunId, setGradingRunId] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Pre-select suite, mode, and runId from query params (e.g., from grading CTA)
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (initializedFromParams) return;
+    const suiteParam = searchParams.get("suite");
+    const modeParam = searchParams.get("mode") as TabMode | null;
+    const runParam = searchParams.get("run");
+    if (suiteParam && suites.length > 0) {
+      const match = suites.find(s => s.id === suiteParam);
+      if (match) setSelectedSuite(match.id);
+    }
+    if (modeParam && ["autotune", "autofix", "stress_lab", "tournament", "distillation", "evolution"].includes(modeParam)) {
+      setActiveTab(modeParam);
+    }
+    if (runParam) setGradingRunId(runParam);
+    if (suites.length > 0) setInitializedFromParams(true);
+  }, [searchParams, suites, initializedFromParams]);
 
   // Format raw status strings into human-readable i18n text
   const statusLabels = tOpt.status as Record<string, string> | undefined;
@@ -172,8 +205,12 @@ export default function OptimizePage({
           break;
         case "autofix":
           url = `/api/agents/${agentId}/autoresearch/autofix`;
-          // Need to get the latest grading run for this suite
-          body = { userId: user.uid, suiteId: selectedSuite, runId: "latest" };
+          body = {
+            userId: user.uid,
+            suiteId: selectedSuite,
+            runId: gradingRunId || "latest",
+            improvementNotes: agent?.pendingOptimizationRequest?.notes || undefined,
+          };
           break;
         case "stress_lab":
           url = `/api/agents/${agentId}/autoresearch/stress-lab`;
@@ -267,18 +304,29 @@ export default function OptimizePage({
       case "progress":
         setBestScore(data.bestScore as number);
         break;
-      case "done":
-        setBestScore(data.bestScore as number);
+      case "done": {
+        const doneScore = data.bestScore as number;
+        setBestScore(doneScore);
         if (data.bestPrompt) setBestPrompt(data.bestPrompt as string);
+        // Persist best score to Firestore so badge survives page reload
+        if (user && doneScore > 0) {
+          updateAgent(user.uid, agentId, { latestGradingScore: doneScore }).catch(() => {});
+        }
         toast.success(tOpt.runComplete);
         break;
+      }
       case "diagnostic":
         setStatusMessage((statusLabels?.diagnostic || "Diagnosis: {detail}").replace("{detail}", String((data as Record<string, unknown>).rootCause)));
         break;
       case "result":
         if (activeTab === "autofix") {
-          setBestScore(data.newScore as number);
+          const fixScore = data.newScore as number;
+          setBestScore(fixScore);
           if (data.patchedPrompt) setBestPrompt(data.patchedPrompt as string);
+          // Persist autofix score
+          if (user && fixScore > 0) {
+            updateAgent(user.uid, agentId, { latestGradingScore: fixScore }).catch(() => {});
+          }
         }
         if (activeTab === "distillation") {
           setBestScore(data.teacherScore as number);
@@ -318,7 +366,7 @@ export default function OptimizePage({
         toast.error(data.message as string);
         break;
     }
-  }, [activeTab, tOpt, statusLabels]);
+  }, [activeTab, tOpt, statusLabels, user, agentId]);
 
   const handleStop = useCallback(() => {
     abortRef.current?.abort();
@@ -328,12 +376,14 @@ export default function OptimizePage({
     const prompt = promptOverride || bestPrompt;
     if (!user || !prompt) return;
     try {
-      await updateAgent(user.uid, agentId, { systemPrompt: prompt });
+      const updates: Parameters<typeof updateAgent>[2] = { systemPrompt: prompt };
+      if (bestScore !== null) updates.latestGradingScore = bestScore;
+      await updateAgent(user.uid, agentId, updates);
       toast.success(tOpt.promptApplied);
     } catch {
       toast.error("Failed to apply prompt");
     }
-  }, [user, agentId, bestPrompt, tOpt]);
+  }, [user, agentId, bestPrompt, bestScore, tOpt]);
 
   const modeDescriptions: Record<TabMode, { icon: typeof Zap; color: string }> = {
     autotune: { icon: Target, color: "text-blue-500" },
@@ -355,11 +405,17 @@ export default function OptimizePage({
             </h1>
             <p className="text-muted-foreground mt-1">{tOpt.subtitle}</p>
           </div>
-          {agent && (
-            <Badge variant="outline" className="text-sm">
-              {tOpt.currentScore}: {agent.latestGradingScore !== null ? `${(agent.latestGradingScore * 10).toFixed(1)}/10` : "N/A"}
-            </Badge>
-          )}
+          {agent && (() => {
+            const firestoreScore = agent.latestGradingScore;
+            const displayScore = bestScore !== null && (firestoreScore === null || bestScore > firestoreScore)
+              ? bestScore
+              : firestoreScore;
+            return (
+              <Badge variant="outline" className="text-sm">
+                {tOpt.currentScore}: {displayScore !== null ? `${(displayScore * 10).toFixed(1)}/10` : "N/A"}
+              </Badge>
+            );
+          })()}
         </div>
       </SlideUp>
 
@@ -381,8 +437,8 @@ export default function OptimizePage({
 
               {/* Configuration section — shared across all tabs */}
               <div className="mt-4 space-y-4">
-                <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
-                  <div className="space-y-2">
+                <div className="flex flex-wrap gap-3">
+                  <div className="space-y-2 min-w-[200px] flex-1">
                     <Label>{tOpt.gradingSuite}</Label>
                     <Select value={selectedSuite} onValueChange={setSelectedSuite}>
                       <SelectTrigger>
@@ -396,11 +452,19 @@ export default function OptimizePage({
                         ))}
                       </SelectContent>
                     </Select>
+                    {selectedSuite && (
+                      <LocalizedLink
+                        href={`/agents/${agentId}/grading/${selectedSuite}/runs`}
+                        className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        View grading runs &rarr;
+                      </LocalizedLink>
+                    )}
                   </div>
 
                   {(activeTab === "autotune" || activeTab === "evolution") && (
                     <>
-                      <div className="space-y-2">
+                      <div className="space-y-2 w-[140px]">
                         <Label>{activeTab === "evolution" ? tOpt.maxGenerations || tOpt.maxIterations : tOpt.maxIterations}</Label>
                         <Input
                           type="number"
@@ -410,7 +474,7 @@ export default function OptimizePage({
                           onChange={(e) => setMaxIterations(parseInt(e.target.value) || 10)}
                         />
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-2 w-[140px]">
                         <Label>{tOpt.targetScore}</Label>
                         <Input
                           type="number"
@@ -450,6 +514,29 @@ export default function OptimizePage({
                     </div>
                   );
                 })()}
+
+                {/* Pending optimization notes banner */}
+                {agent?.pendingOptimizationRequest?.notes && agent.pendingOptimizationRequest.notes.length > 0 && (
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 flex items-center gap-3">
+                    <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{t.optimize.pendingNotes.title.replace("{count}", String(agent.pendingOptimizationRequest.notes.length))}</p>
+                      <p className="text-xs text-muted-foreground">{t.optimize.pendingNotes.description}</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-xs shrink-0"
+                      onClick={async () => {
+                        if (!user) return;
+                        await updateAgent(user.uid, agentId, { pendingOptimizationRequest: null });
+                        toast.success(t.optimize.pendingNotes.cleared);
+                      }}
+                    >
+                      {t.optimize.pendingNotes.clear}
+                    </Button>
+                  </div>
+                )}
 
                 {/* Action buttons */}
                 <div className="flex gap-2">
@@ -504,52 +591,76 @@ export default function OptimizePage({
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {/* Score progression — line-style chart */}
-                    <div className="relative h-40">
-                      {/* Y-axis labels */}
-                      <div className="absolute left-0 top-0 bottom-6 w-8 flex flex-col justify-between text-[10px] tabular-nums text-muted-foreground">
-                        <span>10</span>
-                        <span>5</span>
-                        <span>0</span>
-                      </div>
-                      {/* Grid lines */}
-                      <div className="absolute left-9 right-0 top-0 bottom-6">
-                        <div className="absolute top-0 left-0 right-0 border-t border-dashed border-border/50" />
-                        <div className="absolute top-1/2 left-0 right-0 border-t border-dashed border-border/50" />
-                        <div className="absolute bottom-0 left-0 right-0 border-t border-border" />
-                      </div>
-                      {/* Bars */}
-                      <div className="absolute left-9 right-0 top-0 bottom-6 flex items-end gap-1.5 px-1">
-                        {iterations.map((iter, i) => {
-                          const pct = Math.max(iter.gradingScore * 100, 2);
-                          const isKeep = iter.status === "keep" || iter.status === "baseline";
-                          return (
-                            <div key={i} className="flex-1 flex flex-col items-center gap-0.5 min-w-0">
-                              <span className="text-[10px] tabular-nums font-medium" style={{ color: isKeep ? "var(--color-emerald-500, #10b981)" : "var(--color-muted-foreground)" }}>
-                                {(iter.gradingScore * 10).toFixed(1)}
-                              </span>
-                              <motion.div
-                                initial={{ height: 0 }}
-                                animate={{ height: `${pct}%` }}
-                                transition={{ duration: 0.4, delay: i * 0.05, ease: "easeOut" }}
-                                className={cn(
-                                  "w-full rounded-t-sm min-h-[2px]",
-                                  isKeep ? "bg-emerald-500" : iter.status === "crash" ? "bg-red-500" : "bg-muted-foreground/20"
-                                )}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                      {/* X-axis labels */}
-                      <div className="absolute left-9 right-0 bottom-0 flex gap-1.5 px-1">
-                        {iterations.map((iter, i) => (
-                          <div key={i} className="flex-1 text-center text-[10px] tabular-nums text-muted-foreground">
-                            {iter.index}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    {/* Score progression — line chart with points */}
+                    {(() => {
+                      const scores = iterations.map((it) => it.gradingScore * 10);
+                      const minScore = Math.floor(Math.min(...scores));
+                      const maxScore = Math.ceil(Math.max(...scores));
+                      const yMin = Math.max(0, minScore - 1);
+                      const yMax = Math.min(10, maxScore + 1);
+                      const yRange = yMax - yMin || 1;
+                      const padL = 32, padR = 12, padT = 16, padB = 24;
+                      const W = 600, H = 160;
+                      const chartW = W - padL - padR;
+                      const chartH = H - padT - padB;
+                      const pts = scores.map((s, i) => ({
+                        x: padL + (iterations.length === 1 ? chartW / 2 : (i / (iterations.length - 1)) * chartW),
+                        y: padT + chartH - ((s - yMin) / yRange) * chartH,
+                        score: s,
+                        status: iterations[i].status,
+                        index: iterations[i].index,
+                      }));
+                      const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+                      const gridLines = 3;
+                      return (
+                        <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-40">
+                          {/* Grid lines + Y labels */}
+                          {Array.from({ length: gridLines + 1 }).map((_, i) => {
+                            const val = yMin + (yRange / gridLines) * (gridLines - i);
+                            const y = padT + (i / gridLines) * chartH;
+                            return (
+                              <g key={i}>
+                                <line x1={padL} y1={y} x2={W - padR} y2={y} stroke="currentColor" strokeOpacity={0.15} strokeDasharray={i === gridLines ? "0" : "4 4"} />
+                                <text x={padL - 6} y={y + 3} textAnchor="end" fill="currentColor" fillOpacity={0.5} fontSize={10}>{val.toFixed(0)}</text>
+                              </g>
+                            );
+                          })}
+                          {/* Area fill */}
+                          {pts.length > 1 && (
+                            <path
+                              d={`${linePath} L${pts[pts.length - 1].x},${padT + chartH} L${pts[0].x},${padT + chartH} Z`}
+                              fill="#10b981"
+                              fillOpacity={0.08}
+                            />
+                          )}
+                          {/* Line */}
+                          <path
+                            d={linePath}
+                            fill="none"
+                            stroke="#10b981"
+                            strokeWidth={2.5}
+                            strokeLinejoin="round"
+                            strokeLinecap="round"
+                          />
+                          {/* Points + labels */}
+                          {pts.map((p, i) => {
+                            const isKeep = p.status === "keep" || p.status === "baseline";
+                            const color = isKeep ? "#10b981" : p.status === "crash" ? "#ef4444" : "#a1a1aa";
+                            return (
+                              <g key={i}>
+                                <circle cx={p.x} cy={p.y} r={6} fill={color} stroke="#0a0a0a" strokeWidth={2} />
+                                <text x={p.x} y={p.y - 12} textAnchor="middle" fill={color} fontSize={11} fontWeight={700}>
+                                  {p.score.toFixed(1)}
+                                </text>
+                                <text x={p.x} y={H - 4} textAnchor="middle" fill="currentColor" fillOpacity={0.5} fontSize={10}>
+                                  #{p.index}
+                                </text>
+                              </g>
+                            );
+                          })}
+                        </svg>
+                      );
+                    })()}
 
                     <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1.5">
@@ -638,7 +749,7 @@ export default function OptimizePage({
                         </div>
                       </div>
                       {bestPrompt && (
-                        <Button onClick={() => handleApplyPrompt()} className="gap-2">
+                        <Button onClick={() => handleApplyPrompt()} className="gap-2 btn-glow-cta">
                           <CheckCircle2 className="h-4 w-4" />
                           {tOpt.applyPrompt}
                         </Button>
@@ -1181,7 +1292,7 @@ function StressLabReportView({
                   <Button
                     size="sm"
                     onClick={() => onApplyPrompt(hardenedPrompt)}
-                    className="gap-1.5"
+                    className="gap-1.5 btn-glow-cta"
                   >
                     <Shield className="h-3.5 w-3.5" />
                     {tOpt.applyHardenedPrompt}

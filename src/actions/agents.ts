@@ -84,6 +84,8 @@ export async function updateAgent(
       | "memoryConfig"
       | "maxToolIterations"
       | "maxToolResultChars"
+      | "latestGradingScore"
+      | "pendingOptimizationRequest"
     >
   >
 ) {

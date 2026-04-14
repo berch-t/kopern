@@ -1312,7 +1312,7 @@ async function handleDiscovery(body: JsonRpcRequest & { id: string | number }, r
 
 // ─── POST handler (MCP Streamable HTTP) ──────────────────────────────
 
-export const maxDuration = 300;
+export const maxDuration = 600;
 
 export async function POST(request: NextRequest) {
   // 1. Parse body first (needed for discovery methods that don't require auth)

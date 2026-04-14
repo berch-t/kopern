@@ -87,6 +87,9 @@ export async function logIteration(
           bestIterationIndex: iteration.index,
         }
       : {}),
+    ...(iteration.status === "baseline"
+      ? { baselineScore: iteration.gradingScore }
+      : {}),
   });
 }
 
@@ -107,6 +110,7 @@ export async function completeRun(
 
   await runRef.update({
     status: run.status,
+    baselineScore: run.baselineScore,
     bestScore: run.bestScore,
     bestIterationIndex: run.bestIterationIndex,
     totalTokensInput: run.totalTokensUsed.input,

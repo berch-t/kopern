@@ -2,6 +2,7 @@
 // Hill-climbing optimization loop with keep/discard decisions
 
 import { adminDb } from "@/lib/firebase/admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { runAgentWithTools } from "@/lib/tools/run-agent";
 import { createEventCollector } from "@/lib/pi-mono/event-collector";
 import { evaluateAllCriteria } from "@/lib/grading/criteria";
@@ -9,6 +10,8 @@ import { PLAN_LIMITS, type PlanTier } from "@/lib/billing/pricing";
 import { applyMutation } from "./strategies";
 import { getAvailableModelsForUser, checkOllamaReachable } from "./available-models";
 import { resolveProviderKey, resolveProviderKeys } from "@/lib/llm/resolve-key";
+import { createSessionServer, updateSessionMetrics, endSessionServer } from "@/lib/billing/track-usage-server";
+import type { GradingRunSource, ImprovementNote } from "@/lib/firebase/firestore";
 import {
   createRun,
   logIteration,
@@ -105,6 +108,25 @@ export async function runAutoTune(
       .join("\n\n")}\n</skills>`;
   }
 
+  // Fetch improvement notes from latest completed grading run (if any)
+  let improvementNotes: ImprovementNote[] = [];
+  try {
+    // Prefer pending optimization request on agent doc (sent from grading UI)
+    if (agentData.pendingOptimizationRequest?.notes?.length) {
+      improvementNotes = agentData.pendingOptimizationRequest.notes;
+    } else {
+      const latestRunSnap = await adminDb
+        .collection(`users/${userId}/agents/${agentId}/gradingSuites/${suiteId}/runs`)
+        .where("status", "==", "completed")
+        .orderBy("completedAt", "desc")
+        .limit(1)
+        .get();
+      if (!latestRunSnap.empty) {
+        improvementNotes = latestRunSnap.docs[0].data().improvementNotes || [];
+      }
+    }
+  } catch { /* continue without notes */ }
+
   // Create run
   const runId = await createRun(config);
 
@@ -130,8 +152,11 @@ export async function runAutoTune(
   let consecutiveDiscards = 0;
 
   try {
-    // --- ITERATION 0: BASELINE ---
-    callbacks.onIterationStart(0, "Running baseline evaluation");
+    // --- ITERATION 1: BASELINE ---
+    callbacks.onIterationStart(1, "Running baseline evaluation");
+
+    const agentVersion = agentData.version || 1;
+    const gradingOpts = { suiteId, source: "autotune" as GradingRunSource, agentVersion };
 
     const baselineResult = await runGradingSuiteOnPrompt(
       currentPrompt + baseSkillsXml,
@@ -141,11 +166,12 @@ export async function runAutoTune(
       userId,
       agentId,
       apiKey,
-      apiKeys
+      apiKeys,
+      gradingOpts
     );
 
     const baselineIteration: AutoResearchIteration = {
-      index: 0,
+      index: 1,
       timestamp: Date.now(),
       configSnapshot: { systemPrompt: currentPrompt },
       gradingScore: baselineResult.score,
@@ -170,15 +196,15 @@ export async function runAutoTune(
     await logIteration(userId, agentId, runId, baselineIteration);
     callbacks.onIterationEnd(baselineIteration);
 
-    // --- ITERATIONS 1..N ---
-    for (let i = 1; i <= config.maxIterations; i++) {
+    // --- ITERATIONS 2..N+1 ---
+    for (let i = 2; i <= config.maxIterations + 1; i++) {
       // Check stop conditions
-      const stop = checkStopConditions(config, bestScore, i - 1, run.totalTokensUsed, consecutiveDiscards);
+      const stop = checkStopConditions(config, bestScore, i - 2, run.totalTokensUsed, consecutiveDiscards);
       if (stop.shouldStop) {
         break;
       }
 
-      callbacks.onIterationStart(i, `Iteration ${i}: analyzing and proposing mutation`);
+      callbacks.onIterationStart(i, "analyzing and proposing mutation");
       const iterStart = Date.now();
 
       // Phase: ANALYZE + MUTATE (use cached grading results from previous iteration)
@@ -192,7 +218,8 @@ export async function runAutoTune(
         model,
         availableModels,
         config.userScript,
-        apiKey
+        apiKey,
+        improvementNotes
       );
 
       run.totalTokensUsed.input += mutation.tokensUsed.input;
@@ -209,7 +236,8 @@ export async function runAutoTune(
         userId,
         agentId,
         apiKey,
-        apiKeys
+        apiKeys,
+        gradingOpts
       );
 
       run.totalTokensUsed.input += result.tokensUsed.input;
@@ -255,7 +283,7 @@ export async function runAutoTune(
       callbacks.onProgress({
         currentScore: result.score,
         bestScore,
-        iterationsLeft: config.maxIterations - i,
+        iterationsLeft: config.maxIterations + 1 - i,
         tokensUsed: run.totalTokensUsed,
       });
     }
@@ -266,6 +294,13 @@ export async function runAutoTune(
     await completeRun(userId, agentId, runId, run, {
       autotuneResult: { bestPrompt },
     });
+
+    // Clear pending optimization request if it was consumed
+    if (agentData.pendingOptimizationRequest?.notes?.length) {
+      adminDb.doc(`users/${userId}/agents/${agentId}`).update({
+        pendingOptimizationRequest: null,
+      }).catch(() => {});
+    }
 
     // Track usage
     await trackAutoresearchUsage(
@@ -299,7 +334,8 @@ async function runGradingSuiteOnPrompt(
   userId: string,
   agentId: string,
   apiKey?: string,
-  apiKeys?: string[]
+  apiKeys?: string[],
+  opts?: { suiteId?: string; source?: GradingRunSource; agentVersion?: number }
 ): Promise<{
   score: number;
   criteriaBreakdown: Record<string, number>;
@@ -311,8 +347,44 @@ async function runGradingSuiteOnPrompt(
   let totalScore = 0;
   let inputTokens = 0;
   let outputTokens = 0;
+  let totalToolCalls = 0;
   const criteriaBreakdown: Record<string, number> = {};
   const gradingResults: { caseName: string; score: number; passed: boolean; criteriaResults: { criterionType: string; score: number; message: string }[] }[] = [];
+
+  // (A) Create session for this optimization grading
+  let sessionId = "";
+  try {
+    sessionId = await createSessionServer(userId, agentId, {
+      purpose: `[${opts?.source || "autotune"}] Grading evaluation`,
+      modelUsed: model,
+      providerUsed: provider,
+      source: "autoresearch",
+    });
+  } catch { /* continue without session */ }
+
+  // (B) Create grading run record if suiteId provided
+  let gradingRunId = "";
+  if (opts?.suiteId) {
+    try {
+      const runRef = await adminDb
+        .collection(`users/${userId}/agents/${agentId}/gradingSuites/${opts.suiteId}/runs`)
+        .add({
+          agentVersion: opts.agentVersion || 1,
+          status: "running",
+          score: null,
+          totalCases: casesSnap.size,
+          passedCases: 0,
+          source: opts.source || "autotune",
+          startedAt: FieldValue.serverTimestamp(),
+          completedAt: null,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+      gradingRunId = runRef.id;
+    } catch { /* continue without persisting */ }
+  }
+
+  let passedCases = 0;
+  const resultWritePromises: Promise<unknown>[] = [];
 
   for (const caseDoc of casesSnap.docs) {
     const testCase = caseDoc.data();
@@ -334,6 +406,7 @@ async function runGradingSuiteOnPrompt(
         onToken: (text) => collector.addToken(text),
         onToolStart: () => {},
         onToolEnd: (result) => {
+          totalToolCalls++;
           collector.addToolCall({
             name: result.name,
             args: {},
@@ -359,6 +432,7 @@ async function runGradingSuiteOnPrompt(
     );
 
     totalScore += score;
+    if (passed) passedCases++;
 
     for (const cr of criteriaResults) {
       criteriaBreakdown[cr.criterionType] = (criteriaBreakdown[cr.criterionType] || 0) + cr.score;
@@ -374,9 +448,61 @@ async function runGradingSuiteOnPrompt(
         message: cr.message,
       })),
     });
+
+    // (B) Persist result to grading run
+    if (gradingRunId && opts?.suiteId) {
+      resultWritePromises.push(
+        adminDb
+          .collection(`users/${userId}/agents/${agentId}/gradingSuites/${opts.suiteId}/runs/${gradingRunId}/results`)
+          .add({
+            caseId: testCase.id || caseDoc.id,
+            passed,
+            score,
+            agentOutput: collector.assistantOutput.slice(0, 50000),
+            toolCalls: collector.toolCalls,
+            criteriaResults,
+            durationMs: Date.now() - startTime,
+            createdAt: FieldValue.serverTimestamp(),
+          })
+          .catch(() => {})
+      );
+    }
   }
 
   const finalScore = casesSnap.size > 0 ? totalScore / casesSnap.size : 0;
+
+  // (B) Finalize grading run
+  if (gradingRunId && opts?.suiteId) {
+    try {
+      await Promise.all([
+        ...resultWritePromises,
+        adminDb
+          .doc(`users/${userId}/agents/${agentId}/gradingSuites/${opts.suiteId}/runs/${gradingRunId}`)
+          .update({
+            status: "completed",
+            score: finalScore,
+            passedCases,
+            completedAt: FieldValue.serverTimestamp(),
+          }),
+      ]);
+    } catch { /* best-effort */ }
+  }
+
+  // (A) Finalize session
+  if (sessionId) {
+    try {
+      await Promise.all([
+        updateSessionMetrics(userId, agentId, sessionId, {
+          inputTokens,
+          outputTokens,
+          cost: 0,
+          toolCallCount: totalToolCalls,
+          messageCount: casesSnap.size * 2,
+        }),
+        endSessionServer(userId, agentId, sessionId),
+      ]);
+    } catch { /* best-effort */ }
+  }
 
   return {
     score: finalScore,
