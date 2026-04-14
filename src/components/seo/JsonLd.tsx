@@ -372,17 +372,15 @@ export function WebSiteJsonLd() {
 export function PricingJsonLd() {
   const data = {
     "@context": "https://schema.org",
-    "@type": "Product",
+    "@type": "SoftwareApplication",
     name: "Kopern AI Agent Builder",
     description: "Build, test, deploy, and connect production-grade AI agents",
+    applicationCategory: "DeveloperApplication",
+    operatingSystem: "Web",
     image: [
       `${SITE_URL}/opengraph-image`,
       `${SITE_URL}/logo_small.png`,
     ],
-    brand: {
-      "@type": "Brand",
-      name: "Kopern",
-    },
     offers: [
       {
         "@type": "Offer",

@@ -5,7 +5,8 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopern.ai";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const locales = ["en", "fr"];
-  const now = new Date().toISOString();
+  // Fixed date — update only on real deploys (dynamic dates waste crawl budget)
+  const lastDeploy = "2026-04-12T00:00:00.000Z";
 
   // Public pages to index
   const publicRoutes = [
@@ -17,9 +18,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/mcp", priority: 0.75, changeFrequency: "monthly" as const },
     { path: "/grader", priority: 0.85, changeFrequency: "weekly" as const },
     { path: "/monitor", priority: 0.85, changeFrequency: "weekly" as const },
-    { path: "/privacy", priority: 0.3, changeFrequency: "yearly" as const },
-    { path: "/terms", priority: 0.3, changeFrequency: "yearly" as const },
-    { path: "/login", priority: 0.3, changeFrequency: "monthly" as const },
     { path: "/blog", priority: 0.8, changeFrequency: "weekly" as const },
   ];
 
@@ -29,7 +27,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     for (const route of publicRoutes) {
       entries.push({
         url: `${SITE_URL}/${locale}${route.path}`,
-        lastModified: now,
+        lastModified: lastDeploy,
         changeFrequency: route.changeFrequency,
         priority: route.priority,
         alternates: {
@@ -47,7 +45,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     for (const locale of locales) {
       entries.push({
         url: `${SITE_URL}/${locale}/blog/${slug}`,
-        lastModified: now,
+        lastModified: lastDeploy,
         changeFrequency: "monthly" as const,
         priority: 0.7,
         alternates: {
