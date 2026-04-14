@@ -434,7 +434,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 w-full h-screen pointer-events-none" style={{ zIndex: 0 }}>
           <div
             style={{
-              backgroundImage: 'url("/suit2-4.png")',
+              backgroundImage: 'url("/suit2-5.png")',
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center",
               backgroundSize: "1920px auto",
@@ -1266,25 +1266,13 @@ export default function LandingPage() {
                       Smithery
                     </span>
                   </a>
-                  <a href="https://glama.ai/mcp/servers/@kopern/mcp-server" target="_blank" rel="noopener noreferrer">
+                  <a href="https://glama.ai/mcp/servers/berch-t/kopern" target="_blank" rel="noopener noreferrer">
                     <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted/50 transition-colors">
                       <Sparkles className="h-3.5 w-3.5 text-amber-500" />
                       Glama
                     </span>
                   </a>
-                  <a href="https://opentools.com/@kopern/mcp-server" target="_blank" rel="noopener noreferrer">
-                    <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted/50 transition-colors">
-                      <Plug className="h-3.5 w-3.5 text-emerald-500" />
-                      Open Tools
-                    </span>
-                  </a>
-                  <a href="https://mcp.tools/@kopern/mcp-server" target="_blank" rel="noopener noreferrer">
-                    <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted/50 transition-colors">
-                      <Terminal className="h-3.5 w-3.5 text-blue-500" />
-                      MCPT
-                    </span>
-                  </a>
-                </div>
+               </div>
               </div>
             </motion.div>
           </div>
@@ -1589,9 +1577,6 @@ export default function LandingPage() {
               <Linkedin className="h-5 w-5" />
             </a>
           </div>
-          <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-            Made with <Heart className="h-3.5 w-3.5 fill-red-500 text-red-500" /> by berch-t and Tonton Claude
-          </p>
           <p className="text-xs text-muted-foreground/60">
             &copy; {new Date().getFullYear()} Kopern
           </p>
