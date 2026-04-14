@@ -63,6 +63,104 @@ Most AI agent tools are **frameworks** — they give you building blocks and wis
 
 ---
 
+## Quick Start
+
+### Prerequisites
+
+- Node.js >= 20
+- A Firebase project (Firestore + Auth)
+- At least one LLM API key (Anthropic, OpenAI, or Google)
+
+### Install
+
+```bash
+git clone https://github.com/berch-t/kopern.git
+cd kopern
+npm install
+cp .env.example .env.local   # Edit with your keys
+npm run dev                   # http://localhost:3000
+```
+
+### Environment Variables
+
+<details>
+<summary>Click to expand full .env.local template</summary>
+
+```env
+# Firebase Client (public)
+NEXT_PUBLIC_FIREBASE_API_KEY=...
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+NEXT_PUBLIC_FIREBASE_APP_ID=...
+
+# Firebase Admin (server-side only)
+FIREBASE_PROJECT_ID=your-project
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-...@your-project.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+
+# Stripe (optional — billing features)
+STRIPE_SECRET_KEY=sk_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_...
+
+# LLM API Keys (add the ones you need)
+ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...
+GOOGLE_AI_API_KEY=AI...
+OLLAMA_BASE_URL=http://localhost:11434
+
+# Admin (optional)
+NEXT_PUBLIC_ADMIN_UID=your-firebase-uid
+
+# Service Connectors — OAuth (optional)
+GOOGLE_OAUTH_CLIENT_ID=...
+GOOGLE_OAUTH_CLIENT_SECRET=...
+MICROSOFT_OAUTH_CLIENT_ID=...
+MICROSOFT_OAUTH_CLIENT_SECRET=...
+ENCRYPTION_KEY=...  # 64-char hex: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+# Slack Bot (optional)
+SLACK_CLIENT_ID=...
+SLACK_CLIENT_SECRET=...
+SLACK_SIGNING_SECRET=...
+
+# Rate Limiting (optional)
+UPSTASH_REDIS_REST_URL=...
+UPSTASH_REDIS_REST_TOKEN=...
+```
+
+</details>
+
+### Deploy Firestore Rules
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes
+```
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 16 (App Router) |
+| Language | TypeScript (strict mode) |
+| UI | shadcn/ui + Radix UI + Tailwind CSS 4 |
+| Animation | Framer Motion 12 |
+| Visual Editor | React Flow v12 |
+| Database | Cloud Firestore (real-time) |
+| Auth | Firebase Authentication (Google/GitHub/Email) |
+| Billing | Stripe (subscriptions + usage meters) |
+| LLM | Multi-provider streaming (Anthropic, OpenAI, Google, Ollama) |
+| Code Execution | GCP Cloud Run (Python/Node/Bash sandbox) |
+| Rate Limiting | Upstash Redis |
+| Validation | Zod v4 |
+| Encryption | AES-256-GCM (OAuth tokens) |
+
+---
+
 ## Features
 
 ### Agent Builder
@@ -172,104 +270,6 @@ Most AI agent tools are **frameworks** — they give you building blocks and wis
 
 ---
 
-## Quick Start
-
-### Prerequisites
-
-- Node.js >= 20
-- A Firebase project (Firestore + Auth)
-- At least one LLM API key (Anthropic, OpenAI, or Google)
-
-### Install
-
-```bash
-git clone https://github.com/berch-t/kopern.git
-cd kopern
-npm install
-cp .env.example .env.local   # Edit with your keys
-npm run dev                   # http://localhost:3000
-```
-
-### Environment Variables
-
-<details>
-<summary>Click to expand full .env.local template</summary>
-
-```env
-# Firebase Client (public)
-NEXT_PUBLIC_FIREBASE_API_KEY=...
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
-NEXT_PUBLIC_FIREBASE_APP_ID=...
-
-# Firebase Admin (server-side only)
-FIREBASE_PROJECT_ID=your-project
-FIREBASE_CLIENT_EMAIL=firebase-adminsdk-...@your-project.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-
-# Stripe (optional — billing features)
-STRIPE_SECRET_KEY=sk_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_...
-
-# LLM API Keys (add the ones you need)
-ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=sk-...
-GOOGLE_AI_API_KEY=AI...
-OLLAMA_BASE_URL=http://localhost:11434
-
-# Admin (optional)
-NEXT_PUBLIC_ADMIN_UID=your-firebase-uid
-
-# Service Connectors — OAuth (optional)
-GOOGLE_OAUTH_CLIENT_ID=...
-GOOGLE_OAUTH_CLIENT_SECRET=...
-MICROSOFT_OAUTH_CLIENT_ID=...
-MICROSOFT_OAUTH_CLIENT_SECRET=...
-ENCRYPTION_KEY=...  # 64-char hex: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-
-# Slack Bot (optional)
-SLACK_CLIENT_ID=...
-SLACK_CLIENT_SECRET=...
-SLACK_SIGNING_SECRET=...
-
-# Rate Limiting (optional)
-UPSTASH_REDIS_REST_URL=...
-UPSTASH_REDIS_REST_TOKEN=...
-```
-
-</details>
-
-### Deploy Firestore Rules
-
-```bash
-firebase deploy --only firestore:rules,firestore:indexes
-```
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Framework | Next.js 16 (App Router) |
-| Language | TypeScript (strict mode) |
-| UI | shadcn/ui + Radix UI + Tailwind CSS 4 |
-| Animation | Framer Motion 12 |
-| Visual Editor | React Flow v12 |
-| Database | Cloud Firestore (real-time) |
-| Auth | Firebase Authentication (Google/GitHub/Email) |
-| Billing | Stripe (subscriptions + usage meters) |
-| LLM | Multi-provider streaming (Anthropic, OpenAI, Google, Ollama) |
-| Code Execution | GCP Cloud Run (Python/Node/Bash sandbox) |
-| Rate Limiting | Upstash Redis |
-| Validation | Zod v4 |
-| Encryption | AES-256-GCM (OAuth tokens) |
-
----
-
 ## Architecture
 
 ```
@@ -280,7 +280,7 @@ firebase deploy --only firestore:rules,firestore:indexes
                              |
               +--------------+--------------+
               |              |              |
-        +-----+----+  +-----+----+  +------+-----+
+        +-----+-----+  +-----+----+  +------+-----+
         | Dashboard |  |   API    |  |  Landing   |
         | (auth)    |  |  Routes  |  |  (public)  |
         +-----------+  +----+-----+  +------------+
@@ -288,20 +288,20 @@ firebase deploy --only firestore:rules,firestore:indexes
        +--------------------+--------------------+
        |         |          |          |          |
   +----+---+ +--+-----+ +--+----+ +--+------+ +-+------+
-  |  Chat  | |Grading | |  MCP  | |Connectors| | Teams  |
-  |  SSE   | |  Lab   | |Server | | (5 ch.)  | | (Flow) |
-  +----+---+ +--+-----+ +--+----+ +--+-------+ +--+----+
-       |        |           |         |             |
+  |  Chat  | |Grading | |  MCP  | |Connectors| | Teams |
+  |  SSE   | |  Lab   | |Server | | (5 ch.)  | | (Flow)|
+  +----+---+ +---+----+ +---+---+ +---+------+ +----+--+
+       |         |          |         |             |
   +----+--------+-----------+---------+-------------+--+
-  |           runAgentWithTools()                       |
-  |     (shared agentic loop — all routes)             |
+  |                  runAgentWithTools()               |
+  |         (shared agentic loop — all routes)         |
   +----+----------+----------+----------+--------------+
-       |          |          |          |
-  +----+---+ +---+-----+ +-+------+ +-+----------+
-  |streamLLM| |Firebase | |Stripe  | |GCP Cloud   |
-  |(multi-  | |Admin SDK| |Billing | |Run (code   |
-  |provider)| |Firestore| |Meters  | |interpreter)|
-  +---------+ +---------+ +--------+ +------------+
+       |            |            |              |
+  +----+----+   +---+----+   +---+----+   +-----+------+
+  |streamLLM|   |Firebase |  |Stripe  |   |GCP Cloud   |
+  |(multi-  |   |Admin SDK|  |Billing |   |Run (code   |
+  |provider)|   |Firestore|  |Meters  |   |interpreter)|
+  +---------+   +---------+  +--------+   +------------+
 ```
 
 ### Firestore Schema
