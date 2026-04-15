@@ -99,6 +99,45 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+function AnimatedCounter({ end, suffix = "", label }: { end: number; suffix?: string; label: string }) {
+  const counterRef = useRef<HTMLDivElement>(null);
+  const [count, setCount] = useState(0);
+  const [hasAnimated, setHasAnimated] = useState(false);
+
+  useEffect(() => {
+    const el = counterRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAnimated) {
+          setHasAnimated(true);
+          const duration = 2000;
+          const start = performance.now();
+          const step = (now: number) => {
+            const progress = Math.min((now - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setCount(Math.floor(eased * end));
+            if (progress < 1) requestAnimationFrame(step);
+          };
+          requestAnimationFrame(step);
+        }
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [end, hasAnimated]);
+
+  return (
+    <div ref={counterRef} className="text-center">
+      <p className="text-4xl font-bold text-primary tabular-nums">
+        {count.toLocaleString()}{suffix}
+      </p>
+      <p className="text-sm text-muted-foreground mt-1">{label}</p>
+    </div>
+  );
+}
+
 const PixelBlast = lazy(() => import("@/components/ui/PixelBlast"));
 const MagicRings = lazy(() => import("@/components/ui/MagicRings"));
 
@@ -157,6 +196,11 @@ export default function LandingPage() {
   const [heroPhase, setHeroPhase] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   const [scrolled, setScrolled] = useState(false);
+  const [metrics, setMetrics] = useState<{ agents: number; gradingRuns: number; optimized: number; sessions: number } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/metrics").then(r => r.json()).then(setMetrics).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -830,7 +874,7 @@ export default function LandingPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.5, duration: 0.8 }}
-        className="absolute bottom-[5rem] left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 cursor-pointer"
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 hidden sm:flex flex-col items-center gap-2 cursor-pointer"
         onClick={() => window.scrollTo({ top: window.innerHeight, behavior: "smooth" })}
       >
         <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/50 font-medium">
@@ -855,8 +899,97 @@ export default function LandingPage() {
       </motion.div>
       </div>
 
+
+        {/* Metrics */}
+        {metrics && (metrics.agents + metrics.gradingRuns + metrics.optimized + metrics.sessions) > 0 && (
+        <div className="py-16 px-4 md:px-6">
+          <div className="max-w-5xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="grid grid-cols-2 md:grid-cols-4 gap-8"
+            >
+              {metrics.agents > 0 && <AnimatedCounter end={metrics.agents} label={t.landing.metrics.agents} />}
+              {metrics.gradingRuns > 0 && <AnimatedCounter end={metrics.gradingRuns} label={t.landing.metrics.gradingRuns} />}
+              {metrics.optimized > 0 && <AnimatedCounter end={metrics.optimized} label={t.landing.metrics.optimized} />}
+              {metrics.sessions > 0 && <AnimatedCounter end={metrics.sessions} label={t.landing.metrics.sessions} />}
+            </motion.div>
+          </div>
+        </div>
+        )}
+
+        {/* Features */}
+      <div style={{ background: "var(--landing-section-alt)" }}>
+      <div className="max-w-6xl mx-auto px-4 md:px-6">
+        <motion.section
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="py-24"
+        >
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold sm:text-4xl">
+              {t.landing.features.title}{" "}
+              <span className="text-primary">{t.landing.features.titleAccent}</span>
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+              {t.landing.features.subtitle}
+            </p>
+          </div>
+
+          {/* Compliance Badges */}
+          <div className="flex flex-wrap items-center justify-center gap-6 mb-14">
+            <img src="/soc2.png" alt="SOC 2" className="h-16 opacity-80 hover:opacity-100 transition-opacity" />
+            <img src="/iso27001.png" alt="ISO 27001" className="h-16 opacity-80 hover:opacity-100 transition-opacity" />
+            <img src="/iso42001.png" alt="ISO 42001" className="h-16 opacity-80 hover:opacity-100 transition-opacity" />
+            <img src="/gdpr.png" alt="GDPR" className="h-16 opacity-80 hover:opacity-100 transition-opacity" />
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            {
+              icon: Bot,
+              title: t.landing.features.agentBuilder.title,
+              description: t.landing.features.agentBuilder.description,
+            },
+            {
+              icon: ClipboardCheck,
+              title: t.landing.features.grading.title,
+              description: t.landing.features.grading.description,
+            },
+            {
+              icon: Cable,
+              title: t.landing.features.api.title,
+              description: t.landing.features.api.description,
+            },
+            {
+              icon: Shield,
+              title: t.landing.features.security.title,
+              description: t.landing.features.security.description,
+            },
+          ].map((feature) => (
+            <div key={feature.title} className="gradient-border-wrap h-full">
+              <div className="bg-card p-6 space-y-3 h-full">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <feature.icon className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="font-semibold">{feature.title}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {feature.description}
+                </p>
+              </div>
+            </div>
+          ))}
+          </div>
+        </motion.section>
+      </div>
+      </div>
+
         {/* Deploy Everywhere */}
-      <div className="pt-10 pb-20 px-6">
+      <div className="py-24 px-6">
         <div className="max-w-6xl mx-auto">
 
 
@@ -998,8 +1131,90 @@ export default function LandingPage() {
         </div>
       </div>
 
+        {/* AutoResearch — Self-Improving Agents */}
+      <div style={{ background: "var(--landing-section-alt)" }}>
+      <div className="max-w-6xl mx-auto px-4 md:px-6">
+        <motion.section
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="py-24"
+        >
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold sm:text-4xl">
+              {t.landing.autoResearch.title}{" "}
+              <span className="text-primary">{t.landing.autoResearch.titleAccent}</span>
+            </h2>
+            <p className="mt-4 max-w-2xl mx-auto text-muted-foreground">
+              {t.landing.autoResearch.subtitle}
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                icon: Target,
+                title: t.landing.autoResearch.autotune.title,
+                description: t.landing.autoResearch.autotune.description,
+                accent: "text-blue-500",
+                bg: "bg-blue-500/10",
+              },
+              {
+                icon: Zap,
+                title: t.landing.autoResearch.autofix.title,
+                description: t.landing.autoResearch.autofix.description,
+                accent: "text-amber-500",
+                bg: "bg-amber-500/10",
+              },
+              {
+                icon: Shield,
+                title: t.landing.autoResearch.stressLab.title,
+                description: t.landing.autoResearch.stressLab.description,
+                accent: "text-red-500",
+                bg: "bg-red-500/10",
+              },
+              {
+                icon: Trophy,
+                title: t.landing.autoResearch.tournament.title,
+                description: t.landing.autoResearch.tournament.description,
+                accent: "text-purple-500",
+                bg: "bg-purple-500/10",
+              },
+              {
+                icon: Dna,
+                title: t.landing.autoResearch.evolution.title,
+                description: t.landing.autoResearch.evolution.description,
+                accent: "text-pink-500",
+                bg: "bg-pink-500/10",
+              },
+              {
+                icon: ArrowDown,
+                title: t.landing.autoResearch.distillation.title,
+                description: t.landing.autoResearch.distillation.description,
+                accent: "text-emerald-500",
+                bg: "bg-emerald-500/10",
+              },
+            ].map((item) => (
+              <BorderGlow key={item.title} borderRadius={12}>
+                <div className="p-6 space-y-4">
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${item.bg}`}>
+                    <item.icon className={`h-6 w-6 ${item.accent}`} />
+                  </div>
+                  <h3 className="text-lg font-semibold">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {item.description}
+                  </p>
+                </div>
+              </BorderGlow>
+            ))}
+          </div>
+        </motion.section>
+      </div>
+      </div>
+
         {/* Agent Grader — Free Tool */}
-        <div className="pt-10 pb-20 px-4 md:px-6" style={{ background: "var(--landing-section-alt)" }}>
+        <div className="py-24 px-4 md:px-6">
           <div className="max-w-6xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -1066,7 +1281,7 @@ export default function LandingPage() {
         </div>
 
         {/* Workflow Quality Monitor */}
-        <div className="pt-10 pb-20 px-4 md:px-6">
+        <div className="py-24 px-4 md:px-6" style={{ background: "var(--landing-section-alt)" }}>
           <div className="max-w-6xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -1132,8 +1347,113 @@ export default function LandingPage() {
           </div>
         </div>
 
+        {/* Orchestration & Teams */}
+      <div>
+      <div className="max-w-6xl mx-auto px-4 md:px-6">
+        <motion.section
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="py-24"
+        >
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold sm:text-4xl">
+              {t.landing.orchestration.title}{" "}
+              <span className="text-primary">{t.landing.orchestration.titleAccent}</span>
+            </h2>
+            <p className="mt-4 max-w-2xl mx-auto text-muted-foreground">
+              {t.landing.orchestration.subtitle}
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-3">
+            {[
+              {
+                icon: Users,
+                title: t.landing.orchestration.teams.title,
+                description: t.landing.orchestration.teams.description,
+              },
+              {
+                icon: Workflow,
+                title: t.landing.orchestration.pipelines.title,
+                description: t.landing.orchestration.pipelines.description,
+              },
+              {
+                icon: Sparkles,
+                title: t.landing.orchestration.metaAgent.title,
+                description: t.landing.orchestration.metaAgent.description,
+              },
+            ].map((item) => (
+              <BorderGlow key={item.title} borderRadius={12}>
+                <div className="p-6 space-y-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <item.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {item.description}
+                  </p>
+                </div>
+              </BorderGlow>
+            ))}
+          </div>
+        </motion.section>
+      </div>
+      </div>
+
+        {/* Observability & Billing */}
+      <div style={{ background: "var(--landing-section-alt)" }}>
+      <div className="max-w-6xl mx-auto px-4 md:px-6">
+        <motion.section
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="py-24"
+        >
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold sm:text-4xl">
+              {t.landing.observability.title}{" "}
+              <span className="text-primary">{t.landing.observability.titleAccent}</span>
+            </h2>
+            <p className="mt-4 max-w-2xl mx-auto text-muted-foreground">
+              {t.landing.observability.subtitle}
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2">
+            {[
+              {
+                icon: Eye,
+                title: t.landing.observability.sessions.title,
+                description: t.landing.observability.sessions.description,
+              },
+              {
+                icon: CreditCard,
+                title: t.landing.observability.billing.title,
+                description: t.landing.observability.billing.description,
+              },
+            ].map((item) => (
+              <div key={item.title} className="gradient-border-wrap">
+                <div className="bg-card p-6 space-y-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <item.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {item.description}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.section>
+      </div>
+      </div>
+
         {/* MCP for Developers */}
-        <div className="pt-10 pb-20 px-4 md:px-6">
+        <div className="py-24 px-4 md:px-6">
           <div className="max-w-6xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -1278,255 +1598,6 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Features */}
-        <div>
-      <div className="max-w-6xl mx-auto px-4 md:px-6">
-        <motion.section
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="pt-10 pb-24"
-        >
-          <div className="text-center mb-10">
-            <h2 className="text-3xl font-bold sm:text-4xl">
-              {t.landing.features.title}{" "}
-              <span className="text-primary">{t.landing.features.titleAccent}</span>
-            </h2>
-            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-              {t.landing.features.subtitle}
-            </p>
-          </div>
-
-          {/* Compliance Badges */}
-          <div className="flex flex-wrap items-center justify-center gap-6 mb-14">
-            <img src="/soc2.png" alt="SOC 2" className="h-[10rem] opacity-80 hover:opacity-100 transition-opacity" />
-            <img src="/iso27001.png" alt="ISO 27001" className="h-[10rem] opacity-80 hover:opacity-100 transition-opacity" />
-            <img src="/iso42001.png" alt="ISO 42001" className="h-[10rem] opacity-80 hover:opacity-100 transition-opacity" />
-            <img src="/gdpr.png" alt="GDPR" className="h-[10rem] opacity-80 hover:opacity-100 transition-opacity" />
-          </div>
-
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            {
-              icon: Bot,
-              title: t.landing.features.agentBuilder.title,
-              description: t.landing.features.agentBuilder.description,
-            },
-            {
-              icon: ClipboardCheck,
-              title: t.landing.features.grading.title,
-              description: t.landing.features.grading.description,
-            },
-            {
-              icon: Cable,
-              title: t.landing.features.api.title,
-              description: t.landing.features.api.description,
-            },
-            {
-              icon: Shield,
-              title: t.landing.features.security.title,
-              description: t.landing.features.security.description,
-            },
-          ].map((feature) => (
-            <div key={feature.title} className="gradient-border-wrap h-full">
-              <div className="bg-card p-6 space-y-3 h-full">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <feature.icon className="h-5 w-5 text-primary" />
-                </div>
-                <h3 className="font-semibold">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {feature.description}
-                </p>
-              </div>
-            </div>
-          ))}
-          </div>
-        </motion.section>
-      </div>
-      </div>
-
-        {/* Orchestration & Teams */}
-      <div style={{ background: "var(--landing-section-alt)" }}>
-      <div className="max-w-6xl mx-auto px-4 md:px-6">
-        <motion.section
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
-          className="py-12"
-        >
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold sm:text-4xl">
-              {t.landing.orchestration.title}{" "}
-              <span className="text-primary">{t.landing.orchestration.titleAccent}</span>
-            </h2>
-            <p className="mt-4 max-w-2xl mx-auto text-muted-foreground">
-              {t.landing.orchestration.subtitle}
-            </p>
-          </div>
-
-          <div className="grid gap-6 sm:grid-cols-3">
-            {[
-              {
-                icon: Users,
-                title: t.landing.orchestration.teams.title,
-                description: t.landing.orchestration.teams.description,
-              },
-              {
-                icon: Workflow,
-                title: t.landing.orchestration.pipelines.title,
-                description: t.landing.orchestration.pipelines.description,
-              },
-              {
-                icon: Sparkles,
-                title: t.landing.orchestration.metaAgent.title,
-                description: t.landing.orchestration.metaAgent.description,
-              },
-            ].map((item) => (
-              <BorderGlow key={item.title} borderRadius={12}>
-                <div className="p-6 space-y-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <item.icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-semibold">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {item.description}
-                  </p>
-                </div>
-              </BorderGlow>
-            ))}
-          </div>
-        </motion.section>
-      </div>
-      </div>
-
-        {/* AutoResearch — Self-Improving Agents */}
-      <div className="max-w-6xl mx-auto px-4 md:px-6">
-        <motion.section
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.7 }}
-          className="py-24"
-        >
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold sm:text-4xl">
-              {t.landing.autoResearch.title}{" "}
-              <span className="text-primary">{t.landing.autoResearch.titleAccent}</span>
-            </h2>
-            <p className="mt-4 max-w-2xl mx-auto text-muted-foreground">
-              {t.landing.autoResearch.subtitle}
-            </p>
-          </div>
-
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              {
-                icon: Target,
-                title: t.landing.autoResearch.autotune.title,
-                description: t.landing.autoResearch.autotune.description,
-                accent: "text-blue-500",
-                bg: "bg-blue-500/10",
-              },
-              {
-                icon: Zap,
-                title: t.landing.autoResearch.autofix.title,
-                description: t.landing.autoResearch.autofix.description,
-                accent: "text-amber-500",
-                bg: "bg-amber-500/10",
-              },
-              {
-                icon: Shield,
-                title: t.landing.autoResearch.stressLab.title,
-                description: t.landing.autoResearch.stressLab.description,
-                accent: "text-red-500",
-                bg: "bg-red-500/10",
-              },
-              {
-                icon: Trophy,
-                title: t.landing.autoResearch.tournament.title,
-                description: t.landing.autoResearch.tournament.description,
-                accent: "text-purple-500",
-                bg: "bg-purple-500/10",
-              },
-              {
-                icon: Dna,
-                title: t.landing.autoResearch.evolution.title,
-                description: t.landing.autoResearch.evolution.description,
-                accent: "text-pink-500",
-                bg: "bg-pink-500/10",
-              },
-              {
-                icon: ArrowDown,
-                title: t.landing.autoResearch.distillation.title,
-                description: t.landing.autoResearch.distillation.description,
-                accent: "text-emerald-500",
-                bg: "bg-emerald-500/10",
-              },
-            ].map((item) => (
-              <BorderGlow key={item.title} borderRadius={12}>
-                <div className="p-6 space-y-4">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${item.bg}`}>
-                    <item.icon className={`h-6 w-6 ${item.accent}`} />
-                  </div>
-                  <h3 className="text-lg font-semibold">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {item.description}
-                  </p>
-                </div>
-              </BorderGlow>
-            ))}
-          </div>
-        </motion.section>
-      </div>
-
-        {/* Observability & Billing */}
-      <div style={{ background: "var(--landing-section-alt)" }}>
-      <div className="max-w-6xl mx-auto px-4 md:px-6">
-        <motion.section
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.8 }}
-          className="py-24"
-        >
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold sm:text-4xl">
-              {t.landing.observability.title}{" "}
-              <span className="text-primary">{t.landing.observability.titleAccent}</span>
-            </h2>
-            <p className="mt-4 max-w-2xl mx-auto text-muted-foreground">
-              {t.landing.observability.subtitle}
-            </p>
-          </div>
-
-          <div className="grid gap-6 sm:grid-cols-2">
-            {[
-              {
-                icon: Eye,
-                title: t.landing.observability.sessions.title,
-                description: t.landing.observability.sessions.description,
-              },
-              {
-                icon: CreditCard,
-                title: t.landing.observability.billing.title,
-                description: t.landing.observability.billing.description,
-              },
-            ].map((item) => (
-              <div key={item.title} className="gradient-border-wrap">
-                <div className="bg-card p-6 space-y-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <item.icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-semibold">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {item.description}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.section>
-      </div>
-      </div>
-
       {/* How it Works — Full documentation */}
       <div>
         <DocsBoundary>
@@ -1548,14 +1619,6 @@ export default function LandingPage() {
             <LocalizedLink href="/terms" className="hover:text-foreground transition-colors">
               {t.footer?.terms ?? "Terms of Service"}
             </LocalizedLink>
-          </div>
-
-          {/* Compliance Badges */}
-          <div className="flex flex-wrap items-center justify-center gap-6">
-            <img src="/soc2.png" alt="SOC 2" className="h-[7rem] opacity-80 hover:opacity-100 transition-opacity" />
-            <img src="/iso27001.png" alt="ISO 27001" className="h-[7rem] opacity-80 hover:opacity-100 transition-opacity" />
-            <img src="/iso42001.png" alt="ISO 42001" className="h-[7rem] opacity-80 hover:opacity-100 transition-opacity" />
-            <img src="/gdpr.png" alt="GDPR" className="h-[7rem] opacity-80 hover:opacity-100 transition-opacity" />
           </div>
 
           {/* Social */}
@@ -1589,6 +1652,7 @@ export default function LandingPage() {
           <WelcomeWizard open={landingWizardOpen} onOpenChange={setLandingWizardOpen} />
         </AuthProvider>
       )}
+
     </div>
   );
 }

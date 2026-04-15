@@ -1,6 +1,6 @@
 {
   "name": "@kopern/mcp-server",
-  "version": "2.0.0",
+  "version": "2.0.6",
   "description": "32 AI agent tools for Claude Code, Cursor, Windsurf, and any MCP client. Build, test, grade, and deploy AI agents from your terminal.",
   "homepage": "https://kopern.ai",
   "repository": "https://github.com/berch-t/kopern",

@@ -112,6 +112,12 @@
       "tryAnother": "Try another",
       "viewSpec": "View full specification"
     },
+    "metrics": {
+      "agents": "Agents created",
+      "gradingRuns": "Grading runs",
+      "optimized": "Prompts optimized",
+      "sessions": "Conversations"
+    },
     "footer": "Kopern — AI Agent Builder & Grader",
     "footerPrivacy": "Privacy Policy",
     "footerTerms": "Terms of Service",

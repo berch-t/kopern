@@ -212,8 +212,8 @@ The Kopern server handles all MCP protocol methods (`initialize`, `tools/list`, 
 - [Kopern Platform](https://kopern.ai)
 - [API Documentation](https://kopern.ai/en/api-reference)
 - [GitHub](https://github.com/berch-t/kopern)
-- [Smithery](https://smithery.ai/server/@kopern/mcp-server)
-- [Glama](https://glama.ai/mcp/servers/@kopern/mcp-server)
+- [Smithery](https://smithery.ai/servers/kopern/mcp-server)
+- [Glama](https://glama.ai/mcp/servers/berch-t/kopern)
 
 ## License
 

@@ -295,7 +295,7 @@ firebase deploy --only firestore:rules,firestore:indexes
   +----+--------+-----------+---------+-------------+--+
   |                  runAgentWithTools()               |
   |         (shared agentic loop — all routes)         |
-  +----+----------+----------+----------+--------------+
+  +----+------------+------------+--------------+------+
        |            |            |              |
   +----+----+   +---+----+   +---+----+   +-----+------+
   |streamLLM|   |Firebase |  |Stripe  |   |GCP Cloud   |
