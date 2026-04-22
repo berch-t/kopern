@@ -70,6 +70,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { motion, AnimatePresence } from "framer-motion";
 import { BugReportDialog } from "@/components/feedback/BugReportDialog";
+import { FAQSection } from "@/components/seo/FAQSection";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
 const HowItWorks = lazy(() => import("@/components/docs/HowItWorks").then((m) => ({ default: m.HowItWorks })));
@@ -1597,6 +1598,40 @@ export default function LandingPage() {
             </motion.div>
           </div>
         </div>
+
+      {/* FAQ — SEO optimized questions */}
+      <FAQSection
+        title={t.landing.faq.title}
+        subtitle={t.landing.faq.subtitle}
+        faqs={t.landing.faq.items}
+        injectJsonLd
+      />
+
+      {/* FAQ CTA — conversion */}
+      <section className="py-12 px-4 md:px-6">
+        <div className="max-w-3xl mx-auto text-center rounded-2xl border bg-gradient-to-br from-primary/5 via-card to-accent/5 p-8 md:p-12">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">
+            {t.landing.faq.ctaTitle}
+          </h2>
+          <p className="text-muted-foreground mb-6">
+            {t.landing.faq.ctaSubtitle}
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <LocalizedLink href="/login">
+              <Button size="lg" className="gap-2 font-semibold">
+                <Sparkles className="h-4 w-4" />
+                {t.landing.faq.ctaButton}
+              </Button>
+            </LocalizedLink>
+            <LocalizedLink href="/mcp">
+              <Button size="lg" variant="outline" className="gap-2 font-semibold">
+                <Terminal className="h-4 w-4" />
+                {t.landing.faq.ctaSecondary}
+              </Button>
+            </LocalizedLink>
+          </div>
+        </div>
+      </section>
 
       {/* How it Works — Full documentation */}
       <div>

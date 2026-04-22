@@ -36,6 +36,7 @@ interface SidebarItem {
   accent: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- dictionary shape is deeply nested and dynamic
 function getSidebarItems(agentId: string, t: Record<string, any>): SidebarItem[] {
   const base = `/agents/${agentId}`;
   return [

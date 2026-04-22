@@ -26,7 +26,7 @@ export function LocaleSwitcher() {
     const segments = pathname.split("/");
     segments[1] = newLocale;
     const newPath = segments.join("/");
-    document.cookie = `NEXT_LOCALE=${newLocale};path=/;max-age=31536000`;
+    Object.assign(document, { cookie: `NEXT_LOCALE=${newLocale};path=/;max-age=31536000` });
     router.push(newPath);
   }
 

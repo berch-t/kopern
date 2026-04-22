@@ -47,6 +47,7 @@ export default function DashboardPage() {
   const [servers, setServers] = useState<ServerWithAgent[]>([]);
   const [serversLoading, setServersLoading] = useState(true);
 
+   
   useEffect(() => {
     if (!user || agents.length === 0) {
       setServersLoading(false);

@@ -99,6 +99,7 @@ export default function AgentsPage() {
 
   const [wizardOpen, setWizardOpen] = useState(false);
 
+   
   useEffect(() => {
     if (!loading && agents.length === 0 && user) {
       setWizardOpen(true);

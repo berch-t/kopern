@@ -108,6 +108,7 @@ export default function ApiReferencePage() {
   const sections = useMemo(() => parseSections(content), [content]);
   const hits = useMemo(() => quickSearch(sections, search), [sections, search]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration gate
   useEffect(() => setMounted(true), []);
 
   const scrollToText = useCallback((headingText: string) => {
@@ -138,7 +139,9 @@ export default function ApiReferencePage() {
     else if (e.key === "Escape") { e.preventDefault(); setOpen(false); inputRef.current?.blur(); }
   }, [open, hits, selIdx, pickResult]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- reset selection when results change
   useEffect(() => { setSelIdx(0); }, [hits.length]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- sync open state with search input
   useEffect(() => { setOpen(search.trim().length > 0 && hits.length > 0); }, [search, hits.length]);
 
   useEffect(() => {

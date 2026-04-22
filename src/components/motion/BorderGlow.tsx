@@ -131,7 +131,7 @@ const BorderGlow: React.FC<BorderGlowProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [resolvedBg, setResolvedBg] = useState(bgProp || "#150e1a");
 
-  // Auto-detect background color from computed style
+   
   useEffect(() => {
     if (bgProp) { setResolvedBg(bgProp); return; }
     const el = cardRef.current;
@@ -195,6 +195,7 @@ const BorderGlow: React.FC<BorderGlowProps> = ({
     [getEdgeProximity, getCursorAngle]
   );
 
+   
   useEffect(() => {
     if (!animated) return;
     const angleStart = 110;

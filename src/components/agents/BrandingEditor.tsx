@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useDictionary } from "@/providers/LocaleProvider";
 import type { AgentBranding } from "@/lib/firebase/firestore";
 import { ICON_OPTIONS, ICON_CATEGORIES, getIconComponent } from "@/lib/agent-icons";
@@ -30,7 +30,8 @@ export function BrandingEditor({ branding, onChange }: BrandingEditorProps) {
     onChange({ ...current, ...partial });
   }
 
-  const SelectedIcon = getIconComponent(current.icon);
+   
+  const SelectedIcon = useMemo(() => getIconComponent(current.icon), [current.icon]);
 
   const filteredIcons = activeCategory
     ? ICON_OPTIONS.filter((o) => o.category === activeCategory)

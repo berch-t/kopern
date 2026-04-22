@@ -16,12 +16,9 @@ interface ApprovalDialogProps {
 
 export function ApprovalDialog({ approval, onRespond }: ApprovalDialogProps) {
   const t = useDictionary();
-  const [remainingMs, setRemainingMs] = useState(TIMEOUT_MS);
+  const [remainingMs, setRemainingMs] = useState(() => Math.max(0, TIMEOUT_MS - (Date.now() - approval.timestamp)));
 
   useEffect(() => {
-    const elapsed = Date.now() - approval.timestamp;
-    setRemainingMs(Math.max(0, TIMEOUT_MS - elapsed));
-
     const interval = setInterval(() => {
       const remaining = Math.max(0, TIMEOUT_MS - (Date.now() - approval.timestamp));
       setRemainingMs(remaining);

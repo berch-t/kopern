@@ -130,10 +130,10 @@ export function AgentConfigDialog({
       <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 gap-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle>
-            {agent ? `Modifier — ${agent.name}` : "Modifier l'agent"}
+            {agent ? `Modifier — ${agent.name}` : "Modifier l&apos;agent"}
           </DialogTitle>
           <DialogDescription>
-            Modifiez la configuration de l'agent sans quitter la vue équipe.
+            Modifiez la configuration de l&apos;agent sans quitter la vue équipe.
           </DialogDescription>
         </DialogHeader>
 
@@ -202,7 +202,7 @@ export function AgentConfigDialog({
                 {/* Audit Log */}
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Journal d'audit (Art. 12)</Label>
+                    <Label>Journal d&apos;audit (Art. 12)</Label>
                     <p className="text-xs text-muted-foreground">
                       Requis pour les agents à risque limité/élevé.
                     </p>
@@ -216,7 +216,7 @@ export function AgentConfigDialog({
 
                 {/* Tool Approval */}
                 <div className="space-y-2">
-                  <Label>Politique d'approbation des tools (Art. 14)</Label>
+                  <Label>Politique d&apos;approbation des tools (Art. 14)</Label>
                   <Select value={toolApprovalPolicy} onValueChange={(v) => setToolApprovalPolicy(v as ToolApprovalPolicy)}>
                     <SelectTrigger>
                       <SelectValue />

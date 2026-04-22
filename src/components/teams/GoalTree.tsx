@@ -31,10 +31,10 @@ interface GoalTreeProps {
   teamId: string;
 }
 
-function GoalNode({ goal, children, depth }: { goal: GoalDoc & { id: string }; children: (GoalDoc & { id: string })[]; depth: number }) {
+function GoalNode({ goal, subGoals, depth }: { goal: GoalDoc & { id: string }; subGoals: (GoalDoc & { id: string })[]; depth: number }) {
   const [expanded, setExpanded] = useState(true);
   const status = STATUS_CONFIG[goal.status] ?? STATUS_CONFIG.not_started;
-  const hasChildren = children.length > 0;
+  const hasChildren = subGoals.length > 0;
 
   return (
     <div className={depth > 0 ? "ml-6 border-l pl-4" : ""}>
@@ -63,8 +63,8 @@ function GoalNode({ goal, children, depth }: { goal: GoalDoc & { id: string }; c
       </div>
       {expanded && hasChildren && (
         <div className="mt-1">
-          {children.map((child) => (
-            <GoalNode key={child.id} goal={child} children={[]} depth={depth + 1} />
+          {subGoals.map((child) => (
+            <GoalNode key={child.id} goal={child} subGoals={[]} depth={depth + 1} />
           ))}
         </div>
       )}
@@ -167,7 +167,7 @@ export function GoalTree({ teamId }: GoalTreeProps) {
             <GoalNode
               key={goal.id}
               goal={goal}
-              children={childMap.get(goal.id) ?? []}
+              subGoals={childMap.get(goal.id) ?? []}
               depth={0}
             />
           ))}

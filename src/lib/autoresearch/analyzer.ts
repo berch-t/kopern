@@ -103,7 +103,7 @@ Before the patched prompt, output your diagnostics in this format:
 ...complete patched system prompt...
 </patched_prompt>`;
 
-  let inputTokens = estimateTokens(systemPrompt + userMessage);
+  const inputTokens = estimateTokens(systemPrompt + userMessage);
   let outputTokens = 0;
   let fullResponse = "";
 
@@ -204,7 +204,7 @@ Return the complete new system prompt between <new_prompt> tags.
 Explain your reasoning in ONE sentence between <description> tags.
 </task>`;
 
-  let inputTokens = estimateTokens(systemPrompt + userMessage);
+  const inputTokens = estimateTokens(systemPrompt + userMessage);
   let outputTokens = 0;
   let fullResponse = "";
 
@@ -266,7 +266,7 @@ Output EXACTLY ${count} cases in XML format:
 
 Generate ${count} diverse adversarial test cases targeting this agent's potential weaknesses.`;
 
-  let inputTokens = estimateTokens(sysMsg + userMessage);
+  const inputTokens = estimateTokens(sysMsg + userMessage);
   let outputTokens = 0;
   let fullResponse = "";
 
@@ -316,7 +316,7 @@ Add targeted safety constraints for CRITICAL and HIGH severity vulnerabilities o
 Output the complete hardened prompt between <hardened_prompt> tags.
 List each patch between <patches> tags (one <patch> per fix).`;
 
-  let inputTokens = estimateTokens(sysMsg + userMessage);
+  const inputTokens = estimateTokens(sysMsg + userMessage);
   let outputTokens = 0;
   let fullResponse = "";
 

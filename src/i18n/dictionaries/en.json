@@ -37,10 +37,22 @@
       "title": "Built for",
       "titleAccent": "Production",
       "subtitle": "Enterprise-grade security, EU AI Act compliance, and battle-tested infrastructure from day one.",
-      "agentBuilder": { "title": "Agent Builder", "description": "Configure agents with system prompts, skills, tools and extensions. Multi-model support." },
-      "grading": { "title": "Deterministic Grading", "description": "6 criterion types: output match, schema validation, tool usage, safety check, LLM judge and more." },
-      "api": { "title": "API Endpoints", "description": "Expose agents as JSON-RPC endpoints with API key auth, rate limiting and usage tracking." },
-      "security": { "title": "Secure by Design", "description": "Owner-only Firestore rules, hashed API keys, server-side key management, sandboxed execution." }
+      "agentBuilder": {
+        "title": "Agent Builder",
+        "description": "Configure agents with system prompts, skills, tools and extensions. Multi-model support."
+      },
+      "grading": {
+        "title": "Deterministic Grading",
+        "description": "6 criterion types: output match, schema validation, tool usage, safety check, LLM judge and more."
+      },
+      "api": {
+        "title": "API Endpoints",
+        "description": "Expose agents as JSON-RPC endpoints with API key auth, rate limiting and usage tracking."
+      },
+      "security": {
+        "title": "Secure by Design",
+        "description": "Owner-only Firestore rules, hashed API keys, server-side key management, sandboxed execution."
+      }
     },
     "orchestration": {
       "title": "Multi-Agent",
@@ -138,6 +150,44 @@
       "clearSearch": "Clear search",
       "resultSingular": "section found",
       "resultPlural": "sections found"
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "subtitle": "Everything you need to know about building, testing and deploying AI agents with Kopern.",
+      "items": [
+        {
+          "question": "What is the difference between AI agents and chatbots?",
+          "answer": "AI agents autonomously execute multi-step tasks using tools (APIs, databases, code), while chatbots only reply with scripted text. Agents can reason, call external services, and decide what to do next. Use a chatbot for simple FAQs and an AI agent for multistep workflows like ticket triage, RAG pipelines, or research."
+        },
+        {
+          "question": "Can I build AI agents without coding?",
+          "answer": "Yes. Kopern is a no-code AI agent builder: describe your goal, pick a template or model, and deploy in under an hour. No Python, no LangChain boilerplate. Use the visual workflow editor, pre-built connectors (Slack, widget, webhooks), and JSON-schema tool definitions to ship without writing a single function."
+        },
+        {
+          "question": "What is the best alternative to CrewAI and LangChain?",
+          "answer": "Kopern is a no-code alternative to CrewAI and LangChain with built-in grading, MCP endpoints, multi-agent teams, and one-click deployment. Unlike framework-only tools, Kopern covers the full lifecycle — build, test, grade, deploy, monitor — and supports Claude, GPT, Gemini, Mistral, and Ollama with zero boilerplate."
+        },
+        {
+          "question": "How much does it cost to deploy AI agents in production?",
+          "answer": "Running an AI agent costs roughly $0.01–$0.30 per conversation depending on the model and context size. Platform costs start free and scale to $79/month for production features. Teams typically see 30–40% lower operational costs versus chatbots once deployed, thanks to higher resolution and autonomous task handling."
+        },
+        {
+          "question": "How do you test and grade an AI agent?",
+          "answer": "Define test cases with inputs and expected behaviors, then grade responses against six criteria: output match, schema validation, tool usage, safety, custom scripts, and LLM-as-judge. Run the suite on every change to catch regressions. Kopern automates grading with AutoTune and AutoFix for continuous improvement."
+        },
+        {
+          "question": "What is MCP (Model Context Protocol) and why does it matter?",
+          "answer": "MCP is an open standard for connecting AI agents to external tools and data. Claude Code, Cursor, and VS Code all speak MCP. With Kopern, expose any agent as an MCP server and call it from your IDE, CI pipeline, or custom apps — a standard protocol replaces dozens of custom integrations."
+        },
+        {
+          "question": "Are AI agents compliant with the EU AI Act?",
+          "answer": "Full enforcement starts August 2, 2026. High-risk AI agents must provide technical documentation, human oversight, audit trails, and stop mechanisms. Kopern ships with built-in tool approval policies, session event logs, and a compliance report generator that cover EU AI Act Article 14 requirements out of the box."
+        }
+      ],
+      "ctaTitle": "Ready to build your first agent?",
+      "ctaSubtitle": "Get started for free. No credit card required.",
+      "ctaButton": "Start building free",
+      "ctaSecondary": "Explore MCP docs"
     }
   },
   "nav": {
@@ -429,7 +479,32 @@
     "rateLimit": "Rate Limit",
     "usage": "Usage",
     "tokens": "Tokens",
-    "requests": "Requests"
+    "requests": "Requests",
+    "faq": {
+      "title": "MCP Frequently Asked Questions",
+      "items": [
+        {
+          "question": "How do I connect my Kopern agent to Claude Code?",
+          "answer": "Install the Kopern MCP server with one command: claude mcp add kopern -- npx -y @kopern/mcp-server. Set KOPERN_API_KEY to your personal or agent-bound key. Claude Code will discover 32 tools for creating agents, running grading, deploying connectors, and more."
+        },
+        {
+          "question": "What is the difference between user and agent API keys?",
+          "answer": "A user key (personal) is not bound to any agent and unlocks 30 platform tools (create/manage agents, grading, teams). An agent-bound key gives access to all 32 tools including kopern_chat and kopern_agent_info for that specific agent. Generate both from Settings or the API Keys page."
+        },
+        {
+          "question": "Can I self-host the Kopern MCP server?",
+          "answer": "Yes. Kopern ships with Docker support: clone the repo, run docker compose up, and you get Next.js + Redis + optional Ollama + Firebase Emulator. The MCP server runs as part of the standard deployment. Point clients at your self-hosted URL via KOPERN_URL."
+        },
+        {
+          "question": "Which IDEs support MCP?",
+          "answer": "Claude Code, Cursor, VS Code (with Copilot), Windsurf, and any MCP-compliant client. All use stdio or Streamable HTTP transport. Kopern's npm package handles the bridge automatically so a single config line enables the full toolset in any supported IDE."
+        },
+        {
+          "question": "Is MCP secure for production use?",
+          "answer": "Kopern MCP keys support expiration, rotation without downtime, and per-key scoping. All traffic uses HTTPS. API keys are hashed with SHA-256 in Firestore. For enterprise, self-host behind your VPN and use role-based access control on top."
+        }
+      ]
+    }
   },
   "examples": {
     "title": "Workflow Examples",

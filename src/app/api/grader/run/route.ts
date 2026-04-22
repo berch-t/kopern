@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
   const isEndpointMode = mode === "endpoint";
 
   // Prompt mode requires system_prompt + API key
-  let provider = parsed.data.provider || "anthropic";
-  let model = parsed.data.model || DEFAULT_MODELS[provider] || DEFAULT_MODELS.anthropic;
+  const provider = parsed.data.provider || "anthropic";
+  const model = parsed.data.model || DEFAULT_MODELS[provider] || DEFAULT_MODELS.anthropic;
 
   if (!isEndpointMode) {
     if (!parsed.data.system_prompt) {

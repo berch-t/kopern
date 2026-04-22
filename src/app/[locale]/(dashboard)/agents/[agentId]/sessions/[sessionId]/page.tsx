@@ -66,6 +66,7 @@ export default function SessionDetailPage({
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
+   
   useEffect(() => {
     if (!user) {
       setLoading(false);

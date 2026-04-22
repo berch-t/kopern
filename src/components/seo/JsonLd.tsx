@@ -149,89 +149,80 @@ export function SoftwareApplicationJsonLd() {
   );
 }
 
-export function FAQJsonLd() {
-  const faqs = [
-    {
-      question: "What is Kopern?",
-      answer:
-        "Kopern is an AI agent builder platform that lets you create, test, and deploy production-grade AI agents. You can configure custom tools with sandboxed execution, connect GitHub repos, build multi-agent teams, validate with deterministic grading pipelines, and deploy agents via embeddable widgets, webhooks, Slack bots, and MCP endpoints.",
-    },
-    {
-      question: "Which AI models does Kopern support?",
-      answer:
-        "Kopern supports Anthropic Claude (Opus 4.6, Sonnet 4.6, Haiku 4.5), OpenAI GPT (GPT-4o, GPT-4o-mini), Google Gemini (2.5 Flash), Mistral AI (Mistral Large, Codestral, Nemo), and local models via Ollama. Each agent can be configured with a different model, temperature, and thinking level.",
-    },
-    {
-      question: "What is agent grading?",
-      answer:
-        "Agent grading lets you create test suites with specific criteria to automatically validate your agent's behavior. Kopern supports 6 criterion types: output match, schema validation, tool usage, safety checks, custom scripts, and LLM-as-judge evaluation. Results are persisted for tracking improvement over time.",
-    },
-    {
-      question: "How do I deploy an agent on my website?",
-      answer:
-        "Use the embeddable chat widget. Add a single <script> tag to your website with your API key. The widget renders in a Shadow DOM for CSS isolation, streams responses via SSE, supports markdown, and is mobile-responsive. Configure welcome message, position, and allowed origins from the dashboard.",
-    },
-    {
-      question: "Can I connect my agent to Slack?",
-      answer:
-        "Yes. Install the Slack bot from the Connectors dashboard using OAuth. Once connected, your agent responds to @mentions and direct messages in Slack. It supports threaded conversations and adds reaction checkmarks to processed messages.",
-    },
-    {
-      question: "What are webhooks used for?",
-      answer:
-        "Inbound webhooks let external services (n8n, Zapier, Make, custom apps) send messages to your agent via REST API and get JSON responses. Outbound webhooks fire when your agent completes actions (message sent, tool called, session ended), letting you trigger downstream workflows. HMAC-SHA256 signing is supported for security.",
-    },
-    {
-      question: "Can I connect my own GitHub repositories?",
-      answer:
-        "Yes. Connect your GitHub repos via OAuth and your agents get built-in read_file, search_files, and github_write tools, plus the repo tree and README injected into context. Agents can read, search, and write to your codebase during conversations.",
-    },
-    {
-      question: "What is MCP (Model Context Protocol)?",
-      answer:
-        "MCP is an open standard for connecting AI agents to external tools and data sources. Kopern lets you expose any agent as an MCP server with API key authentication, compatible with Claude Code, Cursor, and any MCP client. Other applications can send messages to your agent via the standardized protocol.",
-    },
-    {
-      question: "What is AutoResearch?",
-      answer:
-        "AutoResearch is Kopern's optimization lab with 6 modes: AutoTune (auto-optimize prompts), AutoFix (diagnose failing tests), Stress Lab (adversarial testing), Tournament (prompt comparison), Distillation (transfer to cheaper models), and Evolution (genetic prompt optimization). It automatically improves your agent's performance.",
-    },
-    {
-      question: "How does multi-agent orchestration work?",
-      answer:
-        "Kopern supports agent teams with three execution modes: parallel (all agents run simultaneously), sequential (agents run one after another with shared context), and conditional (routing based on input rules). Each agent in a team keeps its own tools, skills, and configuration. Pipelines chain agents sequentially with input/output mapping.",
-    },
-    {
-      question: "Is Kopern free to use?",
-      answer:
-        "Kopern offers a free Starter tier with 3 agents and 100K tokens per month. Pro ($79/mo) adds grading, teams, and connectors. Usage-based billing is available for pay-per-token needs. Enterprise ($499/mo) provides unlimited everything with priority support.",
-    },
-    {
-      question: "What languages does Kopern support?",
-      answer:
-        "The Kopern interface is available in English and French. Agents themselves can be configured to respond in any language supported by the underlying LLM model.",
-    },
-    {
-      question: "What is the Workflow Quality Monitor?",
-      answer:
-        "Kopern Monitor runs 18 standardized test prompts across 6 quality criteria (reasoning depth, instruction following, consistency, latency, edge cases, output quality) against any LLM model or API endpoint. It compares scores against baselines for 29 models and generates actionable improvement recommendations.",
-    },
-    {
-      question: "Can I test my own AI endpoint?",
-      answer:
-        "Yes. Both the Grader and Monitor support endpoint mode — connect any HTTP endpoint that accepts messages and Kopern will send test prompts, evaluate responses, and score quality. Supports OpenAI, Anthropic, n8n, and custom API formats with authentication (Bearer, API key header/query).",
-    },
-    {
-      question: "Does Kopern support social media?",
-      answer:
-        "Kopern includes a Bluesky AT Protocol connector with 9 tools for social media management: create posts, threads, read feeds, track metrics, search mentions, reply, delete posts, get profiles, and list connected accounts.",
-    },
-  ];
+export interface FAQItem {
+  question: string;
+  answer: string;
+}
 
+const DEFAULT_FAQS: FAQItem[] = [
+  {
+    question: "What is the difference between AI agents and chatbots?",
+    answer:
+      "AI agents autonomously execute multi-step tasks using tools (APIs, databases, code), while chatbots only reply with scripted text. Agents can reason, call external services, and decide what to do next; chatbots cannot. Use a chatbot for FAQs and an AI agent for multistep workflows like triaging tickets or running RAG pipelines.",
+  },
+  {
+    question: "How do you build AI agents without coding?",
+    answer:
+      "No-code AI agent builders like Kopern let you create agents through a visual interface: describe the goal, pick a template or model, configure tools via JSON schemas, and deploy. No Python, no LangChain boilerplate. Most production agents can ship in 15–60 minutes through drag-and-drop workflow editors and pre-built connectors.",
+  },
+  {
+    question: "What is the best alternative to CrewAI and LangChain?",
+    answer:
+      "Kopern is a no-code alternative to CrewAI and LangChain with built-in grading, MCP endpoints, multi-agent teams, and deployment connectors (Slack, widget, webhooks). Unlike framework-only tools, Kopern handles the full lifecycle: build, test, grade, deploy, monitor. No Python required, works with Claude, GPT, Gemini, Mistral, and Ollama.",
+  },
+  {
+    question: "How much does it cost to deploy AI agents in production?",
+    answer:
+      "Running an AI agent in production typically costs $0.01–$0.30 per conversation depending on the model and context size. Platform costs range from free tiers to $79/month for production features. Expect 30–40% lower operational costs vs traditional chatbots once deployed, thanks to higher resolution rates and autonomous handling.",
+  },
+  {
+    question: "How do you test and evaluate an AI agent?",
+    answer:
+      "Test AI agents with a grading suite: define test cases with inputs and expected behaviors, then evaluate with six criterion types — output match, schema validation, tool usage, safety, custom scripts, and LLM-as-judge. Run the suite on every prompt change to catch regressions. Kopern automates this with AutoTune and AutoFix for continuous improvement.",
+  },
+  {
+    question: "What is silent degradation in LLM agents?",
+    answer:
+      "Silent degradation is when an AI agent still returns syntactically valid outputs, but semantic quality drops over time — caused by model updates, data drift, or prompt decay. It is common in RAG pipelines. Detect it with scheduled grading (daily test runs), anomaly-based alerts, and continuous LLM observability on latency, faithfulness, and safety metrics.",
+  },
+  {
+    question: "What is MCP (Model Context Protocol) and why does it matter?",
+    answer:
+      "MCP is an open standard (created by Anthropic) for connecting AI agents to external tools and data. Think USB-C for AI: one protocol, any service. Claude Code, Cursor, and VS Code all speak MCP. With Kopern, you can expose any agent as an MCP server and call it from your IDE, CI pipeline, or custom apps.",
+  },
+  {
+    question: "How do I deploy an AI agent on my website?",
+    answer:
+      "Add a single <script> tag with your API key to embed a chat widget. The widget runs in a Shadow DOM for CSS isolation, streams via SSE, supports markdown and mobile. You can also deploy agents as MCP endpoints, webhooks, Slack bots, Telegram bots, or WhatsApp — all from the same dashboard without writing glue code.",
+  },
+  {
+    question: "Are AI agents compliant with the EU AI Act?",
+    answer:
+      "Full enforcement of the EU AI Act starts August 2, 2026. High-risk AI agents must provide technical documentation, structured human oversight, audit trails, and stop mechanisms. Kopern ships with built-in tool approval policies, session event logs, and a compliance report generator to cover Article 14 (human oversight) out of the box.",
+  },
+  {
+    question: "Which LLM models can you use to build AI agents?",
+    answer:
+      "The major providers are Anthropic (Claude Opus, Sonnet, Haiku), OpenAI (GPT-4o, o1), Google (Gemini 2.5 Flash, Pro), Mistral (Large, Codestral, Nemo), and local open-source via Ollama. Kopern lets you switch models per agent and A/B test them via Tournament mode to pick the best quality-cost tradeoff.",
+  },
+  {
+    question: "Is Kopern free to use?",
+    answer:
+      "Yes. Kopern's free Starter tier includes 3 agents and 100K tokens/month with grading and MCP access. Pro ($79/mo) adds teams, connectors, and 2M tokens. Pay-as-you-go is available for unlimited scale. All plans include deterministic grading, multi-agent orchestration, and deployment to Slack, webhooks, and widgets.",
+  },
+  {
+    question: "What is multi-agent orchestration?",
+    answer:
+      "Multi-agent orchestration means multiple specialized AI agents work together on one task. Kopern supports parallel execution (all agents run at once), sequential pipelines (output flows between agents), and conditional routing (input decides which agent runs). Useful for research teams, content pipelines, and triage workflows where one agent is not enough.",
+  },
+];
+
+export function FAQJsonLd({ faqs }: { faqs?: FAQItem[] } = {}) {
+  const items = faqs ?? DEFAULT_FAQS;
   const data = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: faqs.map((faq) => ({
+    mainEntity: items.map((faq) => ({
       "@type": "Question",
       name: faq.question,
       acceptedAnswer: {

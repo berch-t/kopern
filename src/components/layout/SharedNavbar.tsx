@@ -65,8 +65,8 @@ export function SharedNavbar({ variant = "public", isLanding = false }: SharedNa
   const pathname = usePathname();
   const router = useLocalizedRouter();
 
-  // Auth state — dashboard variant uses useAuth() (AuthProvider guaranteed), public uses raw listener
-  const authCtx = variant === "dashboard" ? useAuth() : null;
+  // Auth state — always call useAuth() unconditionally (Rules of Hooks), but only use it for dashboard variant
+  const authCtx = useAuth();
   const [pubUser, setPubUser] = useState<FirebaseUser | null>(null);
   const [pubLoading, setPubLoading] = useState(true);
 
@@ -123,6 +123,7 @@ export function SharedNavbar({ variant = "public", isLanding = false }: SharedNa
 
   // ─── Desktop nav links (public variant only) ────────────────────────────
 
+   
   function DesktopNav() {
     return (
       <div className="flex-1 hidden md:flex items-center justify-center gap-1">
@@ -205,6 +206,7 @@ export function SharedNavbar({ variant = "public", isLanding = false }: SharedNa
 
   // ─── Mobile drawer (public variant) ──────────────────────────────────────
 
+   
   function MobileDrawer() {
     return (
       <Sheet>
@@ -294,6 +296,7 @@ export function SharedNavbar({ variant = "public", isLanding = false }: SharedNa
 
   // ─── User dropdown menu ──────────────────────────────────────────────────
 
+   
   function UserMenu() {
     if (!user) return null;
     return (

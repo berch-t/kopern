@@ -151,6 +151,7 @@ export default function SessionsPage({
   const [loading, setLoading] = useState(true);
   const [sourceFilter, setSourceFilter] = useState<SessionSource | "all">("all");
 
+   
   useEffect(() => {
     if (!user) {
       setLoading(false);

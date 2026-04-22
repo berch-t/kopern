@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { SlideUp } from "@/components/motion/SlideUp";
 import { useDictionary, useLocale } from "@/providers/LocaleProvider";
 import { cn } from "@/lib/utils";
+import { FAQSection } from "@/components/seo/FAQSection";
 
 function slugify(text: string): string {
   return text
@@ -108,6 +109,7 @@ export default function McpDocsPage() {
   const sections = useMemo(() => parseSections(content), [content]);
   const hits = useMemo(() => quickSearch(sections, search), [sections, search]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration gate
   useEffect(() => setMounted(true), []);
 
   const scrollToText = useCallback((headingText: string) => {
@@ -138,7 +140,9 @@ export default function McpDocsPage() {
     else if (e.key === "Escape") { e.preventDefault(); setOpen(false); inputRef.current?.blur(); }
   }, [open, hits, selIdx, pickResult]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- reset selection when results change
   useEffect(() => { setSelIdx(0); }, [hits.length]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- sync open state with search input
   useEffect(() => { setOpen(search.trim().length > 0 && hits.length > 0); }, [search, hits.length]);
 
   useEffect(() => {
@@ -249,13 +253,20 @@ export default function McpDocsPage() {
             )}
           </div>
 
-          <article className="pb-24">
+          <article className="pb-12">
             <MarkdownRenderer
               content={content}
               headingIds
               slugify={slugify}
             />
           </article>
+
+          <FAQSection
+            title={t.mcp.faq.title}
+            faqs={t.mcp.faq.items}
+            injectJsonLd
+            className="pb-24 !px-0"
+          />
         </div>
       </div>
     </div>

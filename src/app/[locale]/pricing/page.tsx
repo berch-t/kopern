@@ -54,7 +54,7 @@ export default function PricingPage() {
   async function handleCheckout(plan: string) {
     if (!user) {
       // Redirect to login, then back
-      window.location.href = `/${locale}/login`;
+      window.location.assign(`/${locale}/login`);
       return;
     }
 
@@ -71,7 +71,7 @@ export default function PricingPage() {
       });
       const data = await res.json();
       if (data.url) {
-        window.location.href = data.url;
+        window.location.assign(data.url);
       } else {
         toast.error(data.error || "Checkout failed");
         setCheckingOut(null);

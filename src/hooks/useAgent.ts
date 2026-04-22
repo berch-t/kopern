@@ -261,6 +261,7 @@ export function useAgent(agentId: string, agentConfig: AgentPlaygroundConfig | n
     stop,
     sessionMetrics,
     cumulativeMetrics,
+    // eslint-disable-next-line react-hooks/refs -- reading ref for return value
     sessionId: sessionIdRef.current,
   };
 }

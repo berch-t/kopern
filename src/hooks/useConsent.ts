@@ -46,16 +46,12 @@ function writeLocalConsent(prefs: ConsentPreferences): void {
 // ---------------------------------------------------------------------------
 
 export function useConsent() {
-  const [consent, setConsent] = useState<ConsentPreferences | null>(null);
+  const [consent, setConsent] = useState<ConsentPreferences | null>(() => readLocalConsent());
   const [loading, setLoading] = useState(true);
   const userRef = useRef<User | null>(null);
 
   // Listen for auth state independently of AuthProvider
   useEffect(() => {
-    const local = readLocalConsent();
-    if (local) {
-      setConsent(local);
-    }
 
     const unsubscribe = onAuthChanged((u) => {
       userRef.current = u;
@@ -64,6 +60,8 @@ export function useConsent() {
         setLoading(false);
         return;
       }
+
+      const local = readLocalConsent();
 
       // Sync from Firestore when authenticated
       getDoc(consentDoc(u.uid))

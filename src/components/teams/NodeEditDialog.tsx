@@ -290,7 +290,7 @@ function OutputForm({
       </div>
 
       <div className="space-y-2">
-        <Label>Mode d'agrégation</Label>
+        <Label>Mode d&apos;agrégation</Label>
         <Select
           value={aggregation}
           onValueChange={(v) => onChange({ ...data, aggregation: v })}
@@ -345,7 +345,7 @@ function ExportForm({
       </div>
 
       <div className="space-y-2">
-        <Label>Format d'export</Label>
+        <Label>Format d&apos;export</Label>
         <Select
           value={exportFormat}
           onValueChange={(v) => onChange({ ...data, exportFormat: v })}
@@ -406,6 +406,7 @@ export function NodeEditDialog({
   const [configAgentId, setConfigAgentId] = useState<string | null>(null);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
 
+   
   useEffect(() => {
     if (node) {
       setEditData({ ...node.data } as Record<string, unknown>);

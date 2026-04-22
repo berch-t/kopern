@@ -25,6 +25,7 @@
  *   }
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports -- standalone Node.js CLI, not a TS module */
 const { readFileSync } = require("fs");
 const { join } = require("path");
 

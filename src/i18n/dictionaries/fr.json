@@ -37,10 +37,22 @@
       "title": "Conçu pour la",
       "titleAccent": "Production",
       "subtitle": "Sécurité enterprise-grade, conformité EU AI Act et infrastructure éprouvée dès le premier jour.",
-      "agentBuilder": { "title": "Constructeur d'Agents", "description": "Configurez des agents avec des prompts système, des skills, des tools et des extensions. Support multi-modèle." },
-      "grading": { "title": "Notation Déterministe", "description": "6 types de critères : correspondance de sortie, validation de schéma, utilisation de tools, vérification de sécurité, juge LLM et plus." },
-      "api": { "title": "Endpoints API", "description": "Exposez vos agents comme endpoints JSON-RPC avec authentification par clé API, limitation de débit et suivi d'utilisation." },
-      "security": { "title": "Sécurisé par Conception", "description": "Règles Firestore propriétaire uniquement, clés API hashées, gestion des clés côté serveur, exécution sandboxée." }
+      "agentBuilder": {
+        "title": "Constructeur d'Agents",
+        "description": "Configurez des agents avec des prompts système, des skills, des tools et des extensions. Support multi-modèle."
+      },
+      "grading": {
+        "title": "Notation Déterministe",
+        "description": "6 types de critères : correspondance de sortie, validation de schéma, utilisation de tools, vérification de sécurité, juge LLM et plus."
+      },
+      "api": {
+        "title": "Endpoints API",
+        "description": "Exposez vos agents comme endpoints JSON-RPC avec authentification par clé API, limitation de débit et suivi d'utilisation."
+      },
+      "security": {
+        "title": "Sécurisé par Conception",
+        "description": "Règles Firestore propriétaire uniquement, clés API hashées, gestion des clés côté serveur, exécution sandboxée."
+      }
     },
     "orchestration": {
       "title": "Orchestration",
@@ -138,6 +150,44 @@
       "clearSearch": "Effacer la recherche",
       "resultSingular": "section trouvée",
       "resultPlural": "sections trouvées"
+    },
+    "faq": {
+      "title": "Questions fréquentes",
+      "subtitle": "Tout ce qu'il faut savoir pour construire, tester et déployer des agents IA avec Kopern.",
+      "items": [
+        {
+          "question": "Quelle est la différence entre un agent IA et un chatbot ?",
+          "answer": "Un agent IA exécute des tâches autonomes en plusieurs étapes à l'aide d'outils (API, bases de données, code), tandis qu'un chatbot se contente de répondre avec du texte scripté. Un agent raisonne, appelle des services externes et décide de la prochaine action. Utilisez un chatbot pour des FAQ simples, un agent IA pour des workflows complexes comme le tri de tickets ou les pipelines RAG."
+        },
+        {
+          "question": "Peut-on créer des agents IA sans coder ?",
+          "answer": "Oui. Kopern est une plateforme no-code de création d'agents IA : décrivez votre objectif, choisissez un modèle ou un template, et déployez en moins d'une heure. Pas de Python, pas de boilerplate LangChain. Utilisez l'éditeur visuel, les connecteurs prêts à l'emploi (Slack, widget, webhooks) et les définitions d'outils en JSON Schema pour livrer sans écrire une seule fonction."
+        },
+        {
+          "question": "Quelle est la meilleure alternative à CrewAI et LangChain ?",
+          "answer": "Kopern est une alternative no-code à CrewAI et LangChain, avec grading intégré, endpoints MCP, équipes multi-agents et déploiement en un clic. Contrairement aux frameworks purs, Kopern couvre tout le cycle de vie — build, test, grading, déploiement, monitoring — et supporte Claude, GPT, Gemini, Mistral et Ollama sans boilerplate."
+        },
+        {
+          "question": "Combien coûte le déploiement d'agents IA en production ?",
+          "answer": "Un agent IA coûte environ 0,01 à 0,30 $ par conversation selon le modèle et la taille du contexte. Les coûts de plateforme vont du gratuit à 79 $/mois pour les fonctionnalités production. Les équipes constatent généralement 30 à 40 % de réduction des coûts opérationnels par rapport aux chatbots, grâce à une meilleure résolution et à l'automatisation."
+        },
+        {
+          "question": "Comment tester et évaluer un agent IA ?",
+          "answer": "Créez des cas de test avec des entrées et comportements attendus, puis évaluez les réponses sur six critères : correspondance de sortie, validation de schéma, usage d'outils, sécurité, scripts personnalisés et LLM-juge. Lancez la suite à chaque changement pour détecter les régressions. Kopern automatise tout avec AutoTune et AutoFix."
+        },
+        {
+          "question": "Qu'est-ce que MCP (Model Context Protocol) et pourquoi c'est important ?",
+          "answer": "MCP est un standard ouvert pour connecter les agents IA à des outils et données externes. Claude Code, Cursor et VS Code parlent tous MCP. Avec Kopern, exposez n'importe quel agent en serveur MCP et appelez-le depuis votre IDE, un pipeline CI ou vos applications — un protocole standard remplace des dizaines d'intégrations custom."
+        },
+        {
+          "question": "Les agents IA sont-ils conformes à l'EU AI Act ?",
+          "answer": "L'application complète commence le 2 août 2026. Les agents IA à haut risque doivent fournir une documentation technique, une supervision humaine, des journaux d'audit et des mécanismes d'arrêt. Kopern intègre nativement des politiques d'approbation d'outils, des logs de sessions et un générateur de rapport de conformité qui couvrent l'article 14 de l'EU AI Act."
+        }
+      ],
+      "ctaTitle": "Prêt à construire votre premier agent ?",
+      "ctaSubtitle": "Commencez gratuitement. Sans carte bancaire.",
+      "ctaButton": "Commencer gratuitement",
+      "ctaSecondary": "Explorer la doc MCP"
     }
   },
   "nav": {
@@ -429,7 +479,32 @@
     "rateLimit": "Limite de Débit",
     "usage": "Utilisation",
     "tokens": "Tokens",
-    "requests": "Requêtes"
+    "requests": "Requêtes",
+    "faq": {
+      "title": "Questions fréquentes sur MCP",
+      "items": [
+        {
+          "question": "Comment connecter mon agent Kopern à Claude Code ?",
+          "answer": "Installez le serveur MCP Kopern en une commande : claude mcp add kopern -- npx -y @kopern/mcp-server. Définissez KOPERN_API_KEY avec votre clé personnelle ou d'agent. Claude Code découvrira 32 outils pour créer des agents, lancer le grading, déployer des connecteurs, etc."
+        },
+        {
+          "question": "Quelle est la différence entre les clés API utilisateur et agent ?",
+          "answer": "Une clé utilisateur (personnelle) n'est liée à aucun agent et débloque 30 outils plateforme (créer/gérer des agents, grading, équipes). Une clé liée à un agent donne accès aux 32 outils incluant kopern_chat et kopern_agent_info pour cet agent. Générez les deux depuis Settings ou la page API Keys."
+        },
+        {
+          "question": "Peut-on auto-héberger le serveur MCP Kopern ?",
+          "answer": "Oui. Kopern supporte Docker nativement : clonez le repo, lancez docker compose up, et vous avez Next.js + Redis + Ollama optionnel + Firebase Emulator. Le serveur MCP fait partie du déploiement standard. Pointez les clients vers votre URL auto-hébergée via KOPERN_URL."
+        },
+        {
+          "question": "Quels IDE supportent MCP ?",
+          "answer": "Claude Code, Cursor, VS Code (avec Copilot), Windsurf, et tout client compatible MCP. Tous utilisent le transport stdio ou Streamable HTTP. Le package npm de Kopern gère le bridge automatiquement — une seule ligne de config active tout l'outillage dans n'importe quel IDE supporté."
+        },
+        {
+          "question": "MCP est-il sécurisé pour la production ?",
+          "answer": "Les clés MCP Kopern supportent l'expiration, la rotation sans interruption et le scoping par clé. Tout le trafic est en HTTPS. Les clés API sont hashées en SHA-256 dans Firestore. Pour l'entreprise, auto-hébergez derrière votre VPN et ajoutez un contrôle d'accès basé sur les rôles."
+        }
+      ]
+    }
   },
   "examples": {
     "title": "Exemples de Workflows",
